@@ -1,0 +1,153 @@
+# AGENTS.md
+
+This file provides guidance to WARP (warp.dev) when working with code in this repository.
+
+## Project Overview
+
+This is a Unity 2022.3.62f2 horror game project featuring first-person gameplay with survival mechanics, enemies with AI state machines, an inventory system, and various interactive elements.
+
+## Building & Running
+
+**Open in Unity:**
+- Open Unity Hub and load this project
+- Unity version: 2022.3.62f2
+- The project will automatically compile C# scripts
+
+**Play in Editor:**
+- Open a scene from `Assets/Scenes` or `Assets/_Scenes`
+- Press Play button in Unity Editor
+
+**Note:** This is a Unity project without external build scripts. Build using Unity Editor's File > Build Settings.
+
+## Code Architecture
+
+### Core Systems
+
+**Singleton Managers:**
+The project uses singleton pattern extensively for manager classes:
+- `GameManager.instance` - Handles pause state, cursor visibility, and global game events
+- `Player.instance` - Central player reference with components for health, movement, weapons, inventory, stability
+- `LevelManager.instance` - Manages player death/respawn, game over/win states
+- `InteractionHandler.instance` - Manages interactable objects and player interaction
+- `ItemInspectionHandler` - Handles item inspection system
+- `EnemyEventHandler` - Manages enemy-related events
+- `GameManager.IsPaused` - Static property that controls pause state, cursor visibility, and timescale
+
+### Player System
+
+The `Player` class is a component aggregator that references:
+- `Health` - HP management with damage events
+- `PlayerMovement` - Character controller-based movement
+- `PlayerWeaponSystem` - Weapon handling and combat
+- `PlayerStamina` - Stamina management for sprinting/rolling
+- `PlayerStability` - Sanity/stability mechanic that decreases on damage
+- `Inventory` - Item and note storage with persistence across scenes
+- `PlayerRoll` - Dodge roll mechanic
+- `PlayerMeleeAttack` - Melee combat system
+
+**Important:** Inventory uses static persistence (`_persistentItems`, `_persistentNotes`) to maintain items across scene loads. The inventory persists through static fields that survive scene transitions.
+
+### Enemy System
+
+Enemies use a state machine architecture:
+- `EnemyStateMachine` - Simple state machine with `Initialize()` and `ChangeState()`
+- `EnemyState` - Base class with `Enter()`, `Exit()`, and `Update()` methods
+- Individual states: `EnemyIdleState`, `EnemyWanderState`, `EnemyChaseState`, `EnemyAttackState`, `EnemyDashAttackState`, `EnemyDeathState`, `EnemyKnockBackState`, `EnemyReloadState`, `EnemySidestepState`
+- Enemy types inherit from base `Enemy` class: `BagBearerEnemy`, `HeadshotEnemy`, `RunnerEnemy`
+- `Stats` - Enemy health and stat management
+- `Hitbox` and `EnemyWeakpoint` - Damage zones for enemies
+
+### Interactable System
+
+All interactive objects inherit from `Interactable` base class:
+- `InteractionType` enum: `Interact` or `Pickup`
+- Subclasses: `ItemPickup`, `DoorInteractable`, `CombinationLockInteractable`, `ImageFadeInteractable`, `ItemBarrierInteractable`, `WallHoleInteractable`, `DrillHoleInteractable`, `EyePeakInteractable`
+- Uses trigger colliders to detect player proximity
+- `InteractionHandler` manages active interactables and player interaction input
+
+### Camera System
+
+`CameraSystem` implements a third-person camera with:
+- Follow target and look-at target transforms
+- Strafe detection based on player input
+- Camera collision detection and zoom adjustment
+- Integration with `PlayerWeaponSystem` for aiming mode
+- Instant teleport handling via `OnPlayerTeleported` event
+
+### Audio System
+
+- `SoundEffectManager` - Central sound effect playback
+- `AmbienceHandler` and `AmbienceTrigger` - Manages ambient audio zones
+- `AudioPoint` and `AudioTrigger` - Positional audio triggers
+- `GroundType` - Different footstep sounds per surface
+- `UISoundManager` - UI interaction sounds
+- Uses `HorrorProjectMixer.mixer` for audio mixing
+
+### Input System
+
+- Uses Unity's new Input System with `HorrorInput.inputactions`
+- Input handled via `InputActionReference` in components
+- Player movement, combat, and interaction all use Input System
+
+### Door System
+
+Specialized door mechanics:
+- `DoorInteractable` - Base door interaction
+- `DoorInteractionHandler` - Manages door opening/closing animations
+- `DoorInteractableTrigger` - Trigger-based door detection
+- `DoorLockTrigger` - Lock/unlock doors based on conditions
+
+### Specialized Gameplay Systems
+
+- **Object Pooling:** `ObjectPooling` system for performance optimization
+- **Message System:** `MessageHandler` and `MessageList` for in-game text messages
+- **Subtitle System:** `SubtitleManager` and `SubtitleTrigger` for dialogue/audio subtitles
+- **Localization:** `Localization` folder with `LocalizeFontUpdater` for multi-language support
+- **Map System:** `MapHandler` for in-game map display
+- **Item Inspection:** Detailed item examination system via `ItemInspectionHandler` and `InspectableItemPickup`
+- **Timeline Integration:** `TimelineEnemyController` for scripted sequences
+
+### Scene Management
+
+- Scenes located in both `Assets/Scenes` and `Assets/_Scenes`
+- `LoadingHandler` and `LoadButton` - Scene loading UI
+- Static inventory persistence across scene transitions
+- Player spawn points via `PlayerSpawnPoint`
+
+### Important Patterns
+
+1. **Event-Driven Architecture:** Extensive use of `UnityEvent` and C# events/delegates (e.g., `GameManager.OnGamePaused`, `Health.OnDeath`)
+2. **Component References:** Most systems reference each other via serialized fields or singleton instances
+3. **Trigger-Based Interactions:** Heavy use of trigger colliders for zone-based gameplay
+4. **Static Persistence:** Critical data (inventory) uses static fields to survive scene loads
+
+## Script Organization
+
+Scripts are organized in two main directories with parallel structures:
+- `Assets/Script/` - Primary scripts directory
+- `Assets/_Script/` - Secondary scripts directory
+
+Key subdirectories:
+- `Script/Manager/` - Singleton manager classes
+- `Script/Player/` - Player-related components
+- `Script/Enemy/EnemyCore/` - Enemy AI and state machine
+- `Script/Interactable/` - Interactive object system
+- `Script/Camera/` - Camera system
+- `Script/Audio/` - Audio management
+- `Script/UI/` - User interface components
+- `Script/Gameplay/` - Specialized gameplay mechanics
+- `Script/Door/` - Door interaction system
+
+## Addressables
+
+The project uses Unity Addressables - check `Assets/AddressableAssetsData/` for configuration.
+
+## Third-Party Assets
+
+Notable third-party assets integrated:
+- PSXShaderKit - PlayStation 1 visual style
+- Enviro - Sky and Weather - Weather system
+- TextMesh Pro - Text rendering
+- AllSkyFree - Skybox assets
+- ArabicSupport - Arabic text support
+- KinoBloom - Post-processing bloom effect

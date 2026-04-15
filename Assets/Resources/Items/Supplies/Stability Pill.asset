@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10b5f494cc81f0e4b93b23eea8396dbf, type: 3}
+  m_Name: Stability Pill
+  m_EditorClassIdentifier: 
+  itemName: Stability Pill
+  itemIcon: {fileID: 21300000, guid: df9193e6f5148bb42ba7dd386ef82f7e, type: 3}
+  description: Increases stability by 50%
+  isStackable: 1
+  maxStackSize: 10
+  itemType: 2
+  healingAmount: 0
+  stabilityIncreaseAmount: 50
+  energyDrinkDuration: 0
+  calmingInhalerDuration: 0
+  keyCode: 0

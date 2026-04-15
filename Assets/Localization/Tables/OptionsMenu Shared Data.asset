@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b11a58205ec3474ca216360e9fa74a8, type: 3}
+  m_Name: OptionsMenu Shared Data
+  m_EditorClassIdentifier: 
+  m_TableCollectionName: OptionsMenu
+  m_TableCollectionNameGuidString: 3d79878293b342844ab451c01a1173d7
+  m_Entries:
+  - m_Id: 23677685760
+    m_Key: OPTIONS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 39431491584
+    m_Key: General
+    m_Metadata:
+      m_Items: []
+  - m_Id: 52488359936
+    m_Key: Language
+    m_Metadata:
+      m_Items: []
+  - m_Id: 70326734848
+    m_Key: Music Volume
+    m_Metadata:
+      m_Items: []
+  - m_Id: 86764212224
+    m_Key: SFX Volume
+    m_Metadata:
+      m_Items: []
+  - m_Id: 101482024960
+    m_Key: Graphics
+    m_Metadata:
+      m_Items: []
+  - m_Id: 122747146240
+    m_Key: Resolutions
+    m_Metadata:
+      m_Items: []
+  - m_Id: 141185306624
+    m_Key: Apply
+    m_Metadata:
+      m_Items: []
+  - m_Id: 158440673280
+    m_Key: Back
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items: []
+  m_KeyGenerator:
+    rid: 5546314085197938688
+  references:
+    version: 2
+    RefIds:
+    - rid: 5546314085197938688
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables,
+        asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1768292030208

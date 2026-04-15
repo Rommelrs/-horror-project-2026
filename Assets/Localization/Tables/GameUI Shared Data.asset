@@ -1,0 +1,357 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b11a58205ec3474ca216360e9fa74a8, type: 3}
+  m_Name: GameUI Shared Data
+  m_EditorClassIdentifier: 
+  m_TableCollectionName: GameUI
+  m_TableCollectionNameGuidString: 0d8ee424ff218bd49a04803c55de9155
+  m_Entries:
+  - m_Id: 20594872320
+    m_Key: INVENTORY
+    m_Metadata:
+      m_Items: []
+  - m_Id: 35832778752
+    m_Key: STATUS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 50886135808
+    m_Key: ACTIONS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 65536839680
+    m_Key: ITEMS
+    m_Metadata:
+      m_Items: []
+  - m_Id: 79495483392
+    m_Key: NOTES
+    m_Metadata:
+      m_Items: []
+  - m_Id: 94699835392
+    m_Key: Use
+    m_Metadata:
+      m_Items: []
+  - m_Id: 112122974208
+    m_Key: Inspect
+    m_Metadata:
+      m_Items: []
+  - m_Id: 127427989504
+    m_Key: Read
+    m_Metadata:
+      m_Items: []
+  - m_Id: 143051771904
+    m_Key: MAP
+    m_Metadata:
+      m_Items: []
+  - m_Id: 178468474880
+    m_Key: PAUSED
+    m_Metadata:
+      m_Items: []
+  - m_Id: 195849670656
+    m_Key: Resume
+    m_Metadata:
+      m_Items: []
+  - m_Id: 210441654272
+    m_Key: Options
+    m_Metadata:
+      m_Items: []
+  - m_Id: 227676049408
+    m_Key: Menu
+    m_Metadata:
+      m_Items: []
+  - m_Id: 242901372928
+    m_Key: GAMEOVER
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698944
+    m_Key: 'Condition:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698945
+    m_Key: Healthy
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698946
+    m_Key: Good
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698947
+    m_Key: OK
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698948
+    m_Key: BAD
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698949
+    m_Key: SEVERE
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698950
+    m_Key: 'Stability:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698951
+    m_Key: Stable
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698952
+    m_Key: Unsteady
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698953
+    m_Key: Shaken
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698954
+    m_Key: DISTURBED
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698955
+    m_Key: FRACTURED
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698956
+    m_Key: Bandage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698957
+    m_Key: Bandage Description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698958
+    m_Key: Calming Inhaler
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698959
+    m_Key: Calming Inhaler Description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698960
+    m_Key: Cookie
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698961
+    m_Key: Cookie Description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698962
+    m_Key: Drill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698963
+    m_Key: Drill Description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698964
+    m_Key: Drill Charge
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698965
+    m_Key: Drill Charge Description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698966
+    m_Key: Fuse
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698967
+    m_Key: Fuse Description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698968
+    m_Key: Key
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698969
+    m_Key: Key Description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698970
+    m_Key: Light Ammo
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698971
+    m_Key: Light Ammo Description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698972
+    m_Key: Med Kit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698973
+    m_Key: Med Kit Description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698974
+    m_Key: Pain Killer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698975
+    m_Key: Pain Killer Description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698976
+    m_Key: Pistol
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698977
+    m_Key: Pistol Description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698978
+    m_Key: Stability Pill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698979
+    m_Key: Stability Pill Description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698980
+    m_Key: Storage Room Reminder
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698981
+    m_Key: Storage Room Reminder Description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698982
+    m_Key: Training Note
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395714719698983
+    m_Key: Training Note Description
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395840456544256
+    m_Key: 'Name:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 395854721372160
+    m_Key: 'Stock:'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 426599095521280
+    m_Key: No Item Found!
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6038800195964928
+    m_Key: I got ammo
+    m_Metadata:
+      m_Items: []
+  - m_Id: 6038844043218944
+    m_Key: I got a knife handle
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18148857727471616
+    m_Key: I got a shovel
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18148989403451392
+    m_Key: I got a UV Light
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18160224727519232
+    m_Key: I got a lighter
+    m_Metadata:
+      m_Items: []
+  - m_Id: 18507459029946368
+    m_Key: I got a duct tape
+    m_Metadata:
+      m_Items: []
+  - m_Id: 19607820419518464
+    m_Key: I got a knife blade
+    m_Metadata:
+      m_Items: []
+  - m_Id: 19631042926006272
+    m_Key: I managed to combine the parts into a single knife
+    m_Metadata:
+      m_Items: []
+  - m_Id: 19987693944229888
+    m_Key: I got 3 ammo
+    m_Metadata:
+      m_Items: []
+  - m_Id: 19987929248878592
+    m_Key: I got 2 ammo
+    m_Metadata:
+      m_Items: []
+  - m_Id: 20034404280487936
+    m_Key: I got a MedKit
+    m_Metadata:
+      m_Items: []
+  - m_Id: 20043675432964096
+    m_Key: I got 1 ammo
+    m_Metadata:
+      m_Items: []
+  - m_Id: 20043806504964096
+    m_Key: New Entry
+    m_Metadata:
+      m_Items: []
+  - m_Id: 20043908602712064
+    m_Key: New Entry 1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 20043983521370112
+    m_Key: I got 4 ammo
+    m_Metadata:
+      m_Items: []
+  - m_Id: 20044031193829376
+    m_Key: I got 5 ammo
+    m_Metadata:
+      m_Items: []
+  - m_Id: 20051442893901824
+    m_Key: I got a pill
+    m_Metadata:
+      m_Items: []
+  - m_Id: 20056290460749824
+    m_Key: I got a syringe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 20058322143858688
+    m_Key: I got a Calming Inhaler
+    m_Metadata:
+      m_Items: []
+  - m_Id: 20059594293039104
+    m_Key: I got a bandage
+    m_Metadata:
+      m_Items: []
+  - m_Id: 22551005856845824
+    m_Key: I got a gate key
+    m_Metadata:
+      m_Items: []
+  - m_Id: 22667175201132544
+    m_Key: I got a knife handl
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23375105651167232
+    m_Key: I got a wooden plank
+    m_Metadata:
+      m_Items: []
+  - m_Id: 24417055858806784
+    m_Key: I got a barber key
+    m_Metadata:
+      m_Items: []
+  - m_Id: 29291768338763776
+    m_Key: I got 10 Ammo
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items: []
+  m_KeyGenerator:
+    rid: 5546314085197938714
+  references:
+    version: 2
+    RefIds:
+    - rid: 5546314085197938714
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables,
+        asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1768294596861

@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d340e9a75b1ef8428f7eebd65ad0518, type: 3}
+  m_Name: LootTable
+  m_EditorClassIdentifier: 
+  lootEntries:
+  - itemPrefab: {fileID: 8169772334964583938, guid: 7cf373c3dabeb384f8d8ad020750b739,
+      type: 3}
+    dropWeight: 3.4
+    isGuaranteed: 0
+    useAdaptiveWeight: 1
+  - itemPrefab: {fileID: 3594014211156974851, guid: 2dcb080460453a942892231b7e8f134c,
+      type: 3}
+    dropWeight: 3.4
+    isGuaranteed: 0
+    useAdaptiveWeight: 1
+  - itemPrefab: {fileID: 6478322687340471994, guid: 607227a4a095c6c44a9c9cfe30614098,
+      type: 3}
+    dropWeight: 3.4
+    isGuaranteed: 0
+    useAdaptiveWeight: 1
+  - itemPrefab: {fileID: 3261948982051545809, guid: b67209505ea033f419d4639df520e7df,
+      type: 3}
+    dropWeight: 3.8
+    isGuaranteed: 0
+    useAdaptiveWeight: 1
+  - itemPrefab: {fileID: 1148633702854430785, guid: d8c9bfa971aa51c4eaec95d6e9bd09a1,
+      type: 3}
+    dropWeight: 3.8
+    isGuaranteed: 0
+    useAdaptiveWeight: 1
+  - itemPrefab: {fileID: 2754334804066192167, guid: a17daee425a9bb244b72baaf91f3b669,
+      type: 3}
+    dropWeight: 3.4
+    isGuaranteed: 0
+    useAdaptiveWeight: 1
+  - itemPrefab: {fileID: 2754334804066192167, guid: 6a045e7d1d636fa428bdfbafc9fa57c6,
+      type: 3}
+    dropWeight: 3.4
+    isGuaranteed: 0
+    useAdaptiveWeight: 1
+  - itemPrefab: {fileID: 2754334804066192167, guid: 4b2f0eb3ce7b2054ba1b09c22dbec721,
+      type: 3}
+    dropWeight: 3.4
+    isGuaranteed: 0
+    useAdaptiveWeight: 1
+  - itemPrefab: {fileID: 2754334804066192167, guid: 42707022f265e9145883e82ea170ff9b,
+      type: 3}
+    dropWeight: 3.4
+    isGuaranteed: 0
+    useAdaptiveWeight: 1
+  - itemPrefab: {fileID: 2754334804066192167, guid: 2eaabf28334e0384b801963e01027ffc,
+      type: 3}
+    dropWeight: 3.4
+    isGuaranteed: 0
+    useAdaptiveWeight: 1
+  minDrops: 1
+  maxDrops: 1
+  emptyChance: 0
+  enableAdaptiveLoot: 1
+  criticalNeedMultiplier: 3
+  lowNeedMultiplier: 2
+  abundanceMultiplier: 0.5
+  enableDebugLogs: 1

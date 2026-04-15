@@ -1,0 +1,229 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2714266897951438854
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2534585619354534519}
+  - component: {fileID: 6610321107765405823}
+  - component: {fileID: 122984351120487590}
+  - component: {fileID: 2221497456375551967}
+  - component: {fileID: 3010102931605692739}
+  - component: {fileID: -3885300342562051385}
+  m_Layer: 0
+  m_Name: DuctTapePickup
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2534585619354534519
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2714266897951438854}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -19.21, y: -0.853, z: -71.03}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2657911681530291321}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6610321107765405823
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2714266897951438854}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bd41a422e191bf44840588a6cf59620, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  interactPoint: {fileID: 0}
+  itemToPickup: {fileID: 11400000, guid: b9b52bf14a88673489c8fadfc92bc71e, type: 2}
+  itemQuantity: 1
+  destroyOnInteract: 1
+  OnInteracted:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 122984351120487590}
+        m_TargetAssemblyTypeName: SubtitleTrigger, Assembly-CSharp
+        m_MethodName: TriggerSubtitle
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+  pckupClip: {fileID: 8300000, guid: 55cf98c19644cc049a55ab11d87d9f05, type: 3}
+--- !u!114 &122984351120487590
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2714266897951438854}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43cf92587ae54e54e82540ffd217c4aa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  autoTriggerOnStart: 0
+  autoTriggerOnStartDelay: 0
+  lifeTime: 1.5
+  triggerOnce: 0
+  freezeGame: 1
+  subtitleTriggerType: 0
+  subtitleType: 0
+  completedEventType: 1
+  onSubtitleTriggerCompleted:
+    m_PersistentCalls:
+      m_Calls: []
+  subtitleRef:
+    m_TableReference:
+      m_TableCollectionName: GUID:0d8ee424ff218bd49a04803c55de9155
+    m_TableEntryReference:
+      m_KeyId: 18507459029946368
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  subtitleGroupRef: []
+  audioClip: {fileID: 8300000, guid: 55cf98c19644cc049a55ab11d87d9f05, type: 3}
+  audioSource: {fileID: 0}
+  references:
+    version: 2
+    RefIds: []
+--- !u!135 &2221497456375551967
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2714266897951438854}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Radius: 0.5
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &3010102931605692739
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2714266897951438854}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4e830ce84020cd4fa77d0366c6ad114, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  id: 
+--- !u!114 &-3885300342562051385
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2714266897951438854}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ae91cde4a3f102c4e8cd355502aded30, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!1001 &2551418840735286162
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 2534585619354534519}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 3d83e7cababa8ab4990df60c0597aebb,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 3d83e7cababa8ab4990df60c0597aebb,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.12649637
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 3d83e7cababa8ab4990df60c0597aebb,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 3d83e7cababa8ab4990df60c0597aebb,
+        type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 3d83e7cababa8ab4990df60c0597aebb,
+        type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 3d83e7cababa8ab4990df60c0597aebb,
+        type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 3d83e7cababa8ab4990df60c0597aebb,
+        type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 3d83e7cababa8ab4990df60c0597aebb,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 3d83e7cababa8ab4990df60c0597aebb,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 3d83e7cababa8ab4990df60c0597aebb,
+        type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 3d83e7cababa8ab4990df60c0597aebb,
+        type: 3}
+      propertyPath: m_Name
+      value: DuctTape
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 3d83e7cababa8ab4990df60c0597aebb, type: 3}
+--- !u!4 &2657911681530291321 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 3d83e7cababa8ab4990df60c0597aebb,
+    type: 3}
+  m_PrefabInstance: {fileID: 2551418840735286162}
+  m_PrefabAsset: {fileID: 0}
