@@ -37,10 +37,36 @@ public class UniqueIDGenerator : Editor
             }
         }
         
+        // Generate IDs for SaveableUIImage markers
+        SaveableUIImage[] allUIImages = FindObjectsByType<SaveableUIImage>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        int markerIDCount = 0;
+        
+        foreach (SaveableUIImage uiImage in allUIImages)
+        {
+            if (uiImage.markers == null || uiImage.markers.Length == 0)
+                continue;
+            
+            for (int i = 0; i < uiImage.markers.Length; i++)
+            {
+                if (string.IsNullOrEmpty(uiImage.markers[i].uniqueID))
+                {
+                    // Auto-generate ID based on marker GameObject name
+                    if (uiImage.markers[i].marker != null)
+                    {
+                        uiImage.markers[i].uniqueID = $"{uiImage.markers[i].marker.name}_{System.Guid.NewGuid().ToString().Substring(0, 8)}";
+                        markerIDCount++;
+                        Debug.Log($"Generated marker ID: {uiImage.markers[i].uniqueID} for {uiImage.markers[i].marker.name}");
+                    }
+                }
+            }
+            
+            EditorUtility.SetDirty(uiImage);
+        }
+        
         // Mark the scene as dirty so Unity prompts to save
         EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
         
-        Debug.Log($"<color=green>UniqueID Generation Complete!</color> Generated: {generatedCount}, Skipped: {skippedCount}");
+        Debug.Log($"<color=green>UniqueID Generation Complete!</color> Generated: {generatedCount}, Skipped: {skippedCount}, Marker IDs: {markerIDCount}");
         Debug.Log("<color=yellow>Remember to save your scene (Ctrl+S) to persist the IDs!</color>");
     }
     
@@ -74,5 +100,38 @@ public class UniqueIDGenerator : Editor
         
         Debug.Log($"<color=green>Regenerated {regeneratedCount} UniqueIDs!</color>");
         Debug.Log("<color=yellow>Remember to save your scene (Ctrl+S)!</color>");
+    }
+    
+    [MenuItem("Tools/Save System/Clear All Map Marker PlayerPrefs")]
+    public static void ClearMapMarkerPrefs()
+    {
+        if (!EditorUtility.DisplayDialog("Clear Map Markers", 
+            "This will clear all saved map marker states from PlayerPrefs. Continue?", 
+            "Yes, Clear", "Cancel"))
+        {
+            return;
+        }
+        
+        // Find all SaveableUIImage components
+        SaveableUIImage[] allUIImages = FindObjectsByType<SaveableUIImage>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        int clearedCount = 0;
+        
+        foreach (SaveableUIImage uiImage in allUIImages)
+        {
+            if (uiImage.markers == null)
+                continue;
+            
+            foreach (var marker in uiImage.markers)
+            {
+                if (!string.IsNullOrEmpty(marker.uniqueID))
+                {
+                    UnityEngine.PlayerPrefs.DeleteKey($"UIImage_{marker.uniqueID}");
+                    clearedCount++;
+                }
+            }
+        }
+        
+        UnityEngine.PlayerPrefs.Save();
+        Debug.Log($"<color=green>Cleared {clearedCount} map marker PlayerPrefs!</color>");
     }
 }

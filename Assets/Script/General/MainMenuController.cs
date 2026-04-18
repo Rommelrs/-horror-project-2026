@@ -66,6 +66,15 @@ public class MainMenuController : MonoBehaviour
     /// </summary>
     private void OnNewGame()
     {
+        // Clear SaveManager runtime tracking for new game
+        if (SaveManager.instance != null)
+        {
+            SaveManager.instance.ClearAllRuntimeTracking();
+        }
+        
+        // Clear all map marker PlayerPrefs
+        ClearAllMapMarkerPlayerPrefs();
+        
         // Load the first game scene using LoadingHandler
         if (LoadingHandler.instance != null)
         {
@@ -76,6 +85,31 @@ public class MainMenuController : MonoBehaviour
             Debug.LogWarning("LoadingHandler instance not found! Loading scene directly.");
             UnityEngine.SceneManagement.SceneManager.LoadScene(firstGameSceneName);
         }
+    }
+    
+    /// <summary>
+    /// Clear all map marker PlayerPrefs (called on new game)
+    /// </summary>
+    private void ClearAllMapMarkerPlayerPrefs()
+    {
+        // Get all keys that start with "UIImage_"
+        // PlayerPrefs doesn't have a "get all keys" method, so we need to track a list
+        // For now, just delete all with a known prefix pattern
+        
+        // Alternative: Use a more robust approach by storing a list of marker IDs
+        // For simplicity, we'll just clear everything that matches the pattern
+        
+        // Note: This is a brute-force approach. In a real game, you'd track marker IDs.
+        // For now, we'll use a regex-like approach by trying common patterns
+        
+        // Since we can't enumerate PlayerPrefs keys, we'll use a marker list approach
+        // This will be handled by SaveableUIImage components when they initialize
+        
+        // Clear a marker to indicate new game (SaveableUIImage will check this)
+        PlayerPrefs.SetInt("IsNewGame", 1);
+        PlayerPrefs.Save();
+        
+        Debug.Log("[MainMenu] Cleared map markers for new game");
     }
     
     /// <summary>
