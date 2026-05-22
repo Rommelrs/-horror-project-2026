@@ -54,7 +54,7 @@ public class EnemySidestepState : EnemyState
     {
         base.Exit();
 
-        enemy.rb.velocity = Vector3.zero;
+        enemy.rb.linearVelocity = Vector3.zero;
         enemy.rb.angularVelocity = Vector3.zero;
         enemy.rb.useGravity = false;
         enemy.rb.isKinematic = true;
@@ -107,16 +107,16 @@ public class EnemySidestepState : EnemyState
             if (isSidesteppingToRight)
             {
                 //Sidestepping to Right
-                if (enemy.rb.velocity.magnitude < enemy.stats.sideStepSpeed)
+                if (enemy.rb.linearVelocity.magnitude < enemy.stats.sideStepSpeed)
                     enemy.rb.AddForce(enemy.transform.right * enemy.stats.sideStepAccelaration * Time.fixedDeltaTime, ForceMode.Impulse);
-                enemy.rb.velocity = Vector3.ClampMagnitude(enemy.rb.velocity, enemy.stats.sideStepSpeed);
+                enemy.rb.linearVelocity = Vector3.ClampMagnitude(enemy.rb.linearVelocity, enemy.stats.sideStepSpeed);
             }
             else
             {
                 //Sidestepping to Left
-                if (enemy.rb.velocity.magnitude < enemy.stats.sideStepSpeed)
+                if (enemy.rb.linearVelocity.magnitude < enemy.stats.sideStepSpeed)
                     enemy.rb.AddForce(-enemy.transform.right * enemy.stats.sideStepAccelaration * Time.fixedDeltaTime, ForceMode.Impulse);
-                enemy.rb.velocity = Vector3.ClampMagnitude(enemy.rb.velocity, enemy.stats.sideStepSpeed);
+                enemy.rb.linearVelocity = Vector3.ClampMagnitude(enemy.rb.linearVelocity, enemy.stats.sideStepSpeed);
             }
         }
     }

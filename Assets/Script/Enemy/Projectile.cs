@@ -53,15 +53,15 @@ public class Projectile : MonoBehaviour, IPoolable
 
     private void FixedUpdate()
     {
-        rb.velocity += Vector3.up * gravity * Time.fixedDeltaTime;
+        rb.linearVelocity += Vector3.up * gravity * Time.fixedDeltaTime;
     }
 
     private void LateUpdate()
     {
         // Rotate arrow to face velocity
-        if (rb.velocity.sqrMagnitude > 0.1f)
+        if (rb.linearVelocity.sqrMagnitude > 0.1f)
         {
-            transform.forward = rb.velocity.normalized;
+            transform.forward = rb.linearVelocity.normalized;
         }
     }
 
@@ -75,7 +75,7 @@ public class Projectile : MonoBehaviour, IPoolable
             return;
         }
 
-        rb.velocity = velocity;
+        rb.linearVelocity = velocity;
     }
 
     public void ShootProjectile(Vector3 targetPosition, BagBearerProjectileTest owner)
@@ -88,7 +88,7 @@ public class Projectile : MonoBehaviour, IPoolable
             return;
         }
 
-        rb.velocity = velocity;
+        rb.linearVelocity = velocity;
     }
 
     // Shoot at a fixed position without an owner
@@ -102,7 +102,7 @@ public class Projectile : MonoBehaviour, IPoolable
             return;
         }
 
-        rb.velocity = velocity;
+        rb.linearVelocity = velocity;
     }
 
     private Vector3 CalculateLaunchVelocity(Vector3 target)

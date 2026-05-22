@@ -329,6 +329,6 @@ public class PlayerMovement : MonoBehaviour
         Vector3 pushDir = new Vector3(hit.moveDirection.x, 0, hit.moveDirection.z);
 
         // Apply force to the rigidbody
-        body.velocity = pushDir * pushForce;
+        body.linearVelocity = pushDir * pushForce;
     }
 }

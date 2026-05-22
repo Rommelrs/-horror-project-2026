@@ -55,7 +55,7 @@ public class EnemyKnockBackState : EnemyState
 
         if (knockBackCR != null) enemy.StopCoroutine(knockBackCR);
 
-        enemy.rb.velocity = Vector3.zero;
+        enemy.rb.linearVelocity = Vector3.zero;
         enemy.rb.angularVelocity = Vector3.zero;
         enemy.rb.useGravity = false;
         enemy.rb.isKinematic = true;
@@ -118,9 +118,9 @@ public class EnemyKnockBackState : EnemyState
         yield return new WaitForFixedUpdate();
       
         yield return new WaitForSeconds(0.2f);
-        yield return new WaitUntil(() => enemy.rb.velocity.magnitude < enemy.stats.stillThreshold);
+        yield return new WaitUntil(() => enemy.rb.linearVelocity.magnitude < enemy.stats.stillThreshold);
 
-        enemy.rb.velocity = Vector3.zero;
+        enemy.rb.linearVelocity = Vector3.zero;
         enemy.rb.angularVelocity = Vector3.zero;
         enemy.rb.useGravity = false;
         enemy.rb.isKinematic = true;
