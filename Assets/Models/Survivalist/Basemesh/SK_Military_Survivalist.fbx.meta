@@ -1,69 +1,69 @@
 fileFormatVersion: 2
 guid: 0e55d5c42cc96404f872b45455603f8b
 ModelImporter:
-  serializedVersion: 21300
+  serializedVersion: 24200
   internalIDToNameTable: []
   externalObjects:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Mat_Military_Backpack_1
-    second: {fileID: 2100000, guid: bb22c5d48abf85d4f98617d056e1d110, type: 2}
+    second: {fileID: 2100000, guid: b9f4585cc8c38a548863b1adca288e15, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Mat_Military_Boots_3
-    second: {fileID: 2100000, guid: b4968c47c65a7f04d838250af66552f0, type: 2}
+    second: {fileID: 2100000, guid: b02ac1d19bbb4f6478006230b56832be, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Mat_Military_Cap_1
-    second: {fileID: 2100000, guid: ca362cd434882e7468146d69e8b14eda, type: 2}
+    second: {fileID: 2100000, guid: 9c91383277664b248a3a7d1e8afb6a4a, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Mat_Military_Eyes_1
-    second: {fileID: 2100000, guid: 38b71884de7d2094587df9ab6c870d4b, type: 2}
+    second: {fileID: 2100000, guid: 71265703b5b4aad4c902469a25733dfc, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Mat_Military_Gloves_1
-    second: {fileID: 2100000, guid: 7e5e6c8eb72897145ac408f805ab3a7a, type: 2}
+    second: {fileID: 2100000, guid: d9fc1a54b854cfa4c8e6d4b5d43d98f3, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Mat_Military_Hands_1
-    second: {fileID: 2100000, guid: a4f3038e85335ab4eb10f074fda8b6ad, type: 2}
+    second: {fileID: 2100000, guid: 9556d995bc5c1e0489e5641ebfab9c9b, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Mat_Military_Hands_3
-    second: {fileID: 2100000, guid: 308bfb0f350b3eb4781240efb6c21c23, type: 2}
+    second: {fileID: 2100000, guid: 45804fdff500fcd4891750e4e67534b8, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Mat_Military_Head_1
-    second: {fileID: 2100000, guid: 01e354ee2a262cf40a7b08040b6236fe, type: 2}
+    second: {fileID: 2100000, guid: be484c9dcfea67a4b9844343eb5afe32, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Mat_Military_Pants_2
-    second: {fileID: 2100000, guid: 39c752ff4621e8f408fe3e0030d2cbce, type: 2}
+    second: {fileID: 2100000, guid: 966fb83ab724c2f41a73b1aae725ef94, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Mat_Military_Pouches_1
-    second: {fileID: 2100000, guid: 66281e6f4c3b1b34d8046c9fdea8fa9f, type: 2}
+    second: {fileID: 2100000, guid: 3ae25e06ce2a6c04bbccda5e02e9d8f2, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Mat_Military_Shirt_3
-    second: {fileID: 2100000, guid: 8f39a9a3bee8af04889e87c953c40533, type: 2}
+    second: {fileID: 2100000, guid: 2564528848457354eb448b2a723b2465, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: Mat_Military_Vest_1
-    second: {fileID: 2100000, guid: 85442a5678b051043a848d96f57c039d, type: 2}
+    second: {fileID: 2100000, guid: 08f192a4b0567524bbee7d32044f81ac, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -76,8 +76,6 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 1
     motionNodeName: 
-    rigImportErrors: 
-    rigImportWarnings: 
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 
@@ -100,6 +98,7 @@ ModelImporter:
     addColliders: 0
     useSRGBMaterialColor: 1
     sortHierarchyByName: 1
+    importPhysicalCameras: 1
     importVisibility: 1
     importBlendShapes: 1
     importCameras: 1
@@ -117,6 +116,9 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
     meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8
@@ -127,6 +129,7 @@ ModelImporter:
     secondaryUVMinObjectScale: 1
     secondaryUVPackMargin: 4
     useFileScale: 1
+    strictVertexDataChecks: 0
   tangentSpace:
     normalSmoothAngle: 60
     normalImportMode: 0
@@ -960,6 +963,7 @@ ModelImporter:
   humanoidOversampling: 1
   avatarSetup: 1
   addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 0
   remapMaterialsIfMaterialImportModeIsNone: 0
   additionalBone: 0
   userData: 

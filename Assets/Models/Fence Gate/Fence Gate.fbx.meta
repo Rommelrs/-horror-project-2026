@@ -1,24 +1,24 @@
 fileFormatVersion: 2
 guid: 747f76240bddcbb4baabd87b1980846d
 ModelImporter:
-  serializedVersion: 22200
+  serializedVersion: 24200
   internalIDToNameTable: []
   externalObjects:
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: 09bb1546e3954b9bbba1e61d7a3d41c3_R_fenceCorner_low_opacity
-    second: {fileID: 2800000, guid: ca5430cc4e960344f9c8655408f9d4b1, type: 3}
+    second: {fileID: 2800000, guid: cd49a0d40bc0eda45a163c9d55ef6008, type: 3}
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: 5bca683ac8854e778c28d146e6f6315c_R_fenceCorner_low_metallic
-    second: {fileID: 2800000, guid: 001a2fba18fc63c4a94b285a0fede1ec, type: 3}
+    second: {fileID: 2800000, guid: 0dc10717cc9f2724d88114d170f9261b, type: 3}
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: rusty_metal_04_diff_2k
-    second: {fileID: 2800000, guid: 819cf7dd4f0403a48b72dff7f3bee41b, type: 3}
+    second: {fileID: 2800000, guid: 2bfb703506ccacd4e99e59228d590bc2, type: 3}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -31,8 +31,6 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 0
     motionNodeName: 
-    rigImportErrors: 
-    rigImportWarnings: 
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 
@@ -73,6 +71,9 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
     meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8
