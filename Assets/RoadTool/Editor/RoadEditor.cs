@@ -43,6 +43,7 @@ namespace RoadTool.EditorTools
             {
                 if (GUILayout.Button("Rebuild Mesh"))
                 {
+                    road.InvalidateCurbBake();
                     road.Rebuild();
                     EditorUtility.SetDirty(road);
                 }
@@ -58,6 +59,12 @@ namespace RoadTool.EditorTools
                         EditorUtility.SetDirty(road);
                     }
                 }
+                if (GUILayout.Button("Re-bake Curb"))
+                {
+                    road.InvalidateCurbBake();
+                    road.Rebuild();
+                    EditorUtility.SetDirty(road);
+                }
             }
 
             if (road.splineContainer != null && road.splineContainer.Spline != null)
@@ -68,6 +75,21 @@ namespace RoadTool.EditorTools
                     EditorGUILayout.HelpBox(
                         $"knotWidths has {road.knotWidths.Count} entries, but the spline has {knots} knots. " +
                         "Click 'Sync Knot Widths' to resize.",
+                        MessageType.Warning);
+                }
+            }
+
+            if (road.drawCurbs && road.curbPrefab != null)
+            {
+                bool anyUnreadable = false;
+                var mfs = road.curbPrefab.GetComponentsInChildren<MeshFilter>(true);
+                foreach (var mf in mfs)
+                    if (mf.sharedMesh != null && !mf.sharedMesh.isReadable) { anyUnreadable = true; break; }
+                if (anyUnreadable)
+                {
+                    EditorGUILayout.HelpBox(
+                        "The assigned curb prefab has meshes without Read/Write enabled. " +
+                        "Open the FBX import settings and tick 'Read/Write' under Model.",
                         MessageType.Warning);
                 }
             }
