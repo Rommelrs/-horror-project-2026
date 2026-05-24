@@ -1,49 +1,49 @@
 fileFormatVersion: 2
 guid: 4ee2720b0356910488b184691b3907f2
 ModelImporter:
-  serializedVersion: 22200
+  serializedVersion: 24200
   internalIDToNameTable: []
   externalObjects:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: blinn1
-    second: {fileID: 2100000, guid: 65d87856a48b4f145bb40c0da407ff1a, type: 2}
+    second: {fileID: 2100000, guid: b8e3813c40fe8cf4da4ac5599ef6f53e, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: lambert2
-    second: {fileID: 2100000, guid: eb7e43a18453fd04687a36928ba1978a, type: 2}
+    second: {fileID: 2100000, guid: 04f19f68611643e4ab0b9b19d50b65f1, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: lambert3
-    second: {fileID: 2100000, guid: c2d87c3e1b6c35f46a1444c148c22d79, type: 2}
+    second: {fileID: 2100000, guid: 1bae38feaaecf664995b1c0d68d836ae, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: lambert4
-    second: {fileID: 2100000, guid: 42127f25ff247de458d0f0f93c4080a0, type: 2}
+    second: {fileID: 2100000, guid: 53e53bd44f4edde40a481c359f0f838a, type: 2}
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: Box back texture
-    second: {fileID: 2800000, guid: dc569d98273516046af6ef464891230d, type: 3}
+    second: {fileID: 2800000, guid: f632e7326d82ae644a3e8b17020f4c5c, type: 3}
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: Box front texture
-    second: {fileID: 2800000, guid: 001125aa10ec59c46ae423fa09db6678, type: 3}
+    second: {fileID: 2800000, guid: 361c726c60f61d9428335cb24b3ea64a, type: 3}
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: Screenshot 2026-01-14 010248
-    second: {fileID: 2800000, guid: d80d5b7110f69f34cb979a73bdd323ad, type: 3}
+    second: {fileID: 2800000, guid: 3323201cc7d7b7c45a2b651a0b8e205b, type: 3}
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: bullet.1
-    second: {fileID: 2800000, guid: fab35397b41dddf41832b9fc062f2dfa, type: 3}
+    second: {fileID: 2800000, guid: d2ecd2407a955e94190227790391e6c2, type: 3}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -56,8 +56,6 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 0
     motionNodeName: 
-    rigImportErrors: 
-    rigImportWarnings: 
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 
@@ -98,6 +96,9 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
     meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8

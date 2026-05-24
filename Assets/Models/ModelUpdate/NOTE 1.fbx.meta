@@ -1,19 +1,19 @@
 fileFormatVersion: 2
 guid: 800facc82ac9bab4e839e9fe1839db55
 ModelImporter:
-  serializedVersion: 22200
+  serializedVersion: 24200
   internalIDToNameTable: []
   externalObjects:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: lambert2
-    second: {fileID: 2100000, guid: 510a7cfc5abc0914e8485a2ae9623794, type: 2}
+    second: {fileID: 2100000, guid: 5adf698fe1a1d074da5f3854d7ae96f9, type: 2}
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: sameer
-    second: {fileID: 2800000, guid: 51e9e2fa7ecc43647a8d384a8d4a9434, type: 3}
+    second: {fileID: 2800000, guid: 6c8f3496c35ff094f96072748f07d635, type: 3}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -26,8 +26,6 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 0
     motionNodeName: 
-    rigImportErrors: 
-    rigImportWarnings: 
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 
@@ -68,6 +66,9 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
     meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8

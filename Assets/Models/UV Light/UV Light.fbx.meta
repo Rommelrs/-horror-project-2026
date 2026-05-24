@@ -1,19 +1,19 @@
 fileFormatVersion: 2
 guid: c378d193dafb84240b6dd4718823c75f
 ModelImporter:
-  serializedVersion: 22200
+  serializedVersion: 24200
   internalIDToNameTable: []
   externalObjects:
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: T_Flashlight_Base_color
-    second: {fileID: 2800000, guid: ef1c458ea641c2440ae28f25f9fbe11c, type: 3}
+    second: {fileID: 2800000, guid: 6d2b8eaadb8e9664ca35975680afd137, type: 3}
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: T_Flashlight_Normal_OpenGL
-    second: {fileID: 2800000, guid: 206caf0ebbd2f8446ba75993565dee82, type: 3}
+    second: {fileID: 2800000, guid: 3d1544da9c4d2c34b932e848fab8c5dc, type: 3}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -26,8 +26,6 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 0
     motionNodeName: 
-    rigImportErrors: 
-    rigImportWarnings: 
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 
@@ -68,6 +66,9 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
     meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8

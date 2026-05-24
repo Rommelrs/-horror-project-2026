@@ -1,29 +1,29 @@
 fileFormatVersion: 2
 guid: 8c246320f3d524c46aad8e2f62459281
 ModelImporter:
-  serializedVersion: 22200
+  serializedVersion: 24200
   internalIDToNameTable: []
   externalObjects:
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: texture_pbr_20250901
-    second: {fileID: 2800000, guid: 42a574f5de4c72e4cab9565505074acc, type: 3}
+    second: {fileID: 2800000, guid: a075a9e9ddf72c8469f786c2e25896fc, type: 3}
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: texture_pbr_20250901_metallic
-    second: {fileID: 2800000, guid: 6a34bab2a726f4d48a8365ffaec13495, type: 3}
+    second: {fileID: 2800000, guid: 26257e3aa030e2141badd203a16486af, type: 3}
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: texture_pbr_20250901_normal
-    second: {fileID: 2800000, guid: 9a7b696af9e1ace439e7f0301be08b0d, type: 3}
+    second: {fileID: 2800000, guid: 0b10a0ca49a226b4fa31456b9e1e5817, type: 3}
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: texture_pbr_20250901_roughness
-    second: {fileID: 2800000, guid: 90d54cfb0319c9f409fd94fae712984b, type: 3}
+    second: {fileID: 2800000, guid: f4891cdc5cf779f4bb3de75478dcf9fd, type: 3}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -36,8 +36,6 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 0
     motionNodeName: 
-    rigImportErrors: 
-    rigImportWarnings: 
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 
@@ -78,6 +76,9 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
     meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8
