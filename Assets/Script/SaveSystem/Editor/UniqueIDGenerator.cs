@@ -131,7 +131,10 @@ public class UniqueIDGenerator : Editor
             }
         }
         
+        // Also clear HasMap flag
+        UnityEngine.PlayerPrefs.DeleteKey("HasMap");
+        
         UnityEngine.PlayerPrefs.Save();
-        Debug.Log($"<color=green>Cleared {clearedCount} map marker PlayerPrefs!</color>");
+        Debug.Log($"<color=green>Cleared {clearedCount} map marker PlayerPrefs and HasMap flag!</color>");
     }
 }

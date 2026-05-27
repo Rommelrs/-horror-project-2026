@@ -107,9 +107,13 @@ public class MainMenuController : MonoBehaviour
         
         // Clear a marker to indicate new game (SaveableUIImage will check this)
         PlayerPrefs.SetInt("IsNewGame", 1);
+        
+        // Clear HasMap flag for new game
+        PlayerPrefs.SetInt("HasMap", 0);
+        
         PlayerPrefs.Save();
         
-        Debug.Log("[MainMenu] Cleared map markers for new game");
+        Debug.Log("[MainMenu] Cleared map markers and HasMap for new game");
     }
     
     /// <summary>
