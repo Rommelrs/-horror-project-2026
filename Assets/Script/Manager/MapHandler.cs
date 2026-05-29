@@ -39,6 +39,26 @@ public class MapHandler : MonoBehaviour
     private void Start()
     {
         mapInput.action.performed += OnMapButtonPressed;
+        
+        // If player has map, briefly open/close it to initialize markers
+        if (Player.instance != null && Player.instance.hasMap)
+        {
+            StartCoroutine(Co_InitializeMapMarkers());
+        }
+    }
+    
+    private System.Collections.IEnumerator Co_InitializeMapMarkers()
+    {
+        // Wait for everything to be ready
+        yield return new WaitForEndOfFrame();
+        
+        // Briefly enable map menu to trigger SaveableUIImage.Start()
+        if (mapMenu != null)
+        {
+            mapMenu.SetActive(true);
+            yield return null;
+            mapMenu.SetActive(false);
+        }
     }
 
     private void OnDestroy()

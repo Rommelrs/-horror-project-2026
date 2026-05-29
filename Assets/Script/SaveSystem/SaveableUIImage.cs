@@ -1,8 +1,10 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Saves the active state of UI Image child GameObjects
-/// Put this on the PARENT GameObject (active container)
+/// IMPORTANT: Put this on an ALWAYS-ACTIVE GameObject (e.g. GameManager, EventSystem, or a dedicated MapMarkerManager)
+/// NOT on the map UI parent (which may be inactive)
 /// Each CHILD marker gets tracked individually with its own save data
 /// When a child is enabled via OnPlayerTrigger, it saves to PlayerPrefs
 /// On load, it restores each child's state
@@ -22,13 +24,25 @@ public class SaveableUIImage : MonoBehaviour
     [Tooltip("Add all child UI Image GameObjects here (each one starts disabled)")]
     public MarkerData[] markers;
     
+    private bool hasInitialized = false;
+    
     private void Start()
     {
+        InitializeMarkers();
+    }
+    
+    private void InitializeMarkers()
+    {
+        if (hasInitialized)
+            return;
+        
         if (markers == null || markers.Length == 0)
         {
             Debug.LogError($"[SaveableUIImage] No markers assigned on {gameObject.name}!");
             return;
         }
+        
+        hasInitialized = true;
         
         // Check if this is a new game (clear markers)
         bool isNewGame = PlayerPrefs.GetInt("IsNewGame", 0) == 1;

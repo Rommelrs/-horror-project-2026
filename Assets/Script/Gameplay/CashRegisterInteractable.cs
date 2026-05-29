@@ -163,7 +163,21 @@ public class CashRegisterInteractable : Interactable
 
         currentCode = "";
         UpdateCodeText();
-
+        
+        // If code was correct, auto-open the map
+        if (correctCodeSubmitted && MapHandler.instance != null)
+        {
+            StartCoroutine(Co_OpenMapAfterClose());
+        }
+    }
+    
+    IEnumerator Co_OpenMapAfterClose()
+    {
+        // Wait a bit for subtitle to finish or player to read it
+        yield return new WaitForSeconds(1f);
+        
+        // Open the map
+        MapHandler.instance.EnableMapMenu();
     }
 
     Coroutine attemptToPlayNoPowerSubtitleCR;
