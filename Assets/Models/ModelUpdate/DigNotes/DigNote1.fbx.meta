@@ -1,29 +1,29 @@
 fileFormatVersion: 2
 guid: c33bcdaa70880e94b8be0dfac207b544
 ModelImporter:
-  serializedVersion: 22200
+  serializedVersion: 24200
   internalIDToNameTable: []
   externalObjects:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: lambert2
-    second: {fileID: 2100000, guid: c7e302ca5c3a6504889b0313c2abe2a1, type: 2}
+    second: {fileID: 2100000, guid: e54f2ce20e6a6d34e91fd1a57ac0c48d, type: 2}
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
       name: lambert3
-    second: {fileID: 2100000, guid: 779f02af92b9d1b469728c8e1ea515bb, type: 2}
+    second: {fileID: 2100000, guid: 7fda9c44a9f2d5941a0f774b32e78c9c, type: 2}
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: images (1)
-    second: {fileID: 2800000, guid: 8d67b428891507442bc32abb7b3f98d4, type: 3}
+    second: {fileID: 2800000, guid: c5185c27e4db52f4ab347625ed094342, type: 3}
   - first:
       type: UnityEngine:Texture2D
       assembly: UnityEngine.CoreModule
       name: n6
-    second: {fileID: 2800000, guid: cbd3904279b2e9e49a02e87146fe3a18, type: 3}
+    second: {fileID: 2800000, guid: 65642c7b98348f14baffe6866afef265, type: 3}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -36,8 +36,6 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 0
     motionNodeName: 
-    rigImportErrors: 
-    rigImportWarnings: 
     animationImportErrors: 
     animationImportWarnings: 
     animationRetargetingWarnings: 
@@ -78,6 +76,9 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
     meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8
