@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class EnemyAddonCustomMoveToSpot : MonoBehaviour
 {
@@ -10,9 +11,16 @@ public class EnemyAddonCustomMoveToSpot : MonoBehaviour
     [SerializeField] bool playLookAroundOnDetect = true;
     [SerializeField] float idleAtWaypoints = 0f; // Idle duration at each waypoint (0 = no idle)
     [SerializeField] float idleAtFinalWaypoint = 0f; // Idle duration at final waypoint before destroying (0 = destroy immediately)
+    [SerializeField] bool destroyParentInstead = false; // If true, destroys parent GameObject instead of this GameObject
     [SerializeField] AudioClip startClip;
     [SerializeField] AudioClip waypointReachedClip; // Plays at each waypoint
     [SerializeField] AudioClip finalWaypointReachedClip; // Plays at final waypoint
+
+    [Header("Events")]
+    public UnityEvent onMovementStarted; // When enemy starts moving after detection
+    public UnityEvent onEachWaypointReached; // Called at each waypoint
+    public UnityEvent onFinalWaypointReached; // Called when reaching final destination
+    public UnityEvent onBeforeDestroy; // Called right before destroying the enemy
 
     Enemy enemy;
     bool playerDetected = false;
@@ -56,6 +64,9 @@ public class EnemyAddonCustomMoveToSpot : MonoBehaviour
         enemy.stats.waypoints = waypoints;
         enemy.stats.idleHoldBetweenWaypointDuration = idleAtWaypoints;
         enemy.stateMachine.ChangeState(enemy.enemyWanderState);
+        
+        onMovementStarted?.Invoke();
+        
         yield break;
     }
 
@@ -66,6 +77,8 @@ public class EnemyAddonCustomMoveToSpot : MonoBehaviour
         {
             SoundEffectManager.instance.PlaySFX(waypointReachedClip);
         }
+        
+        onEachWaypointReached?.Invoke();
     }
 
     private void OnReachedToSpot()
@@ -80,6 +93,8 @@ public class EnemyAddonCustomMoveToSpot : MonoBehaviour
         {
             SoundEffectManager.instance.PlaySFX(finalWaypointReachedClip);
         }
+        
+        onFinalWaypointReached?.Invoke();
 
         // Wait at final waypoint if set
         if (idleAtFinalWaypoint > 0f)
@@ -87,18 +102,33 @@ public class EnemyAddonCustomMoveToSpot : MonoBehaviour
             yield return new WaitForSeconds(idleAtFinalWaypoint);
         }
 
-        // Register as dead with save system before destroying
-        SaveableEnemy saveableEnemy = GetComponent<SaveableEnemy>();
-        if (saveableEnemy != null)
+        // Determine which GameObject to destroy
+        GameObject objectToDestroy = destroyParentInstead && transform.parent != null ? transform.parent.gameObject : this.gameObject;
+        
+        // Mark scenario as triggered (for parent GameObjects with SaveableTrigger)
+        SaveableTrigger saveableTrigger = objectToDestroy.GetComponent<SaveableTrigger>();
+        if (saveableTrigger != null)
         {
-            // Use SaveManager directly to register as dead
-            if (SaveManager.instance != null)
+            saveableTrigger.MarkAsTriggered();
+            Debug.Log($"Scenario completed and marked as triggered: {objectToDestroy.name}");
+        }
+        else
+        {
+            // Fallback: Register as dead enemy (for standalone enemies with SaveableEnemy)
+            SaveableEnemy saveableEnemy = GetComponent<SaveableEnemy>();
+            if (saveableEnemy != null)
             {
-                SaveManager.instance.RegisterDeadEnemy(saveableEnemy.GetComponent<UniqueID>().ID);
-                Debug.Log($"Enemy reached destination and registered as dead: {gameObject.name}");
+                // Use SaveManager directly to register as dead
+                if (SaveManager.instance != null)
+                {
+                    SaveManager.instance.RegisterDeadEnemy(saveableEnemy.GetComponent<UniqueID>().ID);
+                    Debug.Log($"Enemy reached destination and registered as dead: {gameObject.name}");
+                }
             }
         }
         
-        Destroy(this.gameObject);
+        onBeforeDestroy?.Invoke();
+        
+        Destroy(objectToDestroy);
     }
 }
