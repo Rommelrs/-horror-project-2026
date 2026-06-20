@@ -55,6 +55,14 @@ public class BagBearerEnemy : Enemy
 
         OnChaseStarted.AddListener(EnemyChaseStateStarted);
         OnAttackStarted.AddListener(EnemyAttackStateStarted);
+        
+        // Disable NavMeshAgent movement for Fixed enemies
+        if (stats.enemyType == EnemyType.Fixed && agent != null && agent.isOnNavMesh)
+        {
+            agent.updatePosition = false; // Don't move
+            agent.updateRotation = true;  // Allow rotation
+            agent.isStopped = true;
+        }
 
         // Ensure reload objects match their isReloaded state on spawn
         for (int i = 0; i < bagBearerReloadGroup.Length; i++)
@@ -73,6 +81,24 @@ public class BagBearerEnemy : Enemy
         //if (enemy.health.isDamageByWeakpointHit)
     }
 
+    void LateUpdate()
+    {
+        // Keep Fixed enemies stationary
+        if (stats.enemyType == EnemyType.Fixed)
+        {
+            // Allow movement during knockback
+            if (stateMachine.CurrentState == enemyKnockbackState)
+                return;
+            
+            // Force velocity to zero so animation stays idle
+            if (agent != null && agent.isOnNavMesh)
+            {
+                agent.velocity = Vector3.zero;
+                agent.isStopped = true;
+            }
+        }
+    }
+    
     public override void OnDestroy()
     {
         base.OnDestroy();
@@ -86,6 +112,7 @@ public class BagBearerEnemy : Enemy
             EnemyAttackCoordinator.Instance.OnEnemyDestroyed(this);
         }
     }
+    
 
     public override void CheckLeaveCondition(EnemyState currentState)
     {
@@ -127,16 +154,19 @@ public class BagBearerEnemy : Enemy
         //Currently in Wander State
         if (currentState == enemyWanderState)
         {
-            //If within attack range
-            if (PlayerInRange(stats.attackRange))
+            if (stats.enemyType == EnemyType.Wandering || stats.enemyType == EnemyType.Aggressive)
             {
-                stateMachine.ChangeState(attackState);
-            }
+                //If within attack range
+                if (PlayerInRange(stats.attackRange))
+                {
+                    stateMachine.ChangeState(attackState);
+                }
 
-            //If within vision radius
-            if (PlayerInRange(stats.visionRadius))
-            {
-                stateMachine.ChangeState(chaseState);
+                //If within vision radius
+                if (PlayerInRange(stats.visionRadius))
+                {
+                    stateMachine.ChangeState(chaseState);
+                }
             }
         }
 
@@ -264,7 +294,8 @@ public class BagBearerEnemy : Enemy
             else
                 this.damageForceMultiplier = 1f;
 
-            if(stats.enemyType != EnemyType.Fixed)
+            // Fixed enemies: allow knockback state for weakpoint hits, otherwise just play animation
+            if(stats.enemyType != EnemyType.Fixed || health.isDamageByWeakpointHit)
                 stateMachine.ChangeState(enemyKnockbackState);
             else
                 anim.SetTrigger("Knockback");

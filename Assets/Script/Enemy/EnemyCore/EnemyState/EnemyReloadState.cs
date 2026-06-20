@@ -72,7 +72,15 @@ public class EnemyReloadState : EnemyState
         base.Update();
 
         if (enemy.agent.isOnNavMesh)
+        {
             enemy.agent.isStopped = true;
+            
+            // Force Fixed enemies to stay completely still
+            if (enemy.stats.enemyType == EnemyType.Fixed)
+            {
+                enemy.agent.velocity = Vector3.zero;
+            }
+        }
 
         
         if (enemy.stats.enemyType == EnemyType.Fixed)

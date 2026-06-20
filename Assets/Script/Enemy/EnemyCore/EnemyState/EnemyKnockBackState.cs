@@ -76,7 +76,9 @@ public class EnemyKnockBackState : EnemyState
                 if (!stateChangeTrigerred)
                 {
                     stateChangeTrigerred = true;
-                    enemy.StartCoroutine(Co_WakeUpThenChangeState(enemy.chaseState));
+                    // Fixed enemies go back to idle, others chase
+                    EnemyState nextState = enemy.stats.enemyType == EnemyType.Fixed ? enemy.idleState : enemy.chaseState;
+                    enemy.StartCoroutine(Co_WakeUpThenChangeState(nextState));
                 }
             }
             else
@@ -84,7 +86,9 @@ public class EnemyKnockBackState : EnemyState
                 if (!stateChangeTrigerred)
                 {
                     stateChangeTrigerred = true;
-                    stateMachine.ChangeState(enemy.chaseState);
+                    // Fixed enemies go back to idle, others chase
+                    EnemyState nextState = enemy.stats.enemyType == EnemyType.Fixed ? enemy.idleState : enemy.chaseState;
+                    stateMachine.ChangeState(nextState);
                 }
             }
           

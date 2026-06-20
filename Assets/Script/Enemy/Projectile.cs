@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using ToolBox.Pools;
 
 [RequireComponent(typeof(Rigidbody))]
@@ -28,6 +29,12 @@ public class Projectile : MonoBehaviour, IPoolable
     [SerializeField] private Vector3 dropOffset = new Vector3(0, 0.5f, 0);
     [SerializeField] private float dropForce = 3f;
     [SerializeField] private float dropUpwardForce = 2f;
+
+    [Header("Events")]
+    public UnityEvent onProjectileLaunched; // When projectile is shot
+    public UnityEvent onProjectileHitGround; // When hitting ground/surfaces
+    public UnityEvent onProjectileHitPlayer; // When hitting player
+    public UnityEvent onProjectileDestroyed; // When destroyed by bullet
 
     [System.Serializable]
     public class DropItem
@@ -76,6 +83,7 @@ public class Projectile : MonoBehaviour, IPoolable
         }
 
         rb.linearVelocity = velocity;
+        onProjectileLaunched?.Invoke();
     }
 
     public void ShootProjectile(Vector3 targetPosition, BagBearerProjectileTest owner)
@@ -89,6 +97,7 @@ public class Projectile : MonoBehaviour, IPoolable
         }
 
         rb.linearVelocity = velocity;
+        onProjectileLaunched?.Invoke();
     }
 
     // Shoot at a fixed position without an owner
@@ -103,6 +112,7 @@ public class Projectile : MonoBehaviour, IPoolable
         }
 
         rb.linearVelocity = velocity;
+        onProjectileLaunched?.Invoke();
     }
 
     private Vector3 CalculateLaunchVelocity(Vector3 target)
@@ -178,6 +188,8 @@ public class Projectile : MonoBehaviour, IPoolable
 
         //Drop item (shot by bullet)
         SpawnDrops(dropsOnBulletHit);
+
+        onProjectileDestroyed?.Invoke();
 
         //Send back to pool
         this.gameObject.Release();
@@ -258,6 +270,11 @@ public class Projectile : MonoBehaviour, IPoolable
         {           
             spawnPosition = collision.transform.position;
             isWall = false; // Always use ground effect for player
+            onProjectileHitPlayer?.Invoke();
+        }
+        else
+        {
+            onProjectileHitGround?.Invoke();
         }
 
         //Spawn Particle - choose effect based on surface

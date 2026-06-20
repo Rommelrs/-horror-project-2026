@@ -41,6 +41,12 @@ public class EnemyAttackState : EnemyState
         enemy.CheckLeaveCondition(this);
         canLeave = Time.time > readyToLeaveTime;
 
+        // Force Fixed enemies to stay completely still
+        if (enemy.stats.enemyType == EnemyType.Fixed && enemy.agent.isOnNavMesh)
+        {
+            enemy.agent.velocity = Vector3.zero;
+        }
+
         ////Look at player if ranged attack type enemy
         //if (enemy.stats.attackType == AttackType.Ranged)
         //{
