@@ -336,10 +336,10 @@ MonoBehaviour:
   m_Children: []
   m_Clips:
   - m_Version: 1
-    m_Start: 18.466666666666665
+    m_Start: 19.35
     m_ClipIn: 0
     m_Asset: {fileID: -2954584503571315418}
-    m_Duration: 19.466666666666665
+    m_Duration: 20.049999999999997
     m_TimeScale: 1
     m_ParentTrack: {fileID: -6934526277266825953}
     m_EaseInDuration: 0
@@ -2040,7 +2040,7 @@ MonoBehaviour:
     m_Start: 44.35
     m_ClipIn: 0
     m_Asset: {fileID: 3745377507410712139}
-    m_Duration: 11.007007774775019
+    m_Duration: 13.083333333333329
     m_TimeScale: 1
     m_ParentTrack: {fileID: -4175601127237333412}
     m_EaseInDuration: 0
@@ -2201,7 +2201,7 @@ MonoBehaviour:
     m_Start: 46.53333333333333
     m_ClipIn: 0
     m_Asset: {fileID: -251898572348402812}
-    m_Duration: 8.823674441441689
+    m_Duration: 10.899999999999999
     m_TimeScale: 1
     m_ParentTrack: {fileID: -3680374455038426477}
     m_EaseInDuration: 0
@@ -2210,7 +2210,25 @@ MonoBehaviour:
     m_BlendOutDuration: -1
     m_MixInCurve:
       serializedVersion: 2
-      m_Curve: []
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
@@ -2363,7 +2381,7 @@ MonoBehaviour:
     m_Start: 53.93333333333333
     m_ClipIn: 0
     m_Asset: {fileID: 6863571312607692300}
-    m_Duration: 1.4236744414416904
+    m_Duration: 3.5
     m_TimeScale: 1
     m_ParentTrack: {fileID: -2361749286534113278}
     m_EaseInDuration: 0
@@ -2552,25 +2570,7 @@ MonoBehaviour:
       m_RotationOrder: 4
     m_MixOutCurve:
       serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 1
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
+      m_Curve: []
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
