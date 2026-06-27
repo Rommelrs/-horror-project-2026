@@ -15,6 +15,7 @@ public class CutsceneTrigger : MonoBehaviour
     [SerializeField] private UnityEvent onCutsceneComplete; // Events to trigger before disabling
     
     private static bool hasPlayed = false;
+    private Player originalPlayer; // Store the player we disabled at the start
     
     private void Start()
     {
@@ -59,11 +60,14 @@ public class CutsceneTrigger : MonoBehaviour
             saveableTrigger.MarkAsTriggered();
         }
         
-        // Disable player movement
-        if (Player.instance != null)
+        // Store original player and disable movement
+        originalPlayer = Player.instance; // Remember which player we're disabling
+        
+        if (originalPlayer != null)
         {
-            var movement = Player.instance.GetComponent<PlayerMovement>();
-            if (movement != null) movement.enabled = false;
+            var movement = originalPlayer.GetComponent<PlayerMovement>();
+            if (movement != null)
+                movement.enabled = false;
         }
         
         // Play timeline
@@ -84,11 +88,19 @@ public class CutsceneTrigger : MonoBehaviour
         // Wait for delay to let things finish smoothly
         yield return new WaitForSeconds(delayBeforeDisabling);
         
-        // Re-enable player movement
-        if (Player.instance != null)
+        // Re-enable movement on the ORIGINAL player we disabled
+        if (originalPlayer != null && originalPlayer.gameObject.activeInHierarchy)
+        {
+            var movement = originalPlayer.GetComponent<PlayerMovement>();
+            if (movement != null)
+                movement.enabled = true;
+        }
+        // Fallback to current Player.instance if original is gone
+        else if (Player.instance != null)
         {
             var movement = Player.instance.GetComponent<PlayerMovement>();
-            if (movement != null) movement.enabled = true;
+            if (movement != null)
+                movement.enabled = true;
         }
         
         // Disable the entire cutscene GameObject

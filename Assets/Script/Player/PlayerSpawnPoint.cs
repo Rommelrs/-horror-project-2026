@@ -2,34 +2,41 @@ using UnityEngine;
 
 public class PlayerSpawnPoint : MonoBehaviour
 {
+    [Header("Player Reference")]
+    [SerializeField] private Player targetPlayer; // Manually assign player, or leave null to use Player.instance
+    
+    [Header("Settings")]
     [SerializeField] private bool repositionPlayer = true;
     [SerializeField] private bool resetPlayerState = false;
 
     private void Start()
     {
+        // Use manually assigned player if available, otherwise fall back to singleton
+        Player player = targetPlayer != null ? targetPlayer : Player.instance;
+        
         // Find the Player and reposition
-        if (Player.instance != null && repositionPlayer)
+        if (player != null && repositionPlayer)
         {
             // Disable CharacterController before moving (required for teleportation)
-            if (Player.instance.controller != null)
+            if (player.controller != null)
             {
-                Player.instance.controller.enabled = false;
+                player.controller.enabled = false;
             }
 
             // Move player to spawn point
-            Player.instance.transform.position = transform.position;
-            Player.instance.transform.rotation = transform.rotation;
+            player.transform.position = transform.position;
+            player.transform.rotation = transform.rotation;
 
             // Re-enable CharacterController
-            if (Player.instance.controller != null)
+            if (player.controller != null)
             {
-                Player.instance.controller.enabled = true;
+                player.controller.enabled = true;
             }
 
             // Optionally reset player state
             if (resetPlayerState)
             {
-                Player.instance.ResetPlayer();
+                player.ResetPlayer();
             }
         }
     }
