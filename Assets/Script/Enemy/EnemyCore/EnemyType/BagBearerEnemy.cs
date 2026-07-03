@@ -113,6 +113,42 @@ public class BagBearerEnemy : Enemy
         }
     }
     
+    /// <summary>
+    /// Call this when changing enemy type (e.g. from Fixed to Aggressive)
+    /// </summary>
+    public void ChangeEnemyType(EnemyType newType)
+    {
+        EnemyType oldType = stats.enemyType;
+        stats.enemyType = newType;
+        
+        // If transitioning FROM Fixed to something else, unlock movement
+        if (oldType == EnemyType.Fixed && newType != EnemyType.Fixed)
+        {
+            if (agent != null && agent.isOnNavMesh)
+            {
+                agent.updatePosition = true;  // Re-enable position updates
+                agent.updateRotation = true;  // Keep rotation enabled
+                agent.isStopped = false;      // Allow movement
+            }
+            
+            // Force state change to chase if player is in range
+            if (newType == EnemyType.Aggressive && stateMachine.CurrentState == idleState)
+            {
+                stateMachine.ChangeState(chaseState);
+            }
+        }
+        // If transitioning TO Fixed from something else, lock movement
+        else if (oldType != EnemyType.Fixed && newType == EnemyType.Fixed)
+        {
+            if (agent != null && agent.isOnNavMesh)
+            {
+                agent.updatePosition = false; // Don't move
+                agent.updateRotation = true;  // Allow rotation
+                agent.isStopped = true;       // Stop movement
+            }
+        }
+    }
+    
 
     public override void CheckLeaveCondition(EnemyState currentState)
     {
