@@ -31,6 +31,40 @@ public class SaveableUIImage : MonoBehaviour
         InitializeMarkers();
     }
     
+    private void Awake()
+    {
+        // Register all marker IDs so they can be cleared on new game
+        RegisterMarkerIDs();
+    }
+    
+    private void RegisterMarkerIDs()
+    {
+        if (markers == null || markers.Length == 0)
+            return;
+        
+        // Build a comma-separated list of all marker IDs
+        string existingRegistry = PlayerPrefs.GetString("MarkerIDRegistry", "");
+        System.Collections.Generic.List<string> allIDs = new System.Collections.Generic.List<string>();
+        
+        if (!string.IsNullOrEmpty(existingRegistry))
+        {
+            allIDs.AddRange(existingRegistry.Split(','));
+        }
+        
+        // Add new marker IDs that aren't already registered
+        foreach (var markerData in markers)
+        {
+            if (!string.IsNullOrEmpty(markerData.uniqueID) && !allIDs.Contains(markerData.uniqueID))
+            {
+                allIDs.Add(markerData.uniqueID);
+            }
+        }
+        
+        // Save updated registry
+        PlayerPrefs.SetString("MarkerIDRegistry", string.Join(",", allIDs));
+        PlayerPrefs.Save();
+    }
+    
     private void InitializeMarkers()
     {
         if (hasInitialized)

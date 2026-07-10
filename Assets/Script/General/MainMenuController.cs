@@ -92,28 +92,31 @@ public class MainMenuController : MonoBehaviour
     /// </summary>
     private void ClearAllMapMarkerPlayerPrefs()
     {
-        // Get all keys that start with "UIImage_"
-        // PlayerPrefs doesn't have a "get all keys" method, so we need to track a list
-        // For now, just delete all with a known prefix pattern
+        // Get the registry of all marker IDs
+        string markerRegistry = PlayerPrefs.GetString("MarkerIDRegistry", "");
         
-        // Alternative: Use a more robust approach by storing a list of marker IDs
-        // For simplicity, we'll just clear everything that matches the pattern
+        if (!string.IsNullOrEmpty(markerRegistry))
+        {
+            // Split and delete each registered marker
+            string[] markerIDs = markerRegistry.Split(',');
+            foreach (string markerID in markerIDs)
+            {
+                if (!string.IsNullOrEmpty(markerID))
+                {
+                    PlayerPrefs.DeleteKey($"UIImage_{markerID}");
+                }
+            }
+            
+            Debug.Log($"[MainMenu] Cleared {markerIDs.Length} map markers for new game");
+        }
         
-        // Note: This is a brute-force approach. In a real game, you'd track marker IDs.
-        // For now, we'll use a regex-like approach by trying common patterns
-        
-        // Since we can't enumerate PlayerPrefs keys, we'll use a marker list approach
-        // This will be handled by SaveableUIImage components when they initialize
-        
-        // Clear a marker to indicate new game (SaveableUIImage will check this)
+        // Set flag for SaveableUIImage to check on initialization (redundancy)
         PlayerPrefs.SetInt("IsNewGame", 1);
         
         // Clear HasMap flag for new game
         PlayerPrefs.SetInt("HasMap", 0);
         
         PlayerPrefs.Save();
-        
-        Debug.Log("[MainMenu] Cleared map markers and HasMap for new game");
     }
     
     /// <summary>
@@ -121,6 +124,10 @@ public class MainMenuController : MonoBehaviour
     /// </summary>
     private void OnLoadGame()
     {
+        // Clear the new game flag so markers aren't wiped on load
+        PlayerPrefs.SetInt("IsNewGame", 0);
+        PlayerPrefs.Save();
+        
         // Open the load menu
         if (SaveLoadMenuManager.instance != null)
         {
