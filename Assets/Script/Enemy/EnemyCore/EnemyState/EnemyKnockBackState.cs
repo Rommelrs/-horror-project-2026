@@ -10,6 +10,7 @@ public class EnemyKnockBackState : EnemyState
 
     bool heavyKnockback = false;
     bool stateChangeTrigerred = false;
+    float savedAgentSpeed = 0f;
 
     public EnemyKnockBackState(Enemy enemy, EnemyStateMachine sm) : base(enemy, sm) 
     {
@@ -20,11 +21,15 @@ public class EnemyKnockBackState : EnemyState
     {
         canLeave = false;
         stateChangeTrigerred = false;
+        
+        Debug.Log("KnockbackState.Enter: " + enemy.name + ", isDamageByWeakpointHit = " + enemy.health.isDamageByWeakpointHit);
+        Debug.Log("KnockbackState.Enter: canHeavyKnockBack = " + enemy.stats.canHeavyKnockBack);
 
         if (enemy.stats.canHeavyKnockBack && enemy.health.isDamageByWeakpointHit)
         {
             //Heavy Knockback
             heavyKnockback = true;
+            Debug.Log("KnockbackState.Enter: HEAVY KNOCKBACK for " + enemy.name);
 
             //Trigger knockback Animation
             enemy.anim.SetBool("HeavyKnockback", true);
@@ -35,6 +40,7 @@ public class EnemyKnockBackState : EnemyState
         {
             //Light Knockback
             heavyKnockback = false;
+            Debug.Log("KnockbackState.Enter: LIGHT KNOCKBACK for " + enemy.name);
 
             //Trigger knockback Animation
             enemy.anim.SetTrigger("Knockback");
@@ -45,7 +51,8 @@ public class EnemyKnockBackState : EnemyState
         //Look at player
         Quaternion targetRotation = Quaternion.LookRotation(Player.instance.transform.position - enemy.transform.position);
         enemy.transform.rotation = targetRotation;
-
+        
+        Debug.Log("KnockbackState.Enter: About to call KnockBack with force multiplier = " + enemy.damageForceMultiplier);
         KnockBack(enemy.damageDirection, enemy.damageForceMultiplier);
     }
 
@@ -65,6 +72,9 @@ public class EnemyKnockBackState : EnemyState
 
         //Reset Heavy Knockback
         enemy.anim.SetBool("HeavyKnockback", false);
+        
+        // Reset the weakpoint flag after knockback is complete
+        enemy.health.isDamageByWeakpointHit = false;
     }
 
     public override void Update()
@@ -114,10 +124,28 @@ public class EnemyKnockBackState : EnemyState
     IEnumerator Co_KnockBack(Vector3 direction, float forceMultiplier = 1f)
     {
         yield return null;
+        
+        Debug.Log("Co_KnockBack: Starting for " + enemy.name);
+        Debug.Log("Co_KnockBack: Agent enabled = " + enemy.agent.enabled + ", isOnNavMesh = " + enemy.agent.isOnNavMesh);
+        
+        // Save current agent speed before disabling (important for dynamic chase speed)
+        if (enemy.agent.enabled && enemy.agent.isOnNavMesh)
+        {
+            savedAgentSpeed = enemy.agent.speed;
+            Debug.Log("Co_KnockBack: Saved agent speed = " + savedAgentSpeed);
+        }
+        
         enemy.agent.enabled = false;
+        Debug.Log("Co_KnockBack: Agent disabled");
+        
         enemy.rb.useGravity = true;
         enemy.rb.isKinematic = false;
-        enemy.rb.AddForce(direction.normalized * enemy.stats.knockBackForce * forceMultiplier, ForceMode.Impulse);
+        
+        float calculatedForce = enemy.stats.knockBackForce * forceMultiplier;
+        Debug.Log("Co_KnockBack: Applying force = " + calculatedForce + " (knockBackForce=" + enemy.stats.knockBackForce + ", multiplier=" + forceMultiplier + ")");
+        Debug.Log("Co_KnockBack: Direction = " + direction.normalized);
+        
+        enemy.rb.AddForce(direction.normalized * calculatedForce, ForceMode.Impulse);
 
         yield return new WaitForFixedUpdate();
       
@@ -131,6 +159,12 @@ public class EnemyKnockBackState : EnemyState
 
         enemy.agent.enabled = true;
         enemy.agent.Warp(enemy.transform.position);
+        
+        // Restore saved agent speed (important for dynamic chase speed)
+        if (savedAgentSpeed > 0 && enemy.agent.isOnNavMesh)
+        {
+            enemy.agent.speed = savedAgentSpeed;
+        }
 
         // Keep agent stopped during heavy knockback (wakeup animation will play)
         if (heavyKnockback && enemy.agent.isOnNavMesh)

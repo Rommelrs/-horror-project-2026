@@ -24,6 +24,9 @@ public class LoadButton : MonoBehaviour
             SaveManager.instance.ClearAllRuntimeTracking();
         }
         
+        // Clear all map markers for new game
+        ClearAllMapMarkers();
+        
         // Mark that we're starting a new game (will be used after scene loads)
         PlayerPrefs.SetInt("IsNewGame", 1);
         PlayerPrefs.Save();
@@ -99,4 +102,30 @@ public class LoadButton : MonoBehaviour
         Application.Quit();
     }
     
+    /// <summary>
+    /// Clear all map markers from PlayerPrefs
+    /// </summary>
+    private void ClearAllMapMarkers()
+    {
+        // Get the registry of all marker IDs
+        string markerRegistry = PlayerPrefs.GetString("MarkerIDRegistry", "");
+        
+        if (!string.IsNullOrEmpty(markerRegistry))
+        {
+            // Split and delete each registered marker
+            string[] markerIDs = markerRegistry.Split(',');
+            foreach (string markerID in markerIDs)
+            {
+                if (!string.IsNullOrEmpty(markerID))
+                {
+                    PlayerPrefs.DeleteKey($"UIImage_{markerID}");
+                }
+            }
+        }
+        
+        // Clear HasMap flag for new game
+        PlayerPrefs.SetInt("HasMap", 0);
+        
+        PlayerPrefs.Save();
+    }
 }

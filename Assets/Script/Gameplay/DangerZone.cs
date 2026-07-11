@@ -155,16 +155,30 @@ public class DangerZone : MonoBehaviour
         {
             if (enemy != null && !enemy.health.IsDead)
             {
-                // Destroy weakpoint hitbox if exists
-                if (destroyWeakpointHitbox && enemy.enemyWeakpoint != null)
+                try
                 {
-                    enemy.enemyWeakpoint.DestorySpawnedWeakpoint();
-                }
+                    // Destroy weakpoint hitbox if exists
+                    if (destroyWeakpointHitbox && enemy.enemyWeakpoint != null)
+                    {
+                        enemy.enemyWeakpoint.DestorySpawnedWeakpoint();
+                    }
 
-                // Set weakpoint hit flag and deal damage
-                enemy.health.isDamageByWeakpointHit = true;
-                enemy.health.Damage(weakpointDamage);
-                Debug.Log("DangerZone: Weakpoint hit on " + enemy.name);
+                    // Set weakpoint hit flag and deal damage
+                    enemy.health.isDamageByWeakpointHit = true;
+                    Debug.Log("DangerZone: Set weakpoint flag to TRUE for " + enemy.name);
+                    Debug.Log("DangerZone: Enemy current state: " + enemy.stateMachine.CurrentState.GetType().Name);
+                    Debug.Log("DangerZone: useDynamicChaseSpeed = " + enemy.stats.useDynamicChaseSpeed);
+                    Debug.Log("DangerZone: About to call Damage with amount = " + weakpointDamage);
+                    Debug.Log("DangerZone: Enemy health before damage = " + enemy.health.GetHealthValue());
+                    enemy.health.Damage(weakpointDamage);
+                    Debug.Log("DangerZone: Damage COMPLETED on " + enemy.name + ", isDead = " + enemy.health.IsDead);
+                    Debug.Log("DangerZone: Enemy health after damage = " + enemy.health.GetHealthValue());
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogError("DangerZone: ERROR processing enemy " + enemy.name + ": " + e.Message);
+                    Debug.LogError("DangerZone: Stack trace: " + e.StackTrace);
+                }
             }
         }
 

@@ -90,7 +90,7 @@ public class EnemyChaseState : EnemyState
             enemy.chaseStartDelayEnabled = false;
 
             //Chase Player
-            if (enemy.agent.isOnNavMesh)
+            if (enemy.agent.enabled && enemy.agent.isOnNavMesh)
             {
                 // Calculate distance once for all checks
                 float distanceToPlayer = Vector3.Distance(enemy.transform.position, Player.instance.transform.position);
