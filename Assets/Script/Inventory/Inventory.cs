@@ -94,6 +94,17 @@ public class Inventory : MonoBehaviour
 
         if(item.itemType == ItemType.Note)
         {
+            // Check if note already exists - don't add duplicates
+            for (int i = 0; i < notes.Count; i++)
+            {
+                if (notes[i].item == item)
+                {
+                    Debug.Log("Note '" + item.itemName + "' already exists in inventory. Skipping duplicate.");
+                    return false; // Already have this note
+                }
+            }
+            
+            // Note doesn't exist, add it
             notes.Add(new ItemStack(item, item.maxStackSize));
             SaveToPersistent();
             OnInventoryItemUpdated?.Invoke();

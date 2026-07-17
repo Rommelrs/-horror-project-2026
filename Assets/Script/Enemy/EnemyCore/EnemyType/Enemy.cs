@@ -492,6 +492,52 @@ public class Enemy : MonoBehaviour, IPoolable
     {
         pauseEnemyState = value;
     }
+    
+    /// <summary>
+    /// Change enemy type at runtime. Can be overridden by subclasses for special handling.
+    /// </summary>
+    public virtual void ChangeEnemyType(EnemyType newType)
+    {
+        EnemyType oldType = stats.enemyType;
+        stats.enemyType = newType;
+        
+        // If type actually changed, adjust state accordingly
+        if (oldType != newType)
+        {
+            // Determine appropriate state based on new type
+            if (newType == EnemyType.Aggressive)
+            {
+                // Aggressive enemies should chase immediately
+                if (stateMachine.CurrentState == idleState || stateMachine.CurrentState == enemyWanderState)
+                {
+                    stateMachine.ChangeState(chaseState);
+                }
+            }
+            else if (newType == EnemyType.Wandering)
+            {
+                // Wandering enemies check if player is in range
+                if (stateMachine.CurrentState == idleState)
+                {
+                    if (PlayerInRange(stats.visionRadius))
+                    {
+                        stateMachine.ChangeState(chaseState);
+                    }
+                    else
+                    {
+                        stateMachine.ChangeState(enemyWanderState);
+                    }
+                }
+            }
+            else if (newType == EnemyType.Fixed)
+            {
+                // Fixed enemies should return to idle if chasing/wandering
+                if (stateMachine.CurrentState == chaseState || stateMachine.CurrentState == enemyWanderState)
+                {
+                    stateMachine.ChangeState(idleState);
+                }
+            }
+        }
+    }
 
     public void SetContainmentZone(EnemyContainmentZone zone)
     {

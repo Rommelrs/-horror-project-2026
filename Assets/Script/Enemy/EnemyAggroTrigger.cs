@@ -48,18 +48,8 @@ public class EnemyAggroTrigger : MonoBehaviour
 
                         Debug.Log($"[AggroTrigger] Setting {enemy.name} to Aggressive + Chase");
                         
-                        // Check if it's a BagBearerEnemy (needs special handling for Fixed type)
-                        BagBearerEnemy bagBearer = enemy as BagBearerEnemy;
-                        if (bagBearer != null)
-                        {
-                            bagBearer.ChangeEnemyType(EnemyType.Aggressive);
-                        }
-                        else
-                        {
-                            enemy.stats.enemyType = EnemyType.Aggressive;
-                        }
-                        
-                        enemy.stateMachine.ChangeState(enemy.chaseState);
+                        // Use ChangeEnemyType for all enemies (handles state transitions properly)
+                        enemy.ChangeEnemyType(EnemyType.Aggressive);
                     }
                     else
                     {

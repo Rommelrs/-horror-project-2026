@@ -121,6 +121,23 @@ public class BagBearerEnemy : Enemy
         EnemyType oldType = stats.enemyType;
         stats.enemyType = newType;
         
+        // Clean up any active reload state before changing type
+        if (stateMachine.CurrentState == enemyReloadState)
+        {
+            // Force exit reload state to clean up coroutines and weakpoints
+            enemyWeakpoint.DestorySpawnedWeakpoint();
+            
+            // Change to appropriate state based on new type
+            if (newType == EnemyType.Fixed)
+            {
+                stateMachine.ChangeState(idleState);
+            }
+            else
+            {
+                stateMachine.ChangeState(chaseState);
+            }
+        }
+        
         // If transitioning FROM Fixed to something else, unlock movement
         if (oldType == EnemyType.Fixed && newType != EnemyType.Fixed)
         {
@@ -131,10 +148,25 @@ public class BagBearerEnemy : Enemy
                 agent.isStopped = false;      // Allow movement
             }
             
-            // Force state change to chase if player is in range
-            if (newType == EnemyType.Aggressive && stateMachine.CurrentState == idleState)
+            // Force state change to chase if in idle state
+            if (stateMachine.CurrentState == idleState)
             {
-                stateMachine.ChangeState(chaseState);
+                if (newType == EnemyType.Aggressive)
+                {
+                    stateMachine.ChangeState(chaseState);
+                }
+                else if (newType == EnemyType.Wandering)
+                {
+                    // Wandering type - check if player is in range
+                    if (PlayerInRange(stats.visionRadius))
+                    {
+                        stateMachine.ChangeState(chaseState);
+                    }
+                    else
+                    {
+                        stateMachine.ChangeState(enemyWanderState);
+                    }
+                }
             }
         }
         // If transitioning TO Fixed from something else, lock movement
@@ -145,6 +177,12 @@ public class BagBearerEnemy : Enemy
                 agent.updatePosition = false; // Don't move
                 agent.updateRotation = true;  // Allow rotation
                 agent.isStopped = true;       // Stop movement
+            }
+            
+            // Fixed enemies should only be in idle or attack state
+            if (stateMachine.CurrentState == chaseState || stateMachine.CurrentState == enemyWanderState)
+            {
+                stateMachine.ChangeState(idleState);
             }
         }
     }

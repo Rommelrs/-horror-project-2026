@@ -21,6 +21,8 @@ public class EnemyWeakpointHurtState : EnemyState
         if (runner != null)
         {
             isFirstHit = (runner.weakpointHitCount == 1);
+            // Always reset sidestep count when entering hurt state
+            runner.sideStepCount = 0;
         }
         
         // Stop movement
@@ -54,6 +56,10 @@ public class EnemyWeakpointHurtState : EnemyState
     public override void Exit()
     {
         base.Exit();
+        
+        // Ensure animator is fully reset
+        enemy.anim.SetBool("isCharging", false);
+        enemy.anim.SetBool("DashAttack", false);
         
         if (enemy.agent.isActiveAndEnabled && enemy.agent.isOnNavMesh)
             enemy.agent.isStopped = false;

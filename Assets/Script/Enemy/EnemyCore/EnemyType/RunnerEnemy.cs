@@ -25,7 +25,7 @@ public class RunnerEnemy : Enemy
     [HideInInspector] public bool leftKneeDamaged = false;
     [HideInInspector] public int weakpointHitCount = 0; // 0 = no hits, 1 = first hit, 2 = second hit
 
-    int sideStepCount = 0;
+    [HideInInspector] public int sideStepCount = 0;
     bool injured = false;
 
     float defaultMoveSpeed;
@@ -217,9 +217,29 @@ public class RunnerEnemy : Enemy
                 // Advance to next weakpoint (cycles back to left knee)
                 enemyWeakpoint.AdvanceSequentialIndex();
             }
+            // Force stop dash attack if currently dashing
+            if (stateMachine.CurrentState == enemyDashAttackState)
+            {
+                // Stop dash trail and weakpoint
+                StopDashTrail();
+                
+                // Reset animator
+                anim.SetBool("isCharging", false);
+                anim.SetBool("DashAttack", false);
+                
+                // Stop agent movement
+                if (agent.isActiveAndEnabled && agent.isOnNavMesh)
+                {
+                    agent.isStopped = true;
+                    agent.ResetPath();
+                }
+            }
             
-            //Change to Weakpoint Hurt State
-            stateMachine.ChangeState(weakpointHurtState);
+            //Change to Weakpoint Hurt State ONLY if not already in it
+            if (stateMachine.CurrentState != weakpointHurtState)
+            {
+                stateMachine.ChangeState(weakpointHurtState);
+            }
 
             PlaySoundEffect(stats.takeDamageSFX);
         }
@@ -335,7 +355,17 @@ public class RunnerEnemy : Enemy
                 // If within sidestep range
                 if (PlayerInRange(sideStepRange))
                 {
-                    sideStepCount++;
+                    // Don't increment if we just came from hurt state (sideStepCount is 0)
+                    // This prevents immediate dash after waking up
+                    if (sideStepCount > 0)
+                    {
+                        sideStepCount++;
+                    }
+                    else
+                    {
+                        // First sidestep after hurt - set to 1 to require another sidestep before dash
+                        sideStepCount = 1;
+                    }
                     stateMachine.ChangeState(enemySidestepState);
                 }
             }
@@ -418,22 +448,19 @@ public class RunnerEnemy : Enemy
         {
             if (currentState.canLeave)
             {
-                if (!PlayerInRange(stats.visionRadius))
-                {
-                    stateMachine.ChangeState(chaseState);
-                }
-                else
-                {
-                    stateMachine.ChangeState(chaseState);
-                }
+                // Return to chase state after waking up
+                stateMachine.ChangeState(chaseState);
             }
         }
     }
 
     public override void AlertToSound(Vector3 soundPosition)
     {
-        // Don't interrupt dash attack with sound alerts
-        if (stateMachine.CurrentState == enemyDashAttackState)
+        // Don't interrupt any active combat or hurt states with sound alerts
+        if (stateMachine.CurrentState == enemyDashAttackState ||
+            stateMachine.CurrentState == weakpointHurtState ||
+            stateMachine.CurrentState == enemySidestepState ||
+            stateMachine.CurrentState == runnerAttackState)
             return;
         
         base.AlertToSound(soundPosition);
