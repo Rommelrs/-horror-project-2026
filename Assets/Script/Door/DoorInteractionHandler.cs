@@ -60,6 +60,11 @@ public class DoorInteractionHandler : MonoBehaviour
         //On Interact Button pressed
         if (callbackContext.performed)
         {
+            // Clear stale reference if the door GameObject was disabled (e.g. during a cutscene)
+            // Unity does not reliably call OnTriggerExit when a GameObject is disabled
+            if (currentInteractable != null && !currentInteractable.gameObject.activeInHierarchy)
+                currentInteractable = null;
+
             if (currentInteractable != null && busy == false)
             {
                 //Check if door requires certain key
