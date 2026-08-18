@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Wall Material Custom
+  m_Shader: {fileID: 4800000, guid: 9e118649aff24f54782fa0176ce3057c, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _DamageTex:
+        m_Texture: {fileID: 2800000, guid: 2f7bc1c3a44fdd243b7ab7feb7c01af5, type: 3}
+        m_Scale: {x: 1.15, y: 0.86}
+        m_Offset: {x: -0.16, y: -0.04}
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: 83dcf004a1cc7804ab1de7c45b2b1a10, type: 3}
+        m_Scale: {x: 5.34, y: 10.12}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _DamageContrast: 1.65
+    - _DamageRotation: 0
+    - _DamageStrength: 0.82
+    - _MainRotation: -119
+    - _ReliefStrength: 0.87
+    - _Roughness: 0.82
+    - _ToneVariation: 0.114
+    m_Colors:
+    - _Color: {r: 0.92, g: 0.9, b: 0.86, a: 1}
+    - _DamageColor: {r: 0.8301887, g: 0.747953, b: 0.6383055, a: 1}
+    - _DamageTiling: {r: -2.3, g: -0.91, b: -0.51, a: -0.24}
+    - _MainTiling: {r: 24.91, g: 4, b: 0, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
