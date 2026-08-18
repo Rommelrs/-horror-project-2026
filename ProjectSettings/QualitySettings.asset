@@ -6,7 +6,7 @@ QualitySettings:
   serializedVersion: 5
   m_CurrentQuality: 0
   m_QualitySettings:
-  - serializedVersion: 3
+  - serializedVersion: 5
     name: Ultra
     pixelLightCount: 4
     shadows: 2
@@ -28,9 +28,13 @@ QualitySettings:
     realtimeReflectionProbes: 1
     billboardsFaceCameraPosition: 1
     useLegacyDetailDistribution: 1
+    adaptiveVsync: 0
     vSyncCount: 1
     realtimeGICPUUsage: 25
+    adaptiveVsyncExtraA: 0
+    adaptiveVsyncExtraB: 0
     lodBias: 2
+    meshLodThreshold: 1
     maximumLODLevel: 0
     enableLODCrossFade: 1
     streamingMipmapsActive: 0
@@ -44,8 +48,7 @@ QualitySettings:
     asyncUploadBufferSize: 16
     asyncUploadPersistentBuffer: 1
     resolutionScalingFixedDPIFactor: 1
-    customRenderPipeline: {fileID: 11400000, guid: 8c87107ec8b73224796a27e7c22faf25,
-      type: 2}
+    customRenderPipeline: {fileID: 0}
     terrainQualityOverrides: 0
     terrainPixelError: 1
     terrainDetailDensityScale: 1
@@ -62,6 +65,7 @@ QualitySettings:
     Lumin: 0
     Nintendo 3DS: 0
     Nintendo Switch: 0
+    Nintendo Switch 2: 0
     PS4: 0
     PSP2: 0
     Server: 0

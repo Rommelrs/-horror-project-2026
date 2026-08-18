@@ -65,17 +65,17 @@ public class InteractionHandler : MonoBehaviour
                 if(currentInteractable is DrillHoleInteractable)
                 {
                     DrillHoleInteractable drillHoleInteractable = (DrillHoleInteractable)currentInteractable;
+                    Debug.Log("[DrillHole] E pressed on drill hole. HasDrill: " + drillHoleInteractable.HasDrill() + ", DrillCharges: " + drillHoleInteractable.DrillChargeCount());
                     if (drillHoleInteractable.HasDrill())
                     {
                         int drillCharge = drillHoleInteractable.DrillChargeCount();
                         if(drillCharge > 0)
                         {
-                            //Has Drill Charge
+                            Debug.Log("[DrillHole] Has drill and charges - proceeding.");
                         }
                         else
                         {
-                            //Has no Drill Charge
-                            //Debug.LogError("Has no Drill Charge!");
+                            Debug.LogWarning("[DrillHole] BLOCKED - has drill but no charges.");
 
                             if (MessageHandler.instance)
                             {
@@ -87,7 +87,7 @@ public class InteractionHandler : MonoBehaviour
                     }
                     else
                     {
-                        //Debug.LogError("Has no Drill!");
+                        Debug.LogWarning("[DrillHole] BLOCKED - player has no drill.");
 
                         if (MessageHandler.instance)
                         {
