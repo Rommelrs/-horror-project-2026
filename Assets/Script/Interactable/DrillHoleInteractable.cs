@@ -27,9 +27,23 @@ public class DrillHoleInteractable : Interactable
     {
         base.Interacted();
 
+        Debug.Log("[DrillHole] Interacted() called on: " + gameObject.name + ". busy: " + busy);
+
         if (busy) return;
 
         StartCoroutine(Co_DrillHole());
+    }
+
+    public override void OnTriggerEnter(Collider other)
+    {
+        Debug.Log("[DrillHole] OnTriggerEnter: " + other.gameObject.name + " tag: " + other.gameObject.tag);
+        base.OnTriggerEnter(other);
+    }
+
+    public override void OnTriggerExit(Collider other)
+    {
+        Debug.Log("[DrillHole] OnTriggerExit: " + other.gameObject.name);
+        base.OnTriggerExit(other);
     }
 
     IEnumerator Co_DrillHole()
@@ -37,6 +51,7 @@ public class DrillHoleInteractable : Interactable
         busy = true;
         coll.enabled = false;
 
+        Debug.Log("[DrillHole] Starting drill sequence. FadeOut...");
         FadeScreenUI.instance.FadeOut();
 
         yield return new WaitForSeconds(drillStartDelay);
@@ -45,11 +60,19 @@ public class DrillHoleInteractable : Interactable
         {
             audioSource.PlayOneShot(drillingSound);
         }
+        else
+        {
+            Debug.LogWarning("[DrillHole] No AudioSource found!");
+        }
 
         //Decrease Drill Charge
         if (Player.instance != null)
+        {
+            Debug.Log("[DrillHole] Removing drill charge. Charges before: " + Player.instance.inventory.GetDrillChargeCount());
             Player.instance.inventory.RemoveDrillCharge();
+        }
 
+        Debug.Log("[DrillHole] Enabling " + objectsToEnable.Length + " objects, disabling " + objectsToDisable.Length + " objects.");
         foreach (var item in objectsToEnable)
         {
             item.gameObject.SetActive(true);

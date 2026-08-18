@@ -32,6 +32,7 @@ public class EyePeakHandler : MonoBehaviour
         {
             //Movement Input
             moveInput = movementAction.action.ReadValue<Vector2>();
+            
             if(moveInput.magnitude > 0.1f)
             {
                 currentOffset += moveInput * moveSensitivity * Time.deltaTime;

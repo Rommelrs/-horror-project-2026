@@ -878,6 +878,16 @@ public class PlayerWeaponSystem : MonoBehaviour
                     yield break;
                 }
 
+                // Check if world object has a Health component (e.g. ShootableButton)
+                Health worldHealth = damageInfo[i].hit.collider.GetComponentInParent<Health>();
+                if (worldHealth != null)
+                {
+                    worldHealth.SetLastHitPoint(damageInfo[i].hit.point);
+                    worldHealth.Damage(damage);
+                    hitCount++;
+                    yield break;
+                }
+
                 //If no lock, continue checking other hits instead of stopping immediately
                 continue;
             }
