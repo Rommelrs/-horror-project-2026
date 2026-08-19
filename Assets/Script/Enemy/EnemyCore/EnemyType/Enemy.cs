@@ -431,9 +431,20 @@ public class Enemy : MonoBehaviour, IPoolable
         //Death State
         stateMachine.ChangeState(deathState);
 
+        // Disable all colliders except deathCollider (needed to keep body above ground)
+        foreach (Collider col in GetComponentsInChildren<Collider>())
+        {
+            if (col == deathCollider) continue;
+            col.enabled = false;
+        }
+
+        // Make deathCollider ignore the player so they can walk through the body
+        if (deathCollider != null && Player.instance != null)
+            Physics.IgnoreCollision(deathCollider, Player.instance.controller);
+
         //Trigger Event
         OnEnemyDied?.Invoke();
-    }  
+    }
 
     public virtual void OnPool()
     {

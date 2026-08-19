@@ -1010,6 +1010,7 @@ public class PlayerWeaponSystem : MonoBehaviour
     public float restrictPitchAngleMax;
     public float eyePeakRotationSensitivity= 20f;
 
+
     void CameraRotation()
     {
         if (eyePeakAimingRotationEnabled)
