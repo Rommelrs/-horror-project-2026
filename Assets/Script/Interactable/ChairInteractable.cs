@@ -42,6 +42,8 @@ public class ChairInteractable : Interactable
     public UnityEvent OnStandUp;
 
     bool isSitting = false;
+    bool isTransitioning = false;
+    bool wasADS = false;
     Collider triggerCollider;
     float currentYaw = 0f;
     float currentPitch = 0f;
@@ -52,7 +54,7 @@ public class ChairInteractable : Interactable
         if (sitCam != null) sitCam.Priority = 0;
     }
 
-    private void Update()
+    private void LateUpdate()
     {
         if (!isSitting || sitCamPos == null || sitCam == null) return;
 
@@ -65,44 +67,56 @@ public class ChairInteractable : Interactable
         currentYaw = Mathf.Clamp(currentYaw, -yawLimit, yawLimit);
         currentPitch = Mathf.Clamp(currentPitch, pitchMin, pitchMax);
 
+        // Compute current rotation from WASD
+        Quaternion sitRotation = sitCamPos.rotation * Quaternion.Euler(currentPitch, currentYaw, 0f);
+
         // Always keep sitCam at correct position/rotation
         sitCam.transform.position = sitCamPos.position;
-        sitCam.transform.rotation = sitCamPos.rotation * Quaternion.Euler(currentPitch, currentYaw, 0f);
+        sitCam.transform.rotation = sitRotation;
 
-        // ADS: teleport player to sitCamPos so aimCam is at the right spot, then drop sitCam priority
+        // Rotate player body to always face where the camera is looking
+        float worldYaw = sitCamPos.eulerAngles.y + currentYaw;
+        Player.instance.transform.rotation = Quaternion.Euler(0f, worldYaw, 0f);
+        Player.instance.playerWeaponSystem.CinemachineCameraTarget.transform.localRotation = Quaternion.Euler(currentPitch, 0f, 0f);
+        Player.instance.animator.SetFloat("x", 0f);
+        Player.instance.animator.SetFloat("y", 0f);
+        Player.instance.animator.SetFloat("Velocity", 0f);
+
         bool isADS = adsInput != null && adsInput.action.ReadValue<float>() > 0.1f;
-        if (isADS)
-        {
-            sitCam.Priority = 0; // let aimCam take over
 
-            // Align player position/rotation to sitCam so aimCam matches the view
+        // Only teleport player on ADS transition, not every frame
+        if (isADS && !wasADS)
+        {
+            // Entering ADS - move player so CinemachineCameraTarget aligns with sitCamPos
             Player.instance.controller.enabled = false;
-            Player.instance.transform.position = sitCamPos.position;
-            Player.instance.transform.rotation = sitCam.transform.rotation;
+            Transform camTarget = Player.instance.playerWeaponSystem.CinemachineCameraTarget.transform;
+            Vector3 camTargetOffset = camTarget.position - Player.instance.transform.position;
+            Player.instance.transform.position = sitCamPos.position - camTargetOffset;
             Player.instance.controller.enabled = true;
         }
-        else
+        else if (!isADS && wasADS)
         {
-            sitCam.Priority = 100; // restore sit cam
-
-            // Return player to sit point when not ADS
+            // Releasing ADS - return player to sit point
             Player.instance.controller.enabled = false;
             Player.instance.transform.position = sitPoint.position;
             Player.instance.transform.rotation = sitPoint.rotation;
             Player.instance.controller.enabled = true;
         }
+
+        wasADS = isADS;
+        sitCam.Priority = isADS ? 0 : 100;
     }
 
     public override void Interacted()
     {
         base.Interacted();
-        if (isSitting) return;
+        if (isSitting || isTransitioning) return;
         StartCoroutine(Co_SitDown());
     }
 
     IEnumerator Co_SitDown()
     {
-        isSitting = true;
+        isTransitioning = true;
         currentYaw = 0f;
         currentPitch = 0f;
 
@@ -110,6 +124,7 @@ public class ChairInteractable : Interactable
 
         Player.instance.pauseMovement = true;
 
+        // Fade out first, then teleport
         FadeScreenUI.instance.FadeOut();
         yield return new WaitForSeconds(fadeWaitDuration);
 
@@ -122,7 +137,17 @@ public class ChairInteractable : Interactable
 
         Player.instance.controller.enabled = true;
 
-        if (sitCam != null) sitCam.Priority = 100;
+        // Only now activate sitting mode (starts LateUpdate)
+        isSitting = true;
+        isTransitioning = false;
+
+        // Hide player model while sitting
+        if (Player.instance.playerModel != null)
+            Player.instance.playerModel.SetActive(false);
+
+        // Keep weapon enabled for ADS + shooting, but lock mouse camera movement
+        Player.instance.playerWeaponSystem.weaponIsEnabled = true;
+        Player.instance.playerWeaponSystem.LockCameraPosition = true;
 
         FadeScreenUI.instance.FadeIn();
         OnSitDown?.Invoke();
@@ -133,7 +158,7 @@ public class ChairInteractable : Interactable
 
     void OnExitPressed(InputAction.CallbackContext ctx)
     {
-        if (!isSitting) return;
+        if (!isSitting || isTransitioning) return;
         StartCoroutine(Co_StandUp());
     }
 
@@ -142,10 +167,17 @@ public class ChairInteractable : Interactable
         if (exitSitInput != null)
             exitSitInput.action.performed -= OnExitPressed;
 
+        isTransitioning = true;
+
+        // Fade out while sitCam is still active
         FadeScreenUI.instance.FadeOut();
         yield return new WaitForSeconds(fadeWaitDuration);
 
+        // Screen is black - now disable sitCam and stop LateUpdate
+        isSitting = false;
+        wasADS = false;
         if (sitCam != null) sitCam.Priority = 0;
+
         yield return new WaitForEndOfFrame();
 
         if (standUpPoint != null)
@@ -158,8 +190,13 @@ public class ChairInteractable : Interactable
             Player.instance.controller.enabled = true;
         }
 
+        // Restore player model
+        if (Player.instance.playerModel != null)
+            Player.instance.playerModel.SetActive(true);
+
         Player.instance.pauseMovement = false;
-        isSitting = false;
+        Player.instance.playerWeaponSystem.LockCameraPosition = false;
+        isTransitioning = false;
 
         if (triggerCollider != null) triggerCollider.enabled = true;
 
