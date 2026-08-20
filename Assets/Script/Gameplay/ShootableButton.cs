@@ -15,6 +15,7 @@ public class ShootableButton : Interactable
     [Header("Events")]
     public UnityEvent OnShot;
     public UnityEvent OnActivated;
+    public UnityEvent OnReset;
 
     Health health;
     bool activated = false;
@@ -72,5 +73,27 @@ public class ShootableButton : Interactable
             Collider coll = GetComponent<Collider>();
             if (coll != null) coll.enabled = false;
         }
+    }
+
+    // Call this from TimedLightTrigger's OnLightsOff event to reset the button
+    public void ResetButton()
+    {
+        activated = false;
+
+        // Restore health
+        health.ResetHealth();
+
+        // Reverse objects (disable what was enabled, enable what was disabled)
+        foreach (var obj in objectsToEnable)
+            if (obj != null) obj.SetActive(false);
+
+        foreach (var obj in objectsToDisable)
+            if (obj != null) obj.SetActive(true);
+
+        // Re-enable collider so button can be interacted with again
+        Collider coll = GetComponent<Collider>();
+        if (coll != null) coll.enabled = true;
+
+        OnReset?.Invoke();
     }
 }
