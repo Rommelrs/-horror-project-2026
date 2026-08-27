@@ -51,6 +51,10 @@ public class PauseHandler : MonoBehaviour
         if (LoadingHandler.IsLoading())
             return;
 
+        // Block all input during map reveal sequence
+        if (MapLocationReveal.IsSequenceActive)
+            return;
+
         //Subtitle is showing so ignore pause input
         if (SubtitleManager.instance != null && SubtitleManager.instance.IsSubtitleBusy())
             return;

@@ -30,6 +30,9 @@ public class MapLocationReveal : MonoBehaviour
     bool revealed = false;
     bool isRunning = false;
 
+    // Static flag checked by MapHandler and PauseHandler to block input during sequence
+    public static bool IsSequenceActive = false;
+
     private void Start()
     {
         if (!string.IsNullOrEmpty(triggerNoteItemName) && ItemInspectionHandler.instance != null)
@@ -59,6 +62,10 @@ public class MapLocationReveal : MonoBehaviour
     IEnumerator Co_RevealSequence()
     {
         isRunning = true;
+        IsSequenceActive = true;
+
+        // Lock player movement and all controls
+        Player.instance.pauseMovement = true;
 
         // Fade to black
         FadeScreenUI.instance.FadeOut();
@@ -108,6 +115,10 @@ public class MapLocationReveal : MonoBehaviour
         }
 
         isRunning = false;
+        IsSequenceActive = false;
+
+        // Restore player movement
+        Player.instance.pauseMovement = false;
     }
 
     // Call this when the map closes to reset zoom

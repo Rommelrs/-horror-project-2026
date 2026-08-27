@@ -38,6 +38,8 @@ public class MapHandler : MonoBehaviour
     [SerializeField] GameObject originalMapPanel;
 
     int currentPage = 0;
+    [HideInInspector] public bool hasMap1 = false;
+    [HideInInspector] public bool hasMap2 = false;
 
     Coroutine openMapCR;
     AudioSource audioSource;
@@ -61,6 +63,11 @@ public class MapHandler : MonoBehaviour
     private void Start()
     {
         mapInput.action.performed += OnMapButtonPressed;
+        hasMap1 = PlayerPrefs.GetInt("HasMap1", 0) == 1;
+        hasMap2 = PlayerPrefs.GetInt("HasMap2", 0) == 1;
+        // Only sync Player.hasMap for Map1 (not Map2)
+        if (Player.instance != null && hasMap1)
+            Player.instance.hasMap = true;
         
         // If player has map, briefly open/close it to initialize markers
         if (Player.instance != null && Player.instance.hasMap)
@@ -90,7 +97,7 @@ public class MapHandler : MonoBehaviour
 
     private void Update()
     {
-        if (mapMenu != null && mapMenu.activeSelf)
+        if (mapMenu != null && mapMenu.activeSelf && !MapLocationReveal.IsSequenceActive)
         {
             if (UnityEngine.Input.GetKeyDown(KeyCode.RightArrow) || UnityEngine.Input.GetKeyDown(KeyCode.D))
                 NextPage();
@@ -106,14 +113,16 @@ public class MapHandler : MonoBehaviour
 
     public void OnMapButtonPressed(InputAction.CallbackContext callbackContext)
     {
-        if (Player.instance == null || !Player.instance.hasMap)
-            return;
+        if (!hasMap1 && !hasMap2) return;
 
         if (LevelManager.instance.isGameOver || LevelManager.instance.isGameWon)
             return;
 
         if (callbackContext.performed)
         {
+            // Block all map input during reveal sequence
+            if (MapLocationReveal.IsSequenceActive) return;
+
             if (mapMenu.gameObject.activeSelf)
             {
                 if (!isClosingMap)
@@ -126,15 +135,25 @@ public class MapHandler : MonoBehaviour
         }
     }
 
+    public void UnlockMap1()
+    {
+        hasMap1 = true;
+        PlayerPrefs.SetInt("HasMap1", 1);
+        PlayerPrefs.Save();
+        if (Player.instance != null) Player.instance.hasMap = true;
+    }
+
+    public void UnlockMap2()
+    {
+        hasMap2 = true;
+        PlayerPrefs.SetInt("HasMap2", 1);
+        PlayerPrefs.Save();
+    }
+
+    // Keep old UnlockMap for CashRegister compatibility
     public void UnlockMap()
     {
-        if (Player.instance != null)
-        {
-            Player.instance.hasMap = true;
-            // Save to PlayerPrefs
-            PlayerPrefs.SetInt("HasMap", 1);
-            PlayerPrefs.Save();
-        }
+        UnlockMap1();
     }
 
 
@@ -160,6 +179,7 @@ public class MapHandler : MonoBehaviour
 
     public void NextPage()
     {
+        if (!hasMap1 || !hasMap2) return; // Need both maps to navigate
         if (additionalMaps == null || additionalMaps.Length == 0) return;
         if (isSwitchingPage) return;
         int totalPages = 1 + additionalMaps.Length;
@@ -169,6 +189,7 @@ public class MapHandler : MonoBehaviour
 
     public void PreviousPage()
     {
+        if (!hasMap1 || !hasMap2) return; // Need both maps to navigate
         if (additionalMaps == null || additionalMaps.Length == 0) return;
         if (isSwitchingPage) return;
         int totalPages = 1 + additionalMaps.Length;
@@ -226,8 +247,7 @@ public class MapHandler : MonoBehaviour
 
     public void EnableMapMenu(bool instantEnable = false)
     {
-        if (Player.instance == null || !Player.instance.hasMap)
-            return;
+        if (!hasMap1 && !hasMap2) return;
 
         if (LevelManager.instance.isGameOver || LevelManager.instance.isGameWon)
             return;
@@ -258,20 +278,17 @@ public class MapHandler : MonoBehaviour
         //Resume the Game
         GameManager.IsPaused = true;
 
-        // Reset to first page on open
-        currentPage = 0;
+        // Start on Map 2 if player only has Map 2
+        currentPage = (!hasMap1 && hasMap2) ? 1 : 0;
         ApplyCurrentPage();
 
-        // Show navigation panel only if there are additional maps
+        // Show navigation only if player has BOTH maps
         if (pageNavigationPanel != null)
-            pageNavigationPanel.SetActive(additionalMaps != null && additionalMaps.Length > 0);
+            pageNavigationPanel.SetActive(hasMap1 && hasMap2 && additionalMaps != null && additionalMaps.Length > 0);
 
         // Unlock cursor so player can click navigation buttons
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-
-        //Enable Map Camera
-        mapCamera.gameObject.SetActive(true);
 
         if (instantEnable)
         {

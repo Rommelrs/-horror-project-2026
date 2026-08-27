@@ -154,6 +154,12 @@ public class Inventory : MonoBehaviour
             
             // Check for knife combining after adding item
             CheckKnifeCombining();
+
+            // Handle map unlocking
+            if (item.itemType == ItemType.Map1 && MapHandler.instance != null)
+                MapHandler.instance.UnlockMap1();
+            else if (item.itemType == ItemType.Map2 && MapHandler.instance != null)
+                MapHandler.instance.UnlockMap2();
             
             return true;
         }
