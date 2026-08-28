@@ -24,6 +24,7 @@ public class CashRegisterInteractable : Interactable
     [SerializeField] AudioClip wrongCodeClip;
 
     [SerializeField] Fusebox fuseBox;
+    [SerializeField] SubtitleTrigger mapOpenedSubtitleTrigger;
 
     public UnityEvent OnCashRegisterOpenedSuccessfully;
 
@@ -173,11 +174,30 @@ public class CashRegisterInteractable : Interactable
     
     IEnumerator Co_OpenMapAfterClose()
     {
-        // Wait a bit for subtitle to finish or player to read it
-        yield return new WaitForSeconds(1f);
+        // Lock input immediately - no gap where M can be pressed
+        MapLocationReveal.IsSequenceActive = true;
+        Player.instance.pauseMovement = true;
+
+        yield return new WaitForSecondsRealtime(1f);
         
         // Open the map
         MapHandler.instance.EnableMapMenu();
+
+        // Wait for player to see the map before showing subtitle
+        yield return new WaitForSecondsRealtime(2f);
+
+        // Trigger subtitle
+        if (mapOpenedSubtitleTrigger != null)
+            mapOpenedSubtitleTrigger.TriggerSubtitle();
+
+        // Wait for subtitle to fully finish before unlocking
+        yield return new WaitForSecondsRealtime(0.5f);
+        while (SubtitleManager.instance != null && SubtitleManager.instance.IsSubtitleBusy())
+            yield return null;
+
+        // Now unlock - player can interact with map normally
+        MapLocationReveal.IsSequenceActive = false;
+        Player.instance.pauseMovement = false;
     }
 
     Coroutine attemptToPlayNoPowerSubtitleCR;

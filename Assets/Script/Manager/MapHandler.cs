@@ -38,6 +38,7 @@ public class MapHandler : MonoBehaviour
     [SerializeField] GameObject originalMapPanel;
 
     int currentPage = 0;
+    int lastOpenedPage = 0;
     [HideInInspector] public bool hasMap1 = false;
     [HideInInspector] public bool hasMap2 = false;
 
@@ -278,8 +279,13 @@ public class MapHandler : MonoBehaviour
         //Resume the Game
         GameManager.IsPaused = true;
 
-        // Start on Map 2 if player only has Map 2
-        currentPage = (!hasMap1 && hasMap2) ? 1 : 0;
+        // Restore last viewed page, or default based on which maps are owned
+        if (!hasMap1 && hasMap2)
+            currentPage = 1; // Only has Map 2
+        else if (hasMap1 && hasMap2)
+            currentPage = lastOpenedPage; // Both maps - restore last viewed
+        else
+            currentPage = 0; // Only Map 1 or default
         ApplyCurrentPage();
 
         // Show navigation only if player has BOTH maps
@@ -325,6 +331,9 @@ public class MapHandler : MonoBehaviour
 
     public void DisableMapMenu()
     {
+        // Remember which page was open
+        lastOpenedPage = currentPage;
+
         // Reset any active map zoom
         MapLocationReveal reveal = FindObjectOfType<MapLocationReveal>();
         if (reveal != null) reveal.ResetZoom();

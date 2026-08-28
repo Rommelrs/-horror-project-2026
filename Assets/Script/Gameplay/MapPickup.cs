@@ -25,9 +25,15 @@ public class MapPickup : Interactable
         if (pickupSound != null && audioSource != null)
             audioSource.PlayOneShot(pickupSound);
 
-        // Disable collider so player can't interact again
+        // Mark as picked up for save system
+        SaveablePickup saveablePickup = GetComponent<SaveablePickup>();
+        if (saveablePickup != null) saveablePickup.MarkAsPickedUp();
+
+        // Hide object immediately - disable collider and all renderers
         Collider coll = GetComponent<Collider>();
         if (coll != null) coll.enabled = false;
+        foreach (var r in GetComponentsInChildren<Renderer>())
+            r.enabled = false;
 
         // Small delay before fade
         yield return new WaitForSeconds(0.2f);
@@ -38,8 +44,10 @@ public class MapPickup : Interactable
         else
             MapHandler.instance.UnlockMap1();
 
-        // Open map with fade
+        // Open map with fade, on the correct page
         MapHandler.instance.EnableMapMenu();
+        if (isSecondMap)
+            MapHandler.instance.GoToPage(1);
 
         // Destroy after map opens
         yield return new WaitForSeconds(1.5f);

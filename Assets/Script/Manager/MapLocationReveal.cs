@@ -18,6 +18,7 @@ public class MapLocationReveal : MonoBehaviour
     [SerializeField] float zoomScale = 2.5f;
     [SerializeField] float markerRevealDelay = 0.4f;
     [SerializeField] float markerFadeDuration = 0.8f;
+    [SerializeField] float zoomOutDuration = 1.2f;
 
     [Header("Audio")]
     [SerializeField] AudioClip revealSound;
@@ -114,6 +115,10 @@ public class MapLocationReveal : MonoBehaviour
             yield return new WaitForSecondsRealtime(markerFadeDuration);
         }
 
+        // Zoom back out to full map
+        ResetZoom();
+        yield return new WaitForSecondsRealtime(0.4f);
+
         isRunning = false;
         IsSequenceActive = false;
 
@@ -125,8 +130,8 @@ public class MapLocationReveal : MonoBehaviour
     public void ResetZoom()
     {
         if (mapToZoom == null) return;
-        mapToZoom.DOScale(1f, 0.3f).SetUpdate(true);
-        mapToZoom.DOAnchorPos(Vector2.zero, 0.3f).SetUpdate(true);
+        mapToZoom.DOScale(1f, zoomOutDuration).SetUpdate(true);
+        mapToZoom.DOAnchorPos(Vector2.zero, zoomOutDuration).SetUpdate(true);
     }
 
     private void OnDisable()
