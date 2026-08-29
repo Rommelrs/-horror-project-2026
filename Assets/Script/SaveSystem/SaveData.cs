@@ -46,6 +46,8 @@ public class PlayerData
     // Weapon
     public int currentAmmo;
     public bool hasMap;
+    public bool hasMap1;
+    public bool hasMap2;
     
     // Inventory
     public List<ItemStackData> items;

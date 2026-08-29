@@ -24,7 +24,6 @@ public class FadeScreenUI : MonoBehaviour
 
     private void Start()
     {
-        //Face in on start
         FadeIn();
     }
 

@@ -436,6 +436,30 @@ public class SaveManager : MonoBehaviour
         return runtimeUsedInteractables.Contains(interactableID);
     }
     
+    // ─── Getters for CheckpointManager ───
+    public HashSet<string> GetPickedUpItems()     => new HashSet<string>(runtimePickedUpItems);
+    public HashSet<string> GetDeadEnemies()       => new HashSet<string>(runtimeDeadEnemies);
+    public HashSet<string> GetOpenedContainers()  => new HashSet<string>(runtimeOpenedContainers);
+    public HashSet<string> GetActivatedSwitches() => new HashSet<string>(runtimeActivatedSwitches);
+    public HashSet<string> GetStoppedSpawners()   => new HashSet<string>(runtimeStoppedSpawners);
+    public HashSet<string> GetTriggeredZones()    => new HashSet<string>(runtimeTriggeredZones);
+    public HashSet<string> GetUsedInteractables() => new HashSet<string>(runtimeUsedInteractables);
+
+    /// <summary>Restore runtime tracking from checkpoint data.</summary>
+    public void RestoreFromCheckpoint(
+        List<string> pickedUp, List<string> dead, List<string> containers,
+        List<string> switches, List<string> spawners,
+        List<string> zones, List<string> interactables)
+    {
+        runtimePickedUpItems.Clear();     foreach (var id in pickedUp)      runtimePickedUpItems.Add(id);
+        runtimeDeadEnemies.Clear();       foreach (var id in dead)          runtimeDeadEnemies.Add(id);
+        runtimeOpenedContainers.Clear();  foreach (var id in containers)    runtimeOpenedContainers.Add(id);
+        runtimeActivatedSwitches.Clear(); foreach (var id in switches)      runtimeActivatedSwitches.Add(id);
+        runtimeStoppedSpawners.Clear();   foreach (var id in spawners)      runtimeStoppedSpawners.Add(id);
+        runtimeTriggeredZones.Clear();    foreach (var id in zones)         runtimeTriggeredZones.Add(id);
+        runtimeUsedInteractables.Clear(); foreach (var id in interactables) runtimeUsedInteractables.Add(id);
+    }
+
     /// <summary>
     /// Clear all runtime tracking - use when starting a completely new game
     /// </summary>

@@ -31,6 +31,15 @@ public class SaveableSwitch : MonoBehaviour, ISaveable
     {
         uniqueID = GetComponent<UniqueID>();
     }
+
+    private void Start()
+    {
+        // Auto-restore if already activated (handles checkpoint loading)
+        if (SaveManager.instance != null && SaveManager.instance.IsSwitchActivated(uniqueID.ID))
+        {
+            RestoreActivatedState();
+        }
+    }
     
     /// <summary>
     /// Call this when the switch/button is activated

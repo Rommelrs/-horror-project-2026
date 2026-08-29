@@ -279,6 +279,13 @@ public class Inventory : MonoBehaviour
         trigger.TriggerSubtitle();
     }
     
+    /// <summary>Call after manually restoring inventory to prevent re-initialization on next scene load.</summary>
+    public void MarkInitialized()
+    {
+        _hasInitialized = true;
+        SaveToPersistent();
+    }
+
     // Play the pickup sound
     public void PlayPickupSound()
     {
