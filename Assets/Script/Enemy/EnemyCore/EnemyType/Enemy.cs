@@ -57,9 +57,6 @@ public class Enemy : MonoBehaviour, IPoolable
         {
             audioSource.spatialBlend = 1f;  // Full 3D
             audioSource.rolloffMode = AudioRolloffMode.Logarithmic;
-            audioSource.minDistance = 5f;
-            audioSource.maxDistance = 50f;
-            audioSource.volume = 1f;
         }
 
         idleState = new EnemyIdleState(this, stateMachine);
