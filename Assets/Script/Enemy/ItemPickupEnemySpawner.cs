@@ -21,6 +21,7 @@ public class ItemPickupEnemySpawner : MonoBehaviour
     [Header("Audio")]
     [SerializeField] private AudioSource musicAudioSource;
     [SerializeField] private AudioClip pickupMusic;
+    [SerializeField] private AudioClip pickupSFX;
     
     [Header("Events")]
     [SerializeField] private UnityEvent onItemPickedUp;
@@ -83,8 +84,6 @@ public class ItemPickupEnemySpawner : MonoBehaviour
             SaveableInteractable saveable = GetComponent<SaveableInteractable>();
             if (saveable != null) saveable.MarkAsUsed();
 
-            onItemPickedUp?.Invoke();
-            PlayPickupMusic();
             StartCoroutine(Co_SpawnEnemies());
         }
 
@@ -109,6 +108,11 @@ public class ItemPickupEnemySpawner : MonoBehaviour
     private IEnumerator Co_SpawnEnemies()
     {
         yield return new WaitForSeconds(delayBeforeSpawning);
+
+        // Fire onItemPickedUp after the delay
+        onItemPickedUp?.Invoke();
+        PlayPickupSFX();
+        PlayPickupMusic();
         
         onSpawningStarted?.Invoke();
 
@@ -178,6 +182,16 @@ public class ItemPickupEnemySpawner : MonoBehaviour
         // Clean up null references
         spawnedEnemies.RemoveAll(e => e == null);
         return spawnedEnemies.Count;
+    }
+
+    private void PlayPickupSFX()
+    {
+        if (pickupSFX == null) return;
+
+        if (musicAudioSource != null)
+            musicAudioSource.PlayOneShot(pickupSFX);
+        else
+            AudioSource.PlayClipAtPoint(pickupSFX, Player.instance.transform.position);
     }
 
     private void PlayPickupMusic()

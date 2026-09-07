@@ -19,6 +19,7 @@ public class SaveManager : MonoBehaviour
     private string saveDirectory;
     private SaveData currentSaveData;
     private float sessionStartTime;
+    private float accumulatedPlaytime; // Total playtime from previous sessions
     
     // Runtime tracking - items picked up this session (persists until save)
     // Made static so they persist even if instance is temporarily replaced
@@ -52,6 +53,8 @@ public class SaveManager : MonoBehaviour
             }
             
             sessionStartTime = Time.time;
+            // Load previously accumulated playtime from PlayerPrefs
+            accumulatedPlaytime = PlayerPrefs.GetFloat("TotalPlaytime", 0f);
         }
         else
         {
@@ -77,7 +80,11 @@ public class SaveManager : MonoBehaviour
         saveData.saveFileName = GetSaveFileName(slotIndex);
         saveData.sceneName = SceneManager.GetActiveScene().name;
         saveData.saveDate = DateTime.Now;
-        saveData.playtime = Time.time - sessionStartTime;
+        float thisSessionTime = Time.time - sessionStartTime;
+        saveData.playtime = accumulatedPlaytime + thisSessionTime;
+        // Persist total playtime so next session starts from here
+        PlayerPrefs.SetFloat("TotalPlaytime", saveData.playtime);
+        PlayerPrefs.Save();
         
         // Collect data from all saveable objects
         CollectSaveData(saveData);
@@ -472,6 +479,13 @@ public class SaveManager : MonoBehaviour
         runtimeStoppedSpawners.Clear();
         runtimeTriggeredZones.Clear();
         runtimeUsedInteractables.Clear();
+        
+        // Reset playtime for new game
+        accumulatedPlaytime = 0f;
+        sessionStartTime = Time.time;
+        PlayerPrefs.SetFloat("TotalPlaytime", 0f);
+        PlayerPrefs.Save();
+        
         Debug.Log("[SaveManager] All runtime tracking cleared for new game");
     }
     

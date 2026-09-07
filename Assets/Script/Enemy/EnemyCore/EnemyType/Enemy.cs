@@ -41,6 +41,9 @@ public class Enemy : MonoBehaviour, IPoolable
     public bool playerDetected = false;
     public UnityEvent onPlayerDetected;
 
+    // Override in subclasses to hold position during chase (e.g. BagBearer waiting for attack slot)
+    public virtual bool HoldPositionDuringChase => false;
+
     // Containment Zone
     private EnemyContainmentZone containmentZone;
 
@@ -361,30 +364,25 @@ public class Enemy : MonoBehaviour, IPoolable
 
     AudioClip[] GetFootstepSoundsForCurrentSurface()
     {
-        // Raycast down from enemy position to detect ground  
-        Vector3 rayOrigin = transform.position;
+        Vector3 rayOrigin = transform.position + Vector3.up * 0.2f; // Offset up to avoid starting inside ground
         RaycastHit hit;
-        if (Physics.Raycast(rayOrigin, Vector3.down, out hit, 1.5f))
+        if (Physics.Raycast(rayOrigin, Vector3.down, out hit, 1.7f))
         {
-            // Check if the ground has a GroundType component
             GroundType groundType = hit.collider.GetComponent<GroundType>();
             
             if (groundType != null)
             {
-                // Get EnemySound component if it exists (for surface-specific sounds)
                 EnemySound enemySound = GetComponent<EnemySound>();
                 if (enemySound == null)
                     enemySound = GetComponentInChildren<EnemySound>();
                 
                 if (enemySound != null)
                 {
-                    // Use EnemySound's surface detection (will check its surfaceFootstepSounds array)
                     return enemySound.GetFootstepSoundsForSurface(groundType.surfaceType);
                 }
             }
         }
 
-        // Fallback to Stats footstep sounds
         return stats.footstepSounds;
     }
 

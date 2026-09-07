@@ -145,7 +145,8 @@ MonoBehaviour:
   randomMinDuration: 10
   randomMaxDuration: 20
   guaranteedAttackSound: {fileID: 0}
-  footstepSounds: []
+  footstepSounds:
+  - {fileID: 8300000, guid: c0d166852dcb8eb4e9d2ee9d87fae917, type: 3}
   footstepVolume: 0.5
   animationSmoothness: 3
   sideStepLookRotation: 30
@@ -259,7 +260,7 @@ AudioSource:
   Priority: 128
   DopplerLevel: 1
   MinDistance: 1
-  MaxDistance: 27.4
+  MaxDistance: 15
   Pan2D: 0
   rolloffMode: 1
   BypassEffects: 0
@@ -507,8 +508,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   defaultFootstepSounds:
-  - {fileID: 0}
-  - {fileID: 0}
+  - {fileID: 8300000, guid: 6394dba571f681c459802271b417a439, type: 3}
+  - {fileID: 8300000, guid: 0c71673cf09515f4cae088a8b1348faf, type: 3}
   surfaceFootstepSounds:
   - surfaceType: 1
     footstepSounds:
@@ -534,11 +535,17 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 526866a202fef0f40bf2bceab4b7415d, type: 3}
     - {fileID: 8300000, guid: cefe151854137fe40af79c00a8e85bc2, type: 3}
     - {fileID: 8300000, guid: 6bf46e0bdfa48d34fa3a6dd09ffdb208, type: 3}
+  - surfaceType: 4
+    footstepSounds:
+    - {fileID: 8300000, guid: 1da97de1da3c9bb4eb790542a0fad4ac, type: 3}
+    - {fileID: 8300000, guid: 530b5a2243ef8a64fa503063662d410d, type: 3}
+    - {fileID: 8300000, guid: 1bf523e255911e54682ede053eb62561, type: 3}
+    - {fileID: 8300000, guid: 4da00b84f8efc9a4f997c072ad6b1bd8, type: 3}
   groundLayer:
     serializedVersion: 2
     m_Bits: 0
   groundCheckDistance: 1.5
-  footstepVolume: 0.5
+  footstepVolume: 0.61
 --- !u!1 &1986377536948694526
 GameObject:
   m_ObjectHideFlags: 0
