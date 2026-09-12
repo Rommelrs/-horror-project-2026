@@ -45,5 +45,7 @@ public enum ItemType
     UVLight,
     DuctTape,
     WoodenPlank,
-    Knife
+    Knife,
+    Map1,
+    Map2
 }

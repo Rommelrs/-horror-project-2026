@@ -157,7 +157,8 @@ public class EnemyChaseState : EnemyState
                 
                 enemy.agent.SetDestination(targetPosition);
 
-                if(enemy.agent.isStopped)
+                // Don't un-stop if the enemy wants to hold position (e.g. BagBearer waiting for attack slot)
+                if(enemy.agent.isStopped && !enemy.HoldPositionDuringChase)
                     enemy.agent.isStopped = false;
             }
             else

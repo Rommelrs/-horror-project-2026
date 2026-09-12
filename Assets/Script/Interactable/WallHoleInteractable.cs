@@ -100,12 +100,9 @@ public class WallHoleInteractable : Interactable
     {
         base.OnTriggerEnter(other);
 
-        Debug.Log("WallHole OnTriggerEnter: " + other.name + " | Tag: " + other.tag + " | isTaped: " + isTaped);
-
         if (other.CompareTag("Player") && !isTaped)
         {
             currentInRange = this;
-            Debug.Log("WallHole: Player in range, currentInRange set");
         }
     }
 

@@ -21,6 +21,7 @@ public class ItemPickupEnemySpawner : MonoBehaviour
     [Header("Audio")]
     [SerializeField] private AudioSource musicAudioSource;
     [SerializeField] private AudioClip pickupMusic;
+    [SerializeField] private AudioClip pickupSFX;
     
     [Header("Events")]
     [SerializeField] private UnityEvent onItemPickedUp;
@@ -43,6 +44,15 @@ public class ItemPickupEnemySpawner : MonoBehaviour
 
     private void Start()
     {
+        // If already triggered in a previous session (save/checkpoint), skip entirely
+        SaveableInteractable saveable = GetComponent<SaveableInteractable>();
+        if (saveable != null && saveable.WasAlreadyUsed())
+        {
+            hasTriggered = true;
+            hadItemBefore = true; // prevent false detection on inventory restore
+            return; // don't subscribe - sequence already happened
+        }
+
         // Check if player already has the item
         if (itemToWatch != null && Player.instance != null)
         {
@@ -69,8 +79,11 @@ public class ItemPickupEnemySpawner : MonoBehaviour
         if (!hadItemBefore && hasItemNow)
         {
             hasTriggered = true;
-            onItemPickedUp?.Invoke();
-            PlayPickupMusic();
+
+            // Mark as used in save system so checkpoint restore doesn't re-trigger
+            SaveableInteractable saveable = GetComponent<SaveableInteractable>();
+            if (saveable != null) saveable.MarkAsUsed();
+
             StartCoroutine(Co_SpawnEnemies());
         }
 
@@ -95,6 +108,11 @@ public class ItemPickupEnemySpawner : MonoBehaviour
     private IEnumerator Co_SpawnEnemies()
     {
         yield return new WaitForSeconds(delayBeforeSpawning);
+
+        // Fire onItemPickedUp after the delay
+        onItemPickedUp?.Invoke();
+        PlayPickupSFX();
+        PlayPickupMusic();
         
         onSpawningStarted?.Invoke();
 
@@ -164,6 +182,16 @@ public class ItemPickupEnemySpawner : MonoBehaviour
         // Clean up null references
         spawnedEnemies.RemoveAll(e => e == null);
         return spawnedEnemies.Count;
+    }
+
+    private void PlayPickupSFX()
+    {
+        if (pickupSFX == null) return;
+
+        if (musicAudioSource != null)
+            musicAudioSource.PlayOneShot(pickupSFX);
+        else
+            AudioSource.PlayClipAtPoint(pickupSFX, Player.instance.transform.position);
     }
 
     private void PlayPickupMusic()

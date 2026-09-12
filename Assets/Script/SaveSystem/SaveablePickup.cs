@@ -14,6 +14,15 @@ public class SaveablePickup : MonoBehaviour, ISaveable
     {
         uniqueID = GetComponent<UniqueID>();
     }
+
+    private void Start()
+    {
+        // Check runtime state on scene load (handles scene transitions without explicit LoadGame)
+        if (SaveManager.instance != null && SaveManager.instance.IsItemPickedUp(uniqueID.ID))
+        {
+            Destroy(gameObject);
+        }
+    }
     
     /// <summary>
     /// Call this when the item is picked up

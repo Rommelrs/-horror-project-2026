@@ -19,6 +19,7 @@ public class SaveManager : MonoBehaviour
     private string saveDirectory;
     private SaveData currentSaveData;
     private float sessionStartTime;
+    private float accumulatedPlaytime; // Total playtime from previous sessions
     
     // Runtime tracking - items picked up this session (persists until save)
     // Made static so they persist even if instance is temporarily replaced
@@ -52,6 +53,8 @@ public class SaveManager : MonoBehaviour
             }
             
             sessionStartTime = Time.time;
+            // Load previously accumulated playtime from PlayerPrefs
+            accumulatedPlaytime = PlayerPrefs.GetFloat("TotalPlaytime", 0f);
         }
         else
         {
@@ -77,7 +80,11 @@ public class SaveManager : MonoBehaviour
         saveData.saveFileName = GetSaveFileName(slotIndex);
         saveData.sceneName = SceneManager.GetActiveScene().name;
         saveData.saveDate = DateTime.Now;
-        saveData.playtime = Time.time - sessionStartTime;
+        float thisSessionTime = Time.time - sessionStartTime;
+        saveData.playtime = accumulatedPlaytime + thisSessionTime;
+        // Persist total playtime so next session starts from here
+        PlayerPrefs.SetFloat("TotalPlaytime", saveData.playtime);
+        PlayerPrefs.Save();
         
         // Collect data from all saveable objects
         CollectSaveData(saveData);
@@ -436,6 +443,30 @@ public class SaveManager : MonoBehaviour
         return runtimeUsedInteractables.Contains(interactableID);
     }
     
+    // ─── Getters for CheckpointManager ───
+    public HashSet<string> GetPickedUpItems()     => new HashSet<string>(runtimePickedUpItems);
+    public HashSet<string> GetDeadEnemies()       => new HashSet<string>(runtimeDeadEnemies);
+    public HashSet<string> GetOpenedContainers()  => new HashSet<string>(runtimeOpenedContainers);
+    public HashSet<string> GetActivatedSwitches() => new HashSet<string>(runtimeActivatedSwitches);
+    public HashSet<string> GetStoppedSpawners()   => new HashSet<string>(runtimeStoppedSpawners);
+    public HashSet<string> GetTriggeredZones()    => new HashSet<string>(runtimeTriggeredZones);
+    public HashSet<string> GetUsedInteractables() => new HashSet<string>(runtimeUsedInteractables);
+
+    /// <summary>Restore runtime tracking from checkpoint data.</summary>
+    public void RestoreFromCheckpoint(
+        List<string> pickedUp, List<string> dead, List<string> containers,
+        List<string> switches, List<string> spawners,
+        List<string> zones, List<string> interactables)
+    {
+        runtimePickedUpItems.Clear();     foreach (var id in pickedUp)      runtimePickedUpItems.Add(id);
+        runtimeDeadEnemies.Clear();       foreach (var id in dead)          runtimeDeadEnemies.Add(id);
+        runtimeOpenedContainers.Clear();  foreach (var id in containers)    runtimeOpenedContainers.Add(id);
+        runtimeActivatedSwitches.Clear(); foreach (var id in switches)      runtimeActivatedSwitches.Add(id);
+        runtimeStoppedSpawners.Clear();   foreach (var id in spawners)      runtimeStoppedSpawners.Add(id);
+        runtimeTriggeredZones.Clear();    foreach (var id in zones)         runtimeTriggeredZones.Add(id);
+        runtimeUsedInteractables.Clear(); foreach (var id in interactables) runtimeUsedInteractables.Add(id);
+    }
+
     /// <summary>
     /// Clear all runtime tracking - use when starting a completely new game
     /// </summary>
@@ -448,6 +479,13 @@ public class SaveManager : MonoBehaviour
         runtimeStoppedSpawners.Clear();
         runtimeTriggeredZones.Clear();
         runtimeUsedInteractables.Clear();
+        
+        // Reset playtime for new game
+        accumulatedPlaytime = 0f;
+        sessionStartTime = Time.time;
+        PlayerPrefs.SetFloat("TotalPlaytime", 0f);
+        PlayerPrefs.Save();
+        
         Debug.Log("[SaveManager] All runtime tracking cleared for new game");
     }
     

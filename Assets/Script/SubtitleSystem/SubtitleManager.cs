@@ -14,6 +14,7 @@ public class SubtitleManager : MonoBehaviour
     public static SubtitleManager instance;
 
     [SerializeField] Text subtitleTxt;
+    [SerializeField] bool useTypewriterEffect = true;
     [SerializeField] float letterDelay = 0.03f; // typing speed
     [SerializeField] float autoDismissDelay = 3f; // auto-dismiss last subtitle after this delay
     //[SerializeField] float groupDelay = 0.4f;
@@ -63,6 +64,21 @@ public class SubtitleManager : MonoBehaviour
     private void OnDestroy()
     {
         continueInput.action.performed -= OnContinueButtonPressed;
+    }
+
+    /// <summary>Force close the current subtitle immediately.</summary>
+    public void ForceClose()
+    {
+        if (!subtitleBusy) return;
+        StopAllCoroutines();
+        subtitleTxt.text = string.Empty;
+        if (shouldFreezeGame && !GameManager.IsPaused)
+            Time.timeScale = 1f;
+        subtitleBusy = false;
+        lastClosedTime = Time.time;
+        callbackOnCompleted?.Invoke();
+        callbackOnCompleted = null;
+        currentSubtitleList.Clear();
     }
 
     public bool IsInInteractionCooldownPeriod()
@@ -178,10 +194,17 @@ public class SubtitleManager : MonoBehaviour
 
         subtitleTxt.text = string.Empty;
 
-        for (int i = 0; i < subtitle.Length; i++)
+        if (useTypewriterEffect)
         {
-            subtitleTxt.text += subtitle[i];
-            yield return new WaitForSecondsRealtime(letterDelay);
+            for (int i = 0; i < subtitle.Length; i++)
+            {
+                subtitleTxt.text += subtitle[i];
+                yield return new WaitForSecondsRealtime(letterDelay);
+            }
+        }
+        else
+        {
+            subtitleTxt.text = subtitle;
         }
 
         // Auto-dismiss last subtitle if no more in queue

@@ -21,18 +21,12 @@ public class EnemyAnimationEventForwarder : MonoBehaviour
     // Animation event methods - forward to Enemy
     public void OnFootstep()
     {
-        if (enemy != null)
-        {
-            enemy.PlayFootstep();
-        }
+        if (enemy != null) enemy.PlayFootstep();
     }
     
     public void PlayFootstep()
     {
-        if (enemy != null)
-        {
-            enemy.PlayFootstep();
-        }
+        if (enemy != null) enemy.PlayFootstep();
     }
 
     public void OnAttack()

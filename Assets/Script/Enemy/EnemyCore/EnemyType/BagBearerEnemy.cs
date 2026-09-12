@@ -10,7 +10,11 @@ public class BagBearerEnemy : Enemy
 
     // Shared across all BagBearerEnemies - prevents simultaneous throws
     static float lastThrowTime = 0f;
-    static float throwStaggerDelay = 1f;
+    static float throwStaggerDelay = 0.4f;
+    static BagBearerEnemy currentAttacker = null; // Only one can be in attack state at a time
+
+    bool holdingPosition = false;
+    public override bool HoldPositionDuringChase => holdingPosition;
 
     [Header("Bag Bearer Setup")]
     [SerializeField] Projectile projectilePrefab;
@@ -18,9 +22,13 @@ public class BagBearerEnemy : Enemy
     public BagBearerReloadGroup []bagBearerReloadGroup;
     
     [Header("Spacing Settings")]
-    [SerializeField] float separationDistance = 2f; // Minimum distance to keep from other enemies
-    [SerializeField] float separationForce = 1f; // How strongly to push away from others
-    [SerializeField] LayerMask enemyLayer; // Layer mask for detecting other enemies
+    [SerializeField] float separationDistance = 2f;
+    [SerializeField] float separationForce = 1f;
+    [SerializeField] LayerMask enemyLayer;
+
+    [Header("Wall Avoidance")]
+    [SerializeField] float wallAvoidanceDistance = 2.5f; // How far to sense walls
+    [SerializeField] float wallAvoidanceForce = 2f;     // How hard to steer away
     
     // Performance optimization - throttle expensive checks
     private float lastSeparationCheckTime = 0f;
@@ -83,6 +91,10 @@ public class BagBearerEnemy : Enemy
 
     void LateUpdate()
     {
+        // Wall avoidance runs in LateUpdate so it overrides EnemyChaseState's destination
+        if (stateMachine.CurrentState == chaseState)
+            ApplyWallAvoidance();
+
         // Keep Fixed enemies stationary
         if (stats.enemyType == EnemyType.Fixed)
         {
@@ -106,7 +118,8 @@ public class BagBearerEnemy : Enemy
         OnChaseStarted.RemoveListener(EnemyChaseStateStarted);
         OnAttackStarted.RemoveListener(EnemyAttackStateStarted);
         
-        // Release attack token when destroyed
+        // Release attack token and attacker slot when destroyed
+        if (currentAttacker == this) currentAttacker = null;
         if (EnemyAttackCoordinator.Instance != null)
         {
             EnemyAttackCoordinator.Instance.OnEnemyDestroyed(this);
@@ -116,7 +129,7 @@ public class BagBearerEnemy : Enemy
     /// <summary>
     /// Call this when changing enemy type (e.g. from Fixed to Aggressive)
     /// </summary>
-    public void ChangeEnemyType(EnemyType newType)
+    public override void ChangeEnemyType(EnemyType newType)
     {
         EnemyType oldType = stats.enemyType;
         stats.enemyType = newType;
@@ -247,18 +260,26 @@ public class BagBearerEnemy : Enemy
         //Currently in EnemyChaseState
         if (currentState == chaseState)
         {
-            // Apply separation from other enemies (throttled)
-            if (Time.time - lastSeparationCheckTime > separationCheckInterval)
-            {
-                ApplySeparation();
-                lastSeparationCheckTime = Time.time;
-            }
+        // Apply separation from other enemies (throttled)
+        if (Time.time - lastSeparationCheckTime > separationCheckInterval)
+        {
+            ApplySeparation();
+            lastSeparationCheckTime = Time.time;
+        }
             
-            if (currentState.canLeave)
+        if (currentState.canLeave)
             {
                 // If within attack range AND has line of sight AND spawn points are clear, enter attack state
                 if (PlayerInRange(stats.attackRange))
                 {
+                    // Only stop if not near a wall - otherwise keep repositioning
+                    if (!IsNearWall())
+                    {
+                        holdingPosition = true;
+                        if (agent != null && agent.isOnNavMesh)
+                            agent.isStopped = true;
+                    }
+
                     // Throttle expensive LoS and spawn point checks
                     if (Time.time - lastLoSCheckTime > loSCheckInterval)
                     {
@@ -269,14 +290,39 @@ public class BagBearerEnemy : Enemy
                     
                     if (cachedHasLoS && cachedSpawnPointsClear)
                     {
-                        // Stagger throws - don't attack if another BagBearer threw recently
-                        if (Time.time >= lastThrowTime + throwStaggerDelay)
+                        // Only enter attack if no other BagBearer is currently attacking
+                        bool slotFree = currentAttacker == null || currentAttacker == this;
+                        if (slotFree && Time.time >= lastThrowTime + throwStaggerDelay)
                         {
+                            currentAttacker = this; // Claim the attack slot
+                            holdingPosition = false;
+                            if (agent != null && agent.isOnNavMesh)
+                                agent.isStopped = false;
                             stateMachine.ChangeState(attackState);
                         }
-                        // Otherwise stay in chase and keep trying
+                        else if (!slotFree)
+                        {
+                            // Slot taken by another BagBearer - keep moving to stay ready
+                            holdingPosition = false;
+                            if (agent != null && agent.isOnNavMesh)
+                                agent.isStopped = false;
+                        }
+                        // Otherwise (slot free but stagger delay) hold position
                     }
-                    // Otherwise stay in chase to reposition for clear shot and clear spawn points
+                    else
+                    {
+                        // No clear shot - resume movement to reposition
+                        holdingPosition = false;
+                        if (agent != null && agent.isOnNavMesh)
+                            agent.isStopped = false;
+                    }
+                }
+                else
+                {
+                    // Not in range - make sure agent is moving
+                    holdingPosition = false;
+                    if (agent != null && agent.isOnNavMesh)
+                        agent.isStopped = false;
                 }
             }
         }
@@ -295,11 +341,8 @@ public class BagBearerEnemy : Enemy
             // If lost line of sight OR spawn points blocked, go back to chase to reposition
             if (currentState.canLeave && (!cachedHasLoS || !cachedSpawnPointsClear))
             {
-                // Release token when leaving attack state
-                if (EnemyAttackCoordinator.Instance != null)
-                {
-                    EnemyAttackCoordinator.Instance.ReleaseToken(this);
-                }
+                if (EnemyAttackCoordinator.Instance != null) EnemyAttackCoordinator.Instance.ReleaseToken(this);
+                if (currentAttacker == this) currentAttacker = null;
                 stateMachine.ChangeState(chaseState);
                 return;
             }
@@ -309,11 +352,8 @@ public class BagBearerEnemy : Enemy
             {
                 if (currentState.canLeave && !PlayerInRange(stats.attackRange))
                 {
-                    // Release token when leaving attack state
-                    if (EnemyAttackCoordinator.Instance != null)
-                    {
-                        EnemyAttackCoordinator.Instance.ReleaseToken(this);
-                    }
+                    if (EnemyAttackCoordinator.Instance != null) EnemyAttackCoordinator.Instance.ReleaseToken(this);
+                    if (currentAttacker == this) currentAttacker = null;
                     stateMachine.ChangeState(chaseState);
                     return;
                 }
@@ -322,11 +362,8 @@ public class BagBearerEnemy : Enemy
             {
                 if (currentState.canLeave && !PlayerInRange(stats.attackRange))
                 {
-                    // Release token when leaving attack state
-                    if (EnemyAttackCoordinator.Instance != null)
-                    {
-                        EnemyAttackCoordinator.Instance.ReleaseToken(this);
-                    }
+                    if (EnemyAttackCoordinator.Instance != null) EnemyAttackCoordinator.Instance.ReleaseToken(this);
+                    if (currentAttacker == this) currentAttacker = null;
                     stateMachine.ChangeState(idleState);
                     return;
                 }
@@ -334,11 +371,8 @@ public class BagBearerEnemy : Enemy
 
             if (CheckIfEnemyNeedReload())
             {
-                // Release token when going to reload
-                if (EnemyAttackCoordinator.Instance != null)
-                {
-                    EnemyAttackCoordinator.Instance.ReleaseToken(this);
-                }
+                if (EnemyAttackCoordinator.Instance != null) EnemyAttackCoordinator.Instance.ReleaseToken(this);
+                if (currentAttacker == this) currentAttacker = null;
                 stateMachine.ChangeState(enemyReloadState);
                 return;
             }
@@ -423,14 +457,17 @@ public class BagBearerEnemy : Enemy
         Vector3 directionToPlayer = playerCenter - rayStart;
         RaycastHit hit;
         
-        int layerMask = ~LayerMask.GetMask("Hitbox");
+        // Exclude Hitbox and Enemy layers so other enemies don't block LoS
+        int layerMask = ~LayerMask.GetMask("Hitbox", "Enemy");
         
         if (Physics.Raycast(rayStart, directionToPlayer.normalized, out hit, stats.attackRange, layerMask))
         {
+            // Hit something - only LoS if it's the player
             return hit.collider.GetComponentInParent<Player>() != null;
         }
         
-        return false;
+        // Nothing hit = completely clear path to player
+        return true;
     }
     
     private bool HasClearSpawnPoints()
@@ -462,6 +499,60 @@ public class BagBearerEnemy : Enemy
         
         return true; // All spawn points are clear
     }
+    // Returns true if enemy is currently too close to a wall
+    private bool IsNearWall()
+    {
+        int layerMask = LayerMask.GetMask("Default", "Wall");
+        float checkDist = 1f; // Fixed 1m threshold - only truly near walls
+        for (int i = 0; i < 8; i++)
+        {
+            float angle = i * 45f * Mathf.Deg2Rad;
+            Vector3 direction = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+            if (Physics.Raycast(transform.position + Vector3.up * 0.5f, direction, checkDist, layerMask))
+                return true;
+        }
+        return false;
+    }
+
+    private void ApplyWallAvoidance()
+    {
+        if (agent == null || !agent.isOnNavMesh) return;
+
+        Vector3 avoidanceVector = Vector3.zero;
+        int hitCount = 0;
+
+        // Cast rays in 8 directions to detect nearby walls
+        for (int i = 0; i < 8; i++)
+        {
+            float angle = i * 45f * Mathf.Deg2Rad;
+            Vector3 direction = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
+            RaycastHit hit;
+
+            int layerMask = LayerMask.GetMask("Default", "Wall");
+            if (Physics.Raycast(transform.position + Vector3.up * 0.5f, direction, out hit, wallAvoidanceDistance, layerMask))
+            {
+                float strength = 1f - (hit.distance / wallAvoidanceDistance);
+                avoidanceVector += -direction * strength;
+                hitCount++;
+            }
+        }
+
+        if (hitCount > 0 && agent.isOnNavMesh)
+        {
+            // Use agent.Move to directly push position away from walls
+            // This works on top of pathfinding without changing the destination
+            avoidanceVector = avoidanceVector.normalized * wallAvoidanceForce * Time.deltaTime;
+            agent.Move(avoidanceVector);
+
+            // If stopped near wall, un-stop temporarily to reposition
+            if (agent.isStopped)
+            {
+                holdingPosition = false;
+                agent.isStopped = false;
+            }
+        }
+    }
+
     private void ApplySeparation()
     {
         // Find nearby enemies
@@ -488,11 +579,13 @@ public class BagBearerEnemy : Enemy
             }
         }
         
-        // Apply separation to NavMeshAgent if we have neighbors too close
-        if (neighborCount > 0 && agent != null && agent.isOnNavMesh)
+        // Apply separation by offsetting the NavMeshAgent destination instead of velocity
+        // (modifying velocity directly fights NavMesh pathfinding)
+        if (neighborCount > 0 && agent != null && agent.isOnNavMesh && !agent.isStopped)
         {
             separationVector = separationVector.normalized * separationForce;
-            agent.velocity += separationVector;
+            Vector3 newDestination = agent.destination + separationVector;
+            agent.SetDestination(newDestination);
         }
     }
 
@@ -501,12 +594,20 @@ public class BagBearerEnemy : Enemy
     {
         if (Player.instance == null) return;
 
+        // If another BagBearer threw very recently, skip this throw to stagger attacks
+        if (Time.time < lastThrowTime + throwStaggerDelay)
+        {
+            stateMachine.ChangeState(chaseState);
+            return;
+        }
+
         for (int i = 0; i < bagBearerReloadGroup.Length; i++)
         {
             if (bagBearerReloadGroup[i].isReloaded == true)
             {
                 //Spawn a projectile and throw at the player
                 lastThrowTime = Time.time;
+                if (currentAttacker == this) currentAttacker = null; // Release slot after throwing
                 Vector3 direction = transform.position - Player.instance.transform.position;
                 Vector3 targetPosition = Player.instance.transform.position + direction.normalized * positionOffset;
 

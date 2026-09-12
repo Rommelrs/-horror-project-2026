@@ -2,21 +2,20 @@ using UnityEngine;
 using UnityEngine.Events;
 
 [RequireComponent(typeof(Health))]
-public class ShootableButton : MonoBehaviour
+public class ShootableButton : Interactable
 {
     [Header("Settings")]
     [Tooltip("If true, can only be activated once and then disables itself.")]
     [SerializeField] bool activateOnce = true;
-    [Tooltip("If true, requires a single shot to activate (sets Health to 1).")]
-    [SerializeField] bool oneShot = false;
 
     [Header("Objects To Enable / Disable")]
     [SerializeField] GameObject[] objectsToEnable;
     [SerializeField] GameObject[] objectsToDisable;
 
     [Header("Events")]
-    public UnityEvent OnShot;       // Fires every time the button is shot
-    public UnityEvent OnActivated;  // Fires when health reaches 0 (button fully activated)
+    public UnityEvent OnShot;
+    public UnityEvent OnActivated;
+    public UnityEvent OnReset;
 
     Health health;
     bool activated = false;
@@ -30,7 +29,6 @@ public class ShootableButton : MonoBehaviour
     {
         health.OnDeath.AddListener(OnButtonActivated);
         health.OnDamageTaken += OnButtonShot;
-        Debug.Log("[ShootableButton] Initialized on: " + gameObject.name + " | HP: " + health.GetHealthValue());
     }
 
     private void OnDestroy()
@@ -39,36 +37,34 @@ public class ShootableButton : MonoBehaviour
         health.OnDamageTaken -= OnButtonShot;
     }
 
+    // Called when player presses E
+    public override void Interacted()
+    {
+        base.Interacted();
+        if (activated && activateOnce) return;
+        Activate();
+    }
+
     void OnButtonShot(int damage)
     {
-        Debug.Log("[ShootableButton] Shot! Damage: " + damage + " | Remaining HP: " + health.GetHealthValue());
         OnShot?.Invoke();
     }
 
     void OnButtonActivated()
     {
-        Debug.Log("[ShootableButton] Activated! activateOnce: " + activateOnce + " | already activated: " + activated);
+        Activate();
+    }
 
-        if (activateOnce && activated)
-        {
-            Debug.Log("[ShootableButton] Already activated - ignoring.");
-            return;
-        }
+    void Activate()
+    {
+        if (activateOnce && activated) return;
         activated = true;
 
-        Debug.Log("[ShootableButton] Enabling " + objectsToEnable.Length + " objects, disabling " + objectsToDisable.Length + " objects.");
-
         foreach (var obj in objectsToEnable)
-        {
-            if (obj != null) { Debug.Log("[ShootableButton] Enabling: " + obj.name); obj.SetActive(true); }
-            else Debug.LogWarning("[ShootableButton] objectsToEnable has a NULL entry!");
-        }
+            if (obj != null) obj.SetActive(true);
 
         foreach (var obj in objectsToDisable)
-        {
-            if (obj != null) { Debug.Log("[ShootableButton] Disabling: " + obj.name); obj.SetActive(false); }
-            else Debug.LogWarning("[ShootableButton] objectsToDisable has a NULL entry!");
-        }
+            if (obj != null) obj.SetActive(false);
 
         OnActivated?.Invoke();
 
@@ -77,5 +73,27 @@ public class ShootableButton : MonoBehaviour
             Collider coll = GetComponent<Collider>();
             if (coll != null) coll.enabled = false;
         }
+    }
+
+    // Call this from TimedLightTrigger's OnLightsOff event to reset the button
+    public void ResetButton()
+    {
+        activated = false;
+
+        // Restore health
+        health.ResetHealth();
+
+        // Reverse objects (disable what was enabled, enable what was disabled)
+        foreach (var obj in objectsToEnable)
+            if (obj != null) obj.SetActive(false);
+
+        foreach (var obj in objectsToDisable)
+            if (obj != null) obj.SetActive(true);
+
+        // Re-enable collider so button can be interacted with again
+        Collider coll = GetComponent<Collider>();
+        if (coll != null) coll.enabled = true;
+
+        OnReset?.Invoke();
     }
 }

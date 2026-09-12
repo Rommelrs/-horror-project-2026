@@ -29,6 +29,21 @@ public class SaveableTrigger : MonoBehaviour, ISaveable
     {
         uniqueID = GetComponent<UniqueID>();
     }
+
+    private void Start()
+    {
+        // Auto-disable if already triggered (handles checkpoint/scene transition loading)
+        if (SaveManager.instance != null && SaveManager.instance.IsZoneTriggered(uniqueID.ID))
+        {
+            if (disableGameObject)
+                gameObject.SetActive(false);
+            else
+            {
+                Collider col = GetComponent<Collider>();
+                if (col != null) col.enabled = false;
+            }
+        }
+    }
     
     /// <summary>
     /// Call this when the trigger is activated

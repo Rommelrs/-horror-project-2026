@@ -20,12 +20,21 @@ public class LoadButton : MonoBehaviour
         
         // Clear all save manager runtime tracking for fresh start
         if (SaveManager.instance != null)
-        {
             SaveManager.instance.ClearAllRuntimeTracking();
-        }
+
+        // Clear checkpoint so Continue button disappears
+        if (CheckpointManager.instance != null)
+            CheckpointManager.instance.ClearCheckpoint();
         
-        // Clear all map markers for new game
+        // Clear all map markers and map unlock state
         ClearAllMapMarkers();
+
+        // Reset map handler runtime state
+        if (MapHandler.instance != null)
+        {
+            MapHandler.instance.hasMap1 = false;
+            MapHandler.instance.hasMap2 = false;
+        }
         
         // Mark that we're starting a new game (will be used after scene loads)
         PlayerPrefs.SetInt("IsNewGame", 1);
@@ -123,8 +132,10 @@ public class LoadButton : MonoBehaviour
             }
         }
         
-        // Clear HasMap flag for new game
+        // Clear all map flags for new game
         PlayerPrefs.SetInt("HasMap", 0);
+        PlayerPrefs.DeleteKey("HasMap1");
+        PlayerPrefs.DeleteKey("HasMap2");
         
         PlayerPrefs.Save();
     }
