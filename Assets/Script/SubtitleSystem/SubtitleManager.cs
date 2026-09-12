@@ -66,6 +66,21 @@ public class SubtitleManager : MonoBehaviour
         continueInput.action.performed -= OnContinueButtonPressed;
     }
 
+    /// <summary>Force close the current subtitle immediately.</summary>
+    public void ForceClose()
+    {
+        if (!subtitleBusy) return;
+        StopAllCoroutines();
+        subtitleTxt.text = string.Empty;
+        if (shouldFreezeGame && !GameManager.IsPaused)
+            Time.timeScale = 1f;
+        subtitleBusy = false;
+        lastClosedTime = Time.time;
+        callbackOnCompleted?.Invoke();
+        callbackOnCompleted = null;
+        currentSubtitleList.Clear();
+    }
+
     public bool IsInInteractionCooldownPeriod()
     {
         if (Player.instance == null)

@@ -57,3 +57,25 @@ MonoBehaviour:
         m_PreInfinity: 0
         m_PostInfinity: 0
         m_RotationOrder: 0
+  - m_From: ThirdPersonVCam
+    m_To: DownedAimCam
+    m_Blend:
+      m_Style: 1
+      m_Time: 0.5
+      m_CustomCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 0
+        m_PostInfinity: 0
+        m_RotationOrder: 0
+  - m_From: DownedAimCam
+    m_To: ThirdPersonVCam
+    m_Blend:
+      m_Style: 1
+      m_Time: 0.5
+      m_CustomCurve:
+        serializedVersion: 2
+        m_Curve: []
+        m_PreInfinity: 0
+        m_PostInfinity: 0
+        m_RotationOrder: 0

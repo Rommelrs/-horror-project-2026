@@ -35,6 +35,10 @@ public class PlayerWeaponSystem : MonoBehaviour
     private const float _threshold = 0.01f;
     public bool LockCameraPosition = false;
     public bool aimingOverrideForTesting = false;
+    /// <summary>Set true to block HandleAiming (e.g. downed state handles ADS externally).</summary>
+    [HideInInspector] public bool blockAimingSystem = false;
+    /// <summary>Set true to grant infinite ammo (ammo is never decremented). Restored to false on stand up.</summary>
+    [HideInInspector] public bool infiniteAmmo = false;
 
     [Header("Audio")]
     [SerializeField] AudioClip pistolShootClip;
@@ -249,13 +253,14 @@ public class PlayerWeaponSystem : MonoBehaviour
             }
         }
 
-        HandleAiming();
-        HandleReloading();   // Process reload first to set isReloading flag
-        HandleShooting();    // Then check shooting (which checks !isReloading)
+        if (!blockAimingSystem) HandleAiming();
+        HandleReloading();
+        HandleShooting();
     }
 
     bool HasEnoughAmmo()
     {
+        if (infiniteAmmo) return true;
         if(currentAmmo > 0)
             return true;
 
@@ -470,9 +475,12 @@ public class PlayerWeaponSystem : MonoBehaviour
 
                 if (isAiming)
                 {
-                    currentAmmo--;
-                    if (currentAmmo <= 0) currentAmmo = 0;
-                    UpdateAmmoCount();
+                    if (!infiniteAmmo)
+                    {
+                        currentAmmo--;
+                        if (currentAmmo <= 0) currentAmmo = 0;
+                        UpdateAmmoCount();
+                    }
 
                     //Trigger Shoot Animation
                     firstPersonAnimRoot.SetTrigger("Shoot");
@@ -713,9 +721,12 @@ public class PlayerWeaponSystem : MonoBehaviour
         if (isReloading)
             return;
             
-        currentAmmo--;
-        if (currentAmmo <= 0) currentAmmo = 0;
-        UpdateAmmoCount();
+        if (!infiniteAmmo)
+        {
+            currentAmmo--;
+            if (currentAmmo <= 0) currentAmmo = 0;
+            UpdateAmmoCount();
+        }
 
         //Play Shoot SFX
         SoundEffectManager.instance.PlaySFX(pistolShootClip, 0.8f, true);
