@@ -102,6 +102,8 @@ public class CinematicKnockdownSequence : MonoBehaviour
     bool hasTriggered = false;
     bool isPlayerDowned = false;
     bool enemiesCleared = false;
+    bool isKnockdownAnimPlaying = false;
+    Quaternion downedPlayerRotation;
 
     bool AllEnemiesDead()
     {
@@ -129,13 +131,28 @@ public class CinematicKnockdownSequence : MonoBehaviour
     {
         if (!isPlayerDowned) return;
 
+        // Always lock the player body rotation while downed — ADS only moves the camera, not the character
+        Player.instance.transform.rotation = downedPlayerRotation;
+
         bool aiming = allowADSWhileDowned && downedAimCam != null
             ? Player.instance.playerWeaponSystem.isAiming
             : false;
 
-        // While not aiming: freeze animation at last frame
+        // While not aiming: let the knockdown animation play through, then freeze at last frame
         if (!aiming)
-            Player.instance.animator.Play(knockdownStateName, knockdownLayerIndex, 1f);
+        {
+            if (isKnockdownAnimPlaying)
+            {
+                // Wait for the animation to finish before freezing
+                AnimatorStateInfo stateInfo = Player.instance.animator.GetCurrentAnimatorStateInfo(knockdownLayerIndex);
+                if (stateInfo.IsName(knockdownStateName) && stateInfo.normalizedTime >= 1f)
+                    isKnockdownAnimPlaying = false;
+            }
+            else
+            {
+                Player.instance.animator.Play(knockdownStateName, knockdownLayerIndex, 1f);
+            }
+        }
 
         // Enemy gate: when all enemies dead and not aiming, allow E to stand up
         if (!aiming && AllEnemiesDead())
@@ -352,7 +369,7 @@ public class CinematicKnockdownSequence : MonoBehaviour
             calculatedForce = pushForce;
         }
 
-        // Face player toward the runner so animation reacts to the hit
+        // Face player toward the runner so animation reacts to the hit, then lock that rotation
         if (runnerEnemy != null)
         {
             Vector3 towardRunner = (runnerEnemy.transform.position - Player.instance.transform.position);
@@ -360,6 +377,7 @@ public class CinematicKnockdownSequence : MonoBehaviour
             if (towardRunner.sqrMagnitude > 0.01f)
                 Player.instance.transform.rotation = Quaternion.LookRotation(towardRunner);
         }
+        downedPlayerRotation = Player.instance.transform.rotation;
 
         StartCoroutine(Co_PushPlayer(pushDir, calculatedForce));
 
@@ -371,7 +389,8 @@ public class CinematicKnockdownSequence : MonoBehaviour
         if (thirdPersonVCam != null)
             StartCoroutine(Co_CameraKnockdownEffect());
 
-        // Activate the knockdown layer and play the animation directly
+        // Activate the knockdown layer and play the animation from the start
+        isKnockdownAnimPlaying = true;
         Player.instance.animator.SetLayerWeight(knockdownLayerIndex, 1f);
         Player.instance.animator.Play(knockdownStateName, knockdownLayerIndex, 0f);
 
@@ -424,6 +443,7 @@ public class CinematicKnockdownSequence : MonoBehaviour
     {
         if (!isPlayerDowned) return;
         isPlayerDowned = false;
+        isKnockdownAnimPlaying = false;
 
         // Reset ADS toggle state and force exit aiming
         adsToggled = false;

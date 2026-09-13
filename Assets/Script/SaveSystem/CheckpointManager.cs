@@ -26,6 +26,9 @@ public class CheckpointManager : MonoBehaviour
     // Static reference read by CheckpointRestorer in the game scene
     public static CheckpointData pendingRestoreData;
 
+    /// <summary>True while a checkpoint restore is in progress. Blocks new checkpoint saves to prevent overwriting with bad mid-restore data.</summary>
+    public static bool IsRestoring { get; private set; }
+
     private void Awake()
     {
         if (instance != null)
@@ -52,6 +55,7 @@ public class CheckpointManager : MonoBehaviour
     public void TriggerCheckpoint(string checkpointName = "")
     {
         if (Player.instance == null) return;
+        if (IsRestoring) return; // Don't overwrite checkpoint while restoring
 
         CheckpointData data = CollectData(checkpointName);
         WriteToFile(data);
@@ -210,6 +214,8 @@ public class CheckpointManager : MonoBehaviour
 
     IEnumerator Co_RestoreAfterLoad(CheckpointData data)
     {
+        IsRestoring = true;
+
         // Wait one frame for scene to initialize
         yield return new WaitForEndOfFrame();
 
@@ -285,8 +291,11 @@ public class CheckpointManager : MonoBehaviour
                 if (note != null)
                     p.inventory.AddItem(note, entry.quantity);
             }
+
+            p.inventory.MarkInitialized();
         }
 
+        IsRestoring = false;
     }
 
     Item FindItemInResources(string itemName)
