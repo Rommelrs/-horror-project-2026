@@ -57,6 +57,8 @@ public class SwayNBobScript : MonoBehaviour
     Vector3 bobEulerRotation;
     Vector2 walkInput;
     Vector2 lookInput;
+    Vector3 _swayBobPos;    // cached sway position used by crosshair
+    Vector3 _swaySmoothed;  // smoothed sway tracked independently of transform.localPosition (which can be overridden externally)
 
     void Update()
     {
@@ -68,10 +70,9 @@ public class SwayNBobScript : MonoBehaviour
         BobRotation();
 
         CompositePositionRotation();
-    }
 
-    private void LateUpdate()
-    {
+        // Crosshair updated here in Update so it reads the correct sway position
+        // BEFORE CinematicKnockdownSequence.LateUpdate() can override firstPersonRoot.localPosition
         HandleCrosshairUIMovement();
     }
 
@@ -85,7 +86,7 @@ public class SwayNBobScript : MonoBehaviour
         if (!player.playerStability.calmingInhalerIsActive)
             currentThreshold = GetCurrentBobStabilityThreshold();
 
-        aimCrosshairImage.transform.localPosition = new Vector3(transform.localPosition.x * currentThreshold.aimCrosshairMultiplierX, transform.localPosition.y * currentThreshold.aimCrosshairMultiplierY, 0f);
+        aimCrosshairImage.transform.localPosition = new Vector3(_swayBobPos.x * currentThreshold.aimCrosshairMultiplierX, _swayBobPos.y * currentThreshold.aimCrosshairMultiplierY, 0f);
     }
 
     //Get Input
@@ -122,7 +123,11 @@ public class SwayNBobScript : MonoBehaviour
     //Update local position and rotation
     void CompositePositionRotation()
     {
-        transform.localPosition = Vector3.Lerp(transform.localPosition, swayPos + bobPosition, Time.deltaTime * smooth);
+        // Lerp from _swaySmoothed (not transform.localPosition) so external overrides
+        // like CinematicKnockdownSequence.LateUpdate() can't corrupt the sway calculation
+        _swaySmoothed = Vector3.Lerp(_swaySmoothed, swayPos + bobPosition, Time.deltaTime * smooth);
+        _swayBobPos = _swaySmoothed;
+        transform.localPosition = _swaySmoothed;
         transform.localRotation = Quaternion.Slerp(transform.localRotation, Quaternion.Euler(swayEulerRot) * Quaternion.Euler(bobEulerRotation), Time.deltaTime * smoothRot);
 
         if (fpAimTransform != null)
@@ -148,13 +153,13 @@ public class SwayNBobScript : MonoBehaviour
 
         if (moveInput.magnitude > 0.1f)
         {
-            bobPosition.x = (curveCos * bobLimit.x * bobLimitMultiplierWhileWalking * (isGrounded ? 1 : 0)) - (walkInput.x * travelLimit.x);
+            bobPosition.x = (curveCos * bobLimit.x * bobLimitMultiplierWhileWalking) - (walkInput.x * travelLimit.x);
             bobPosition.y = (curveSin * bobLimit.y * bobLimitMultiplierWhileWalking) - (moveInput.y * travelLimit.y);
             bobPosition.z = -(walkInput.y * travelLimit.z);
         }
         else
         {
-            bobPosition.x = (curveCos * bobLimit.x * (isGrounded ? 1 : 0)) - (walkInput.x * travelLimit.x);
+            bobPosition.x = (curveCos * bobLimit.x) - (walkInput.x * travelLimit.x);
             bobPosition.y = (curveSin * bobLimit.y) - (moveInput.y * travelLimit.y);
             bobPosition.z = -(walkInput.y * travelLimit.z);
         }

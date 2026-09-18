@@ -76,10 +76,7 @@ public class DangerZone : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Player"))
-        {
             playerInZone = true;
-            Debug.Log("DangerZone: Player entered");
-        }
 
         // Track enemies
         Enemy enemy = other.GetComponent<Enemy>();
@@ -87,10 +84,7 @@ public class DangerZone : MonoBehaviour
             enemy = other.GetComponentInParent<Enemy>();
 
         if (enemy != null && !enemiesInZone.Contains(enemy))
-        {
             enemiesInZone.Add(enemy);
-            Debug.Log("DangerZone: Enemy entered - " + enemy.name);
-        }
     }
 
     private void OnTriggerExit(Collider other)
@@ -98,8 +92,6 @@ public class DangerZone : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             playerInZone = false;
-            Debug.Log("DangerZone: Player exited");
-
             if (resetTimerOnExit)
                 playerTimeInZone = 0f;
         }
@@ -121,8 +113,6 @@ public class DangerZone : MonoBehaviour
         playerTimeInZone = 0f; // Reset timer
         nextTriggerTime = Time.time + retriggerCooldown; // Set cooldown
         
-        Debug.Log("DangerZone: Triggering weakpoint hit on " + enemiesInZone.Count + " enemies");
-
         // Clean up null/dead enemies
         enemiesInZone.RemoveAll(e => e == null || e.health.IsDead);
 
@@ -165,14 +155,7 @@ public class DangerZone : MonoBehaviour
 
                     // Set weakpoint hit flag and deal damage
                     enemy.health.isDamageByWeakpointHit = true;
-                    Debug.Log("DangerZone: Set weakpoint flag to TRUE for " + enemy.name);
-                    Debug.Log("DangerZone: Enemy current state: " + enemy.stateMachine.CurrentState.GetType().Name);
-                    Debug.Log("DangerZone: useDynamicChaseSpeed = " + enemy.stats.useDynamicChaseSpeed);
-                    Debug.Log("DangerZone: About to call Damage with amount = " + weakpointDamage);
-                    Debug.Log("DangerZone: Enemy health before damage = " + enemy.health.GetHealthValue());
                     enemy.health.Damage(weakpointDamage);
-                    Debug.Log("DangerZone: Damage COMPLETED on " + enemy.name + ", isDead = " + enemy.health.IsDead);
-                    Debug.Log("DangerZone: Enemy health after damage = " + enemy.health.GetHealthValue());
                 }
                 catch (System.Exception e)
                 {

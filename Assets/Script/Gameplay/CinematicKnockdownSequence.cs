@@ -13,6 +13,10 @@ public class CinematicKnockdownSequence : MonoBehaviour
     [Header("References")]
     [Tooltip("The RunnerEnemy that will perform the dash.")]
     [SerializeField] RunnerEnemy runnerEnemy;
+    [Tooltip("Assign the CameraRotationOverride so it gets disabled after the push.")]
+    [SerializeField] CameraRotationOverride cameraRotationOverride;
+    [Tooltip("Seconds after the push before the camera rotation override is disabled.")]
+    [SerializeField] float cameraOverrideDisableDelay = 1f;
     [Tooltip("The glass table to shatter when the runner hits the player.")]
     [SerializeField] GlassBreakable glassTable;
     [Tooltip("Optional: subtitle to trigger after player is knocked down.")]
@@ -41,6 +45,8 @@ public class CinematicKnockdownSequence : MonoBehaviour
     [Header("Auto Walk")]
     [Tooltip("Speed the player auto-walks forward when sequence triggers.")]
     [SerializeField] float autoWalkSpeed = 2f;
+    [Tooltip("How long the player walks before the runner starts his dash. Use this to time the encounter.")]
+    [SerializeField] float runnerDashDelay = 0f;
 
     [Header("Push Settings")]
     [Tooltip("Where the player should end up after being pushed (place this at the glass table). Push force auto-calculated from distance.")]
@@ -284,9 +290,15 @@ public class CinematicKnockdownSequence : MonoBehaviour
         autoWalking = true;
         StartCoroutine(Co_AutoWalk());
 
-        // Force runner into dash
+        // Wait before triggering the runner so you can time his dash against the player's walk
+        if (runnerDashDelay > 0f)
+            yield return new WaitForSeconds(runnerDashDelay);
+
+        // Force runner into dash — skip windup and damage for this cinematic push only
         if (runnerEnemy != null)
         {
+            runnerEnemy.enemyDashAttackState.skipWindup = true;
+            runnerEnemy.enemyDashAttackState.disableDashDamage = true;
             runnerEnemy.enemyDashAttackState.DashStarted += OnDashStarted;
             runnerEnemy.stateMachine.ChangeState(runnerEnemy.enemyDashAttackState);
         }
@@ -340,6 +352,17 @@ public class CinematicKnockdownSequence : MonoBehaviour
     {
         isPlayerDowned = true;
         autoWalking = false; // Stop auto-walk
+
+        if (cameraRotationOverride != null)
+            StartCoroutine(Co_DisableCameraOverrideAfterDelay());
+
+        // Clear the damage block:
+        // can't sneak in a hit after the flag clears. Future dashes reset damaged in Enter().
+        if (runnerEnemy != null)
+        {
+            runnerEnemy.enemyDashAttackState.ConsumeCurrentDashDamage();
+            runnerEnemy.enemyDashAttackState.disableDashDamage = false;
+        }
 
         // Calculate push
         Vector3 pushDir;
@@ -405,9 +428,10 @@ public class CinematicKnockdownSequence : MonoBehaviour
         // Fade in knockdown music
         if (knockdownMusicSource != null)
         {
+            float targetVolume = knockdownMusicSource.volume;
             knockdownMusicSource.volume = 0f;
             knockdownMusicSource.Play();
-            StartCoroutine(Co_FadeMusicVolume(knockdownMusicSource, 0f, 1f, musicFadeInDuration));
+            StartCoroutine(Co_FadeMusicVolume(knockdownMusicSource, 0f, targetVolume, musicFadeInDuration));
         }
 
         // Break glass
@@ -569,6 +593,13 @@ public class CinematicKnockdownSequence : MonoBehaviour
         }
     }
 
+    IEnumerator Co_DisableCameraOverrideAfterDelay()
+    {
+        yield return new WaitForSeconds(cameraOverrideDisableDelay);
+        if (cameraRotationOverride != null)
+            cameraRotationOverride.isActive = false;
+    }
+
     IEnumerator Co_FadeMusicVolume(AudioSource source, float from, float to, float duration, bool stopOnComplete = false)
     {
         float elapsed = 0f;
@@ -580,6 +611,17 @@ public class CinematicKnockdownSequence : MonoBehaviour
         }
         source.volume = to;
         if (stopOnComplete) source.Stop();
+    }
+
+    /// <summary>
+    /// Call this from a pre-sequence (CinematicPreSequenceController, Timeline signal, etc.)
+    /// to start the knockdown without needing the player to walk through the trigger collider.
+    /// </summary>
+    public void StartSequence()
+    {
+        if (hasTriggered) return;
+        hasTriggered = true;
+        StartCoroutine(Co_RunSequence());
     }
 
     // Call this from outside if you need to force stand up

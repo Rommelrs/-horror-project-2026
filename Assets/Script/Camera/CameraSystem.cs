@@ -1,4 +1,4 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -117,7 +117,7 @@ public class CameraSystem : MonoBehaviour
         }
 
         // SmoothDamp removes jitter completely
-        float smoothZoom = Mathf.SmoothDamp(m_CameraPositionOffset.localPosition.z, desiredZoom, ref zoomVelocity, zoomSmoothTime); // smooth time (tweak 0.05–0.15));
+        float smoothZoom = Mathf.SmoothDamp(m_CameraPositionOffset.localPosition.z, desiredZoom, ref zoomVelocity, zoomSmoothTime); // smooth time (tweak 0.05-0.15));
 
         Vector3 localPos = m_CameraPositionOffset.localPosition;
         localPos.z = smoothZoom;

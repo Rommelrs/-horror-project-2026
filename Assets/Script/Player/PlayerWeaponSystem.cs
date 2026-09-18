@@ -420,6 +420,15 @@ public class PlayerWeaponSystem : MonoBehaviour
         animator.SetBool("Aiming", false);
     }
 
+    /// <summary>
+    /// Syncs the internal camera yaw tracker to the player's current Y rotation.
+    /// Call after externally rotating the player so the camera doesn't snap on the next aim input.
+    /// </summary>
+    public void SyncCameraYaw()
+    {
+        _cinemachineTargetYaw = transform.eulerAngles.y;
+    }
+
     public void ExitOutOfAiming()
     {
         if (isAiming)
