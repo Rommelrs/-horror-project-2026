@@ -30,7 +30,8 @@ public class SaveManager : MonoBehaviour
     private static HashSet<string> runtimeStoppedSpawners = new HashSet<string>();
     private static HashSet<string> runtimeTriggeredZones = new HashSet<string>();
     private static HashSet<string> runtimeUsedInteractables = new HashSet<string>();
-    
+    private static string runtimeCurrentMusicTrack = "";
+
     // Events
     public delegate void SaveLoadEvent();
     public event SaveLoadEvent OnGameSaved;
@@ -167,7 +168,9 @@ public class SaveManager : MonoBehaviour
                 saveData.progressData.usedInteractables.Add(interactableID);
             }
         }
-        
+
+        saveData.progressData.currentBackgroundMusic = runtimeCurrentMusicTrack;
+
         // Find all objects with ISaveable interface
         ISaveable[] saveables = FindObjectsOfType<MonoBehaviour>() as ISaveable[];
         
@@ -292,8 +295,10 @@ public class SaveManager : MonoBehaviour
                 runtimeTriggeredZones.Add(id);
             foreach (string id in saveData.progressData.usedInteractables)
                 runtimeUsedInteractables.Add(id);
+
+            runtimeCurrentMusicTrack = saveData.progressData.currentBackgroundMusic ?? "";
         }
-        
+
         MonoBehaviour[] allObjects = FindObjectsOfType<MonoBehaviour>();
         
         foreach (MonoBehaviour obj in allObjects)
@@ -442,7 +447,24 @@ public class SaveManager : MonoBehaviour
     {
         return runtimeUsedInteractables.Contains(interactableID);
     }
-    
+
+    /// <summary>
+    /// Register which background music track is currently supposed to be playing
+    /// (call this whenever a track turns on, so it can be restored on continue/load).
+    /// </summary>
+    public void RegisterCurrentMusicTrack(string trackID)
+    {
+        runtimeCurrentMusicTrack = trackID;
+    }
+
+    /// <summary>
+    /// Get the background music track that should currently be playing (empty = none).
+    /// </summary>
+    public string GetCurrentMusicTrack()
+    {
+        return runtimeCurrentMusicTrack;
+    }
+
     // ─── Getters for CheckpointManager ───
     public HashSet<string> GetPickedUpItems()     => new HashSet<string>(runtimePickedUpItems);
     public HashSet<string> GetDeadEnemies()       => new HashSet<string>(runtimeDeadEnemies);
@@ -456,7 +478,8 @@ public class SaveManager : MonoBehaviour
     public void RestoreFromCheckpoint(
         List<string> pickedUp, List<string> dead, List<string> containers,
         List<string> switches, List<string> spawners,
-        List<string> zones, List<string> interactables)
+        List<string> zones, List<string> interactables,
+        string currentMusicTrack = "")
     {
         runtimePickedUpItems.Clear();     foreach (var id in pickedUp)      runtimePickedUpItems.Add(id);
         runtimeDeadEnemies.Clear();       foreach (var id in dead)          runtimeDeadEnemies.Add(id);
@@ -465,6 +488,7 @@ public class SaveManager : MonoBehaviour
         runtimeStoppedSpawners.Clear();   foreach (var id in spawners)      runtimeStoppedSpawners.Add(id);
         runtimeTriggeredZones.Clear();    foreach (var id in zones)         runtimeTriggeredZones.Add(id);
         runtimeUsedInteractables.Clear(); foreach (var id in interactables) runtimeUsedInteractables.Add(id);
+        runtimeCurrentMusicTrack = currentMusicTrack ?? "";
     }
 
     /// <summary>
@@ -479,7 +503,8 @@ public class SaveManager : MonoBehaviour
         runtimeStoppedSpawners.Clear();
         runtimeTriggeredZones.Clear();
         runtimeUsedInteractables.Clear();
-        
+        runtimeCurrentMusicTrack = "";
+
         // Reset playtime for new game
         accumulatedPlaytime = 0f;
         sessionStartTime = Time.time;

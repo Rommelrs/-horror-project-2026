@@ -315,19 +315,27 @@ public class Enemy : MonoBehaviour, IPoolable
         if (audioClips != null && audioClips.Length > 0)
         {
             AudioClip clipToPlay = audioClips[Random.Range(0, audioClips.Length)];
+
+            if (SoundEffectManager.instance != null)
+            {
+                // Routed through the SFX mixer group so this respects the volume sliders
+                SoundEffectManager.instance.PlaySFX(clipToPlay, 2.0f, true);
+                return;
+            }
+
             float randomPitch = Random.Range(0.9f, 1.1f);
-            
+
             // Create temporary GameObject for pitched audio playback
             GameObject tempAudio = new GameObject("TempAudio_" + clipToPlay.name);
             tempAudio.transform.position = Camera.main.transform.position;
-            
+
             AudioSource tempSource = tempAudio.AddComponent<AudioSource>();
             tempSource.clip = clipToPlay;
             tempSource.volume = 2.0f;
             tempSource.pitch = randomPitch;
             tempSource.spatialBlend = 0f; // 2D sound
             tempSource.Play();
-            
+
             Destroy(tempAudio, clipToPlay.length / randomPitch + 0.1f);
         }
     }

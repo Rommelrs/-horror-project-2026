@@ -190,6 +190,8 @@ public class ItemPickupEnemySpawner : MonoBehaviour
 
         if (musicAudioSource != null)
             musicAudioSource.PlayOneShot(pickupSFX);
+        else if (SoundEffectManager.instance != null)
+            SoundEffectManager.instance.PlaySFXAtPosition(pickupSFX, Player.instance.transform.position);
         else
             AudioSource.PlayClipAtPoint(pickupSFX, Player.instance.transform.position);
     }
@@ -202,6 +204,10 @@ public class ItemPickupEnemySpawner : MonoBehaviour
         {
             musicAudioSource.clip = pickupMusic;
             musicAudioSource.Play();
+        }
+        else if (SoundEffectManager.instance != null)
+        {
+            SoundEffectManager.instance.PlaySFXAtPosition(pickupMusic, Player.instance.transform.position);
         }
         else
         {

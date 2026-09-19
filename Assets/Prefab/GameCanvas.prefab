@@ -9365,7 +9365,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.642, g: 0.642, b: 0.642, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -18955,6 +18955,7 @@ GameObject:
   - component: {fileID: 372224245021464006}
   - component: {fileID: 8782303290732875458}
   - component: {fileID: 2820153540274304884}
+  - component: {fileID: 3656524331195681000}
   m_Layer: 5
   m_Name: SubtitleUI
   m_TagString: Untagged
@@ -19030,6 +19031,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_HorizontalFit: 0
   m_VerticalFit: 2
+--- !u!114 &3656524331195681000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8113091619776516691}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 866211c83eb369b4fab0caa97538347c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SubtitleManager
+  subtitleTxt: {fileID: 4016854802603130104}
+  useTypewriterEffect: 0
+  letterDelay: 0
+  autoDismissDelay: 3
+  continueInput: {fileID: 6397305457090860873, guid: 5b380c80d4897454e9a01e859512909f,
+    type: 3}
 --- !u!1 &8120393464810517794
 GameObject:
   m_ObjectHideFlags: 0

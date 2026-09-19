@@ -939,15 +939,22 @@ public class PlayerWeaponSystem : MonoBehaviour
                     // Play bonus sound unaffected by hitstop
                     if (weakPointBonusSounds != null && weakPointBonusSounds.Length > 0)
                     {
-                        GameObject tempAudio = new GameObject("TempWeakpointBonusAudio");
-                        AudioSource bonusSource = tempAudio.AddComponent<AudioSource>();
                         AudioClip randomClip = weakPointBonusSounds[Random.Range(0, weakPointBonusSounds.Length)];
-                        bonusSource.clip = randomClip;
-                        bonusSource.volume = 5f;
-                        bonusSource.spatialBlend = 0f;
-                        bonusSource.ignoreListenerPause = true;
-                        bonusSource.Play();
-                        Destroy(tempAudio, randomClip.length + 0.1f);
+                        if (SoundEffectManager.instance != null)
+                        {
+                            SoundEffectManager.instance.PlaySFX(randomClip, 5f);
+                        }
+                        else
+                        {
+                            GameObject tempAudio = new GameObject("TempWeakpointBonusAudio");
+                            AudioSource bonusSource = tempAudio.AddComponent<AudioSource>();
+                            bonusSource.clip = randomClip;
+                            bonusSource.volume = 5f;
+                            bonusSource.spatialBlend = 0f;
+                            bonusSource.ignoreListenerPause = true;
+                            bonusSource.Play();
+                            Destroy(tempAudio, randomClip.length + 0.1f);
+                        }
                     }
 
                     if (cameraShaker != null)
@@ -963,15 +970,19 @@ public class PlayerWeaponSystem : MonoBehaviour
                 {
                     //Headshot Damage
                     //Play SFX
-                    AudioSource.PlayClipAtPoint(headshotSFX, damageInfo[i].hit.point, 0.8f);
+                    if (SoundEffectManager.instance != null)
+                        SoundEffectManager.instance.PlaySFXAtPosition(headshotSFX, damageInfo[i].hit.point, 0.8f);
+                    else
+                        AudioSource.PlayClipAtPoint(headshotSFX, damageInfo[i].hit.point, 0.8f);
                 }
                 else
                 {
                     //Normal Damage
-                    AudioSource.PlayClipAtPoint(
-                        hitSFX[Random.Range(0, hitSFX.Length)],
-                        damageInfo[i].hit.point,
-                        0.8f);
+                    AudioClip normalHitClip = hitSFX[Random.Range(0, hitSFX.Length)];
+                    if (SoundEffectManager.instance != null)
+                        SoundEffectManager.instance.PlaySFXAtPosition(normalHitClip, damageInfo[i].hit.point, 0.8f);
+                    else
+                        AudioSource.PlayClipAtPoint(normalHitClip, damageInfo[i].hit.point, 0.8f);
                 }
 
                 damagedEnemies.Add(damageInfo[i].enemy);

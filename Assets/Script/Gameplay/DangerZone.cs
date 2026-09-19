@@ -205,6 +205,8 @@ public class DangerZone : MonoBehaviour
 
         if (postHitAudioSource != null)
             postHitAudioSource.PlayOneShot(activateSound);
+        else if (SoundEffectManager.instance != null)
+            SoundEffectManager.instance.PlaySFXAtPosition(activateSound, transform.position);
         else
             AudioSource.PlayClipAtPoint(activateSound, transform.position);
     }
@@ -262,6 +264,10 @@ public class DangerZone : MonoBehaviour
         if (postHitAudioSource != null)
         {
             postHitAudioSource.PlayOneShot(postHitSound);
+        }
+        else if (SoundEffectManager.instance != null)
+        {
+            SoundEffectManager.instance.PlaySFXAtPosition(postHitSound, transform.position);
         }
         else
         {

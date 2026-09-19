@@ -130,24 +130,30 @@ public class LootContainer : Interactable
         // Play open sound with random pitch
         if (openSound != null)
         {
-            GameObject tempAudio = new GameObject("LootContainerAudio");
-            tempAudio.transform.position = transform.position;
-            
-            AudioSource audioSource = tempAudio.AddComponent<AudioSource>();
-            audioSource.clip = openSound;
-            audioSource.volume = 5f;
             float pitch = Random.Range(minPitch, maxPitch);
-            audioSource.pitch = pitch;
-            audioSource.spatialBlend = 0f; // 2D sound - play at full volume everywhere
-            audioSource.minDistance = 1f;
-            audioSource.maxDistance = 20f;
-            
-            audioSource.Play();
-            
-            Destroy(tempAudio, openSound.length + 0.5f);
-        }
-        else
-        {
+
+            if (SoundEffectManager.instance != null)
+            {
+                // Routed through the SFX mixer group so this respects the volume sliders
+                SoundEffectManager.instance.PlaySFXAtPositionWithPitch(openSound, transform.position, pitch, 5f);
+            }
+            else
+            {
+                GameObject tempAudio = new GameObject("LootContainerAudio");
+                tempAudio.transform.position = transform.position;
+
+                AudioSource audioSource = tempAudio.AddComponent<AudioSource>();
+                audioSource.clip = openSound;
+                audioSource.volume = 5f;
+                audioSource.pitch = pitch;
+                audioSource.spatialBlend = 0f; // 2D sound - play at full volume everywhere
+                audioSource.minDistance = 1f;
+                audioSource.maxDistance = 20f;
+
+                audioSource.Play();
+
+                Destroy(tempAudio, openSound.length + 0.5f);
+            }
         }
         
         // Use animator if available

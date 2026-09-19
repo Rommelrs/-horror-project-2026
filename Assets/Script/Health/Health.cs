@@ -76,9 +76,16 @@ public class Health : MonoBehaviour, IDamagable
     [SerializeField] bool enableIFrames = false;
     private float lastDamageTime = -999f;
 
+    [Header("Invincibility")]
+    [Tooltip("When true, this entity completely ignores damage (no health loss, no hit reaction, no death). Used for scripted NPCs that shouldn't react to player bullets.")]
+    [SerializeField] bool isInvincible = false;
+
     //Damage Behaviour
     public void Damage(int damage)
     {
+        if (isInvincible)
+            return;
+
         // Check for i-frames (invincibility frames)
         if (enableIFrames && Time.time - lastDamageTime < iFrameDuration)
         {
@@ -173,7 +180,13 @@ public class Health : MonoBehaviour, IDamagable
         {
             AudioClip clip = hitSoundEffects[UnityEngine.Random.Range(0, hitSoundEffects.Length)];
             Vector3 soundPos = Player.instance != null ? Player.instance.transform.position : spawnPosition;
-            AudioSource.PlayClipAtPoint(clip, soundPos, hitSoundVolume);
+
+            // AudioSource.PlayClipAtPoint can't route through the mixer, so it ignores the SFX volume
+            // slider - go through SoundEffectManager (routed to the SFX group) instead.
+            if (SoundEffectManager.instance != null)
+                SoundEffectManager.instance.PlaySFXAtPosition(clip, soundPos, hitSoundVolume);
+            else
+                AudioSource.PlayClipAtPoint(clip, soundPos, hitSoundVolume);
         }
     }
 

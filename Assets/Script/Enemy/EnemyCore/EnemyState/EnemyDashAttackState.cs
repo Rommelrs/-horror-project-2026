@@ -181,7 +181,17 @@ public class EnemyDashAttackState : EnemyState
         bool passedPlayer = false;
         float stuckTimer = 0f;
         float stuckThreshold = 1.5f; // If no movement after this many seconds, abort and complete dash
-        
+
+        // Throttle re-issuing SetDestination - calling it every single frame with a
+        // constantly-shifting target (which happens whenever the player is sprinting
+        // during the charge) spams the shared NavMesh pathfinding budget and can leave
+        // the path query perpetually restarted before it resolves, freezing the enemy
+        // mid-charge animation. Same fix as EnemyChaseState.
+        Vector3 lastDashSetTarget = dashTargetPosition;
+        float lastDashSetTime = Time.time;
+        const float dashTargetMoveThreshold = 0.75f;
+        const float dashTargetResendInterval = 0.15f;
+
         while (true)
         {
             yield return null;
@@ -210,23 +220,42 @@ public class EnemyDashAttackState : EnemyState
                 Vector3 idealTarget = currentPlayerPos + directionToPlayer * enemy.stats.dashTargetOffset;
 
                 UnityEngine.AI.NavMeshHit navHit;
-                dashTargetPosition = UnityEngine.AI.NavMesh.SamplePosition(idealTarget, out navHit, 3f, UnityEngine.AI.NavMesh.AllAreas)
+                Vector3 candidateTarget = UnityEngine.AI.NavMesh.SamplePosition(idealTarget, out navHit, 3f, UnityEngine.AI.NavMesh.AllAreas)
                     ? navHit.position
                     : currentPlayerPos;
-                
-                if (enemy.agent.isOnNavMesh)
-                    enemy.agent.SetDestination(dashTargetPosition);
 
-                // Stuck detection: stationary agent OR pathPending for too long
-                bool agentNotMoving = enemy.agent.velocity.sqrMagnitude < 0.05f;
+                if (enemy.agent.isOnNavMesh &&
+                    (Vector3.Distance(candidateTarget, lastDashSetTarget) > dashTargetMoveThreshold
+                        || Time.time - lastDashSetTime > dashTargetResendInterval))
+                {
+                    // The overshoot point (dashTargetOffset past the player) can land past a
+                    // corner or into clutter in tight spaces, producing only a PathPartial that
+                    // leaves the agent crawling at near-zero speed instead of a real freeze -
+                    // verify it's fully reachable and fall back to the player's own (walkable)
+                    // position otherwise.
+                    UnityEngine.AI.NavMeshPath checkPath = new UnityEngine.AI.NavMeshPath();
+                    bool overshootReachable = enemy.agent.CalculatePath(candidateTarget, checkPath)
+                        && checkPath.status == UnityEngine.AI.NavMeshPathStatus.PathComplete;
+
+                    dashTargetPosition = overshootReachable ? candidateTarget : currentPlayerPos;
+
+                    enemy.agent.SetDestination(dashTargetPosition);
+                    lastDashSetTarget = dashTargetPosition;
+                    lastDashSetTime = Time.time;
+                }
+
+                // Stuck detection: stationary agent, or a partial path leaving it crawling
+                bool agentNotMoving = enemy.agent.velocity.sqrMagnitude < 0.05f
+                    || enemy.agent.pathStatus == UnityEngine.AI.NavMeshPathStatus.PathPartial;
                 if (agentNotMoving)
                 {
                     stuckTimer += Time.deltaTime;
                     if (stuckTimer >= stuckThreshold)
                     {
-                        Vector3 forcedPos = currentPlayerPos - directionToPlayer * enemy.stats.attackRange;
-                        enemy.agent.Warp(forcedPos);
-                        enemy.transform.rotation = Quaternion.LookRotation(directionToPlayer);
+                        // Genuinely blocked (e.g. tight store aisles) - abort the dash in place
+                        // instead of Warping next to the player, which looked like a teleport
+                        // after the enemy had been playing its running animation without moving.
+                        stuckTimer = 0f;
                         passedPlayer = true;
                     }
                 }

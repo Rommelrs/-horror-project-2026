@@ -220,7 +220,7 @@ MonoBehaviour:
   stats: {fileID: 6607879261224387962}
   health: {fileID: 869524024039967545}
   agent: {fileID: 4061618895443762087}
-  rb: {fileID: 0}
+  rb: {fileID: 7562876655579845816}
   anim: {fileID: 2555879346019295139}
   enemyWeakpoint: {fileID: 0}
   deathCollider: {fileID: 0}
@@ -316,6 +316,7 @@ MonoBehaviour:
   isDamageByWeakpointHit: 0
   iFrameDuration: 1
   enableIFrames: 0
+  isInvincible: 1
 --- !u!114 &7403736206139578377
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -339,6 +340,18 @@ MonoBehaviour:
   startClip: {fileID: 0}
   waypointReachedClip: {fileID: 0}
   finalWaypointReachedClip: {fileID: 0}
+  onMovementStarted:
+    m_PersistentCalls:
+      m_Calls: []
+  onEachWaypointReached:
+    m_PersistentCalls:
+      m_Calls: []
+  onFinalWaypointReached:
+    m_PersistentCalls:
+      m_Calls: []
+  onBeforeDestroy:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!114 &6082748568777609711
 MonoBehaviour:
   m_ObjectHideFlags: 0

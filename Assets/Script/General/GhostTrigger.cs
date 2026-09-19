@@ -33,7 +33,12 @@ public class GhostTrigger : MonoBehaviour
             PlayerScared.instance.TriggerPlayerScaredBehaviour();
 
             if (ghostSound != null)
-                AudioSource.PlayClipAtPoint(ghostSound, transform.position);
+            {
+                if (SoundEffectManager.instance != null)
+                    SoundEffectManager.instance.PlaySFXAtPosition(ghostSound, transform.position);
+                else
+                    AudioSource.PlayClipAtPoint(ghostSound, transform.position);
+            }
 
             Destroy(gameObject, 3f);
         }

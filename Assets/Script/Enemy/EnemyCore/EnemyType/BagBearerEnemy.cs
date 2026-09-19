@@ -385,10 +385,14 @@ public class BagBearerEnemy : Enemy
 
         if ((stateMachine.CurrentState != enemyReloadState && stateMachine.CurrentState != attackState) || health.isDamageByWeakpointHit)
         {
-            // Release token if being knocked back from attack state
-            if (stateMachine.CurrentState == attackState && EnemyAttackCoordinator.Instance != null)
+            // Release token and attack slot if being knocked back from attack state
+            if (stateMachine.CurrentState == attackState)
             {
-                EnemyAttackCoordinator.Instance.ReleaseToken(this);
+                if (EnemyAttackCoordinator.Instance != null)
+                    EnemyAttackCoordinator.Instance.ReleaseToken(this);
+
+                if (currentAttacker == this)
+                    currentAttacker = null;
             }
             
             //Knockback State

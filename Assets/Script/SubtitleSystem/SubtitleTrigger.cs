@@ -182,8 +182,18 @@ public class SubtitleTrigger : MonoBehaviour
             return;
 
         if (audioSource != null)
+        {
             audioSource.PlayOneShot(audioClip);
+        }
+        else if (SoundEffectManager.instance != null)
+        {
+            // AudioSource.PlayClipAtPoint can't route through the mixer, so it ignores the SFX
+            // volume slider - go through SoundEffectManager (routed to the SFX group) instead.
+            SoundEffectManager.instance.PlaySFXAtPosition(audioClip, transform.position);
+        }
         else
+        {
             AudioSource.PlayClipAtPoint(audioClip, transform.position);
+        }
     }
 }

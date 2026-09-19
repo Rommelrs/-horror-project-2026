@@ -134,7 +134,10 @@ public class OnPlayerTrigger : MonoBehaviour
         if (use3DSound)
         {
             // Play 3D sound at trigger position
-            AudioSource.PlayClipAtPoint(triggerSound, transform.position, soundVolume);
+            if (SoundEffectManager.instance != null)
+                SoundEffectManager.instance.PlaySFXAtPosition(triggerSound, transform.position, soundVolume);
+            else
+                AudioSource.PlayClipAtPoint(triggerSound, transform.position, soundVolume);
         }
         else
         {

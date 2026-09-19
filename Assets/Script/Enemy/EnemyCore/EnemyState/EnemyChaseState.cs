@@ -15,6 +15,16 @@ public class EnemyChaseState : EnemyState
     private float offsetRecalculateTime = 0f;
     private float offsetRecalculateInterval = 3f; // Recalculate offset every 3 seconds
 
+    // Throttle SetDestination calls - calling this every single frame with a
+    // constantly-shifting target (which happens whenever the player is moving)
+    // spams the shared NavMesh pathfinding budget across all enemies and can
+    // leave an agent's path query perpetually restarted before it ever resolves,
+    // making the enemy play its run animation while never actually moving.
+    private Vector3 lastDestinationTarget;
+    private float lastSetDestinationTime = -999f;
+    private const float destinationMoveThreshold = 0.75f;
+    private const float destinationResendInterval = 0.2f;
+
     public EnemyChaseState(Enemy enemy, EnemyStateMachine sm) : base(enemy, sm) { }
 
     public override void Enter()
@@ -59,6 +69,10 @@ public class EnemyChaseState : EnemyState
             destinationOffset = Vector3.zero;
         }
 
+        // Force the first SetDestination call in Update to fire immediately
+        lastSetDestinationTime = -999f;
+        lastDestinationTarget = enemy.transform.position;
+
         //Trigger OnChaseStarted Event
         enemy.OnChaseStarted?.Invoke();
 
@@ -71,6 +85,13 @@ public class EnemyChaseState : EnemyState
     public override void Update()
     {
         enemy.CheckLeaveCondition(this);
+
+        // CheckLeaveCondition may have synchronously changed state (e.g. into
+        // EnemySidestepState, which disables the agent). Bail out instead of
+        // continuing to run this state's stale logic against a state that's
+        // no longer active this frame.
+        if (stateMachine.CurrentState != this)
+            return;
 
         if (Player.instance == null)
             return;
@@ -155,7 +176,16 @@ public class EnemyChaseState : EnemyState
                     }
                 }
                 
-                enemy.agent.SetDestination(targetPosition);
+                // Only re-issue SetDestination when the target has moved meaningfully
+                // or enough time has passed, instead of every single frame - avoids
+                // constantly restarting the async path query while the player moves.
+                if (Vector3.Distance(targetPosition, lastDestinationTarget) > destinationMoveThreshold
+                    || Time.time - lastSetDestinationTime > destinationResendInterval)
+                {
+                    enemy.agent.SetDestination(targetPosition);
+                    lastDestinationTarget = targetPosition;
+                    lastSetDestinationTime = Time.time;
+                }
 
                 // Don't un-stop if the enemy wants to hold position (e.g. BagBearer waiting for attack slot)
                 if(enemy.agent.isStopped && !enemy.HoldPositionDuringChase)

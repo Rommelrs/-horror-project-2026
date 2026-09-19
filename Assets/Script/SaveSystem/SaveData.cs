@@ -112,7 +112,10 @@ public class ProgressData
     
     // Generic story flags
     public List<string> storyFlags;
-    
+
+    // Which background music track is currently supposed to be playing (empty = none)
+    public string currentBackgroundMusic;
+
     public ProgressData()
     {
         playedCutscenes = new List<string>();

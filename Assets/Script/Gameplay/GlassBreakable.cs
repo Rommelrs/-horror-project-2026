@@ -78,6 +78,8 @@ public class GlassBreakable : MonoBehaviour
         {
             if (audioSource != null)
                 audioSource.PlayOneShot(shatterSound, shatterVolume);
+            else if (SoundEffectManager.instance != null)
+                SoundEffectManager.instance.PlaySFXAtPosition(shatterSound, transform.position, shatterVolume);
             else
                 AudioSource.PlayClipAtPoint(shatterSound, transform.position, shatterVolume);
         }

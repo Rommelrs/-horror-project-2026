@@ -176,6 +176,7 @@ public class CheckpointManager : MonoBehaviour
             data.stoppedSpawners  = new List<string>(SaveManager.instance.GetStoppedSpawners());
             data.triggeredZones   = new List<string>(SaveManager.instance.GetTriggeredZones());
             data.usedInteractables= new List<string>(SaveManager.instance.GetUsedInteractables());
+            data.currentMusicTrack = SaveManager.instance.GetCurrentMusicTrack();
         }
 
         return data;
@@ -205,7 +206,8 @@ public class CheckpointManager : MonoBehaviour
             SaveManager.instance.RestoreFromCheckpoint(
                 pendingLoadData.pickedUpItems, pendingLoadData.deadEnemies, pendingLoadData.openedContainers,
                 pendingLoadData.activatedSwitches, pendingLoadData.stoppedSpawners,
-                pendingLoadData.triggeredZones, pendingLoadData.usedInteractables);
+                pendingLoadData.triggeredZones, pendingLoadData.usedInteractables,
+                pendingLoadData.currentMusicTrack);
 
         // Store data for CheckpointRestorer in the game scene to pick up
         pendingRestoreData = pendingLoadData;
@@ -374,6 +376,9 @@ public class CheckpointData
     public List<string> stoppedSpawners  = new List<string>();
     public List<string> triggeredZones   = new List<string>();
     public List<string> usedInteractables= new List<string>();
+
+    // Which background music track was playing (empty = none)
+    public string currentMusicTrack = "";
 }
 
 [System.Serializable]
