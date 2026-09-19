@@ -184,6 +184,10 @@ public class PlayerWeaponSystem : MonoBehaviour
 
     private void Start()
     {
+        // Load saved mouse sensitivity
+        if (PlayerPrefs.HasKey("MouseSensitivity"))
+            Sensitivity = PlayerPrefs.GetFloat("MouseSensitivity");
+
         // Subscribe to third-person event handler
         if (playerEvent != null)
         {

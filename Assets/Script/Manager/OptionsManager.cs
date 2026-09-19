@@ -21,6 +21,9 @@ public class OptionsManager : MonoBehaviour
     [SerializeField] Slider sfxSlider;
     [SerializeField] Slider musicSlider;
 
+    [Header("Controls")]
+    [SerializeField] Slider sensitivitySlider;
+
     [Header("Graphics")]
     [SerializeField] TMP_Dropdown resolutionDropdown;
 
@@ -80,6 +83,11 @@ public class OptionsManager : MonoBehaviour
         //Subscribe to the Slider value change event
         sfxSlider.onValueChanged.AddListener(delegate { OnSoundEffectValueChagned(); });
         musicSlider.onValueChanged.AddListener(delegate { OnMusicSliderValueChanged(); });
+        if (sensitivitySlider != null)
+        {
+            LoadSensitivityValue();
+            sensitivitySlider.onValueChanged.AddListener(delegate { OnSensitivityChanged(); });
+        }
     }
 
     private void OnDestroy()
@@ -87,6 +95,8 @@ public class OptionsManager : MonoBehaviour
         //Unsubscribe to the Slider value change event
         sfxSlider.onValueChanged.RemoveListener(delegate { OnSoundEffectValueChagned(); });
         musicSlider.onValueChanged.RemoveListener(delegate { OnMusicSliderValueChanged(); });
+        if (sensitivitySlider != null)
+            sensitivitySlider.onValueChanged.RemoveListener(delegate { OnSensitivityChanged(); });
     }
 
     #region Audio
@@ -124,6 +134,22 @@ public class OptionsManager : MonoBehaviour
         mixer.SetFloat("SFXVolume", Mathf.Log10(volumeTwo) * 20);
     }
     #endregion
+
+    void OnSensitivityChanged()
+    {
+        float value = sensitivitySlider.value;
+        if (Player.instance != null)
+            Player.instance.playerWeaponSystem.Sensitivity = value;
+        PlayerPrefs.SetFloat("MouseSensitivity", value);
+    }
+
+    void LoadSensitivityValue()
+    {
+        float saved = PlayerPrefs.GetFloat("MouseSensitivity", 1f);
+        sensitivitySlider.value = saved;
+        if (Player.instance != null)
+            Player.instance.playerWeaponSystem.Sensitivity = saved;
+    }
 
     #region Graphics
     //Set fullscreen mode
