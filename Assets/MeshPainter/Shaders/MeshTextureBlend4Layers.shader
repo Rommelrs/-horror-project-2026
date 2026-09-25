@@ -21,7 +21,7 @@ Shader "MeshPainter/Texture Blend 4 Layers"
 
         CGPROGRAM
         #pragma surface surf Standard fullforwardshadows
-        #pragma target 3.0
+        #pragma target 3.5
 
         sampler2D _BaseTex;
         sampler2D _Layer1Tex;
