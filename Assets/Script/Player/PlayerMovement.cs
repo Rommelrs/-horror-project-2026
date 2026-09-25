@@ -17,17 +17,32 @@ public class PlayerMovement : MonoBehaviour
 
     public float sprintStaminaCost = 0.3f;
     public float rotationSpeed = 2f;
-    public float strafeRotationSpeed = 5f;
     public float animationSmoothness = 0.3f;
     public float turningAnimationSmoothness = 0.2f;
     public bool useStaminaForSprint = true;
     public float pushForce = 3f; // Force applied to push rigidbodies
+
+    [Header("Tank Controls")]
+    [Tooltip("Degrees per second the character rotates in place under A/D input.")]
+    [SerializeField] float tankTurnSpeed = 150f;
+    [Tooltip("Backward movement speed multiplier (classic tank controls can't sprint backward and walk slower in reverse).")]
+    [SerializeField] [Range(0.1f, 1f)] float tankBackwardSpeedMultiplier = 0.5f;
 
     private Vector2 moveInput;
     private float Gravity = -20.0f;
 
 
     public Vector2 GetMoveInput => moveInput;
+
+    // Lets a scripted sequence (e.g. AutoPickupCutscene) drive the movement animation blend
+    // directly while player.pauseMovement is suppressing normal input processing.
+    public void SetExternalMoveInput(Vector2 value)
+    {
+        moveInput = value;
+    }
+    // Current smoothed movement speed (0 = standing still, up to SprintSpeed) - lets other
+    // systems (like the camera's front-swing timing) react to how fast the player is moving.
+    public float CurrentSpeed => currentSpeed;
 
     CharacterController _characterController;
     PlayerWeaponSystem playerWeaponSystem;
@@ -137,7 +152,13 @@ public class PlayerMovement : MonoBehaviour
     {
         //Check if movement is paused
         if (player.pauseMovement)
+        {
+            // Without this, moveInput keeps whatever value it had the instant movement got
+            // paused (e.g. still holding W), so the animator keeps blending toward a walk/run
+            // pose forever even though the character is frozen in place.
+            moveInput = Vector2.zero;
             return;
+        }
 
         //Check if player is attacking or rolling
         if (player.isAttacking || player.isRolling || player.isScared || playerWeaponSystem.isReloading)
@@ -160,14 +181,11 @@ public class PlayerMovement : MonoBehaviour
 
         float sprintInput = sprintAction.action.ReadValue<float>();
 
-        // Calculate the forward vector
-        Vector3 camForward_Dir = Vector3.Scale(cam.transform.forward, new Vector3(1, 0, 1)).normalized;
-        //moveDirection = moveInput.y * camForward_Dir + moveInput.x * cam.transform.right;
-
-        moveDirection = moveInput.y * transform.forward + moveInput.x * transform.right * 0.5f;
+        // Only forward/back input translates - left/right rotates the character in place instead.
+        bool hasMoveInput = Mathf.Abs(moveInput.y) > 0.1f;
 
         //Check if player is grounded
-        if (_characterController.isGrounded && moveInput.magnitude > 0.1f)
+        if (_characterController.isGrounded && hasMoveInput)
         {
             if (playerMovementLimiter != null && playerMovementLimiter.movementLimitActive)
             {
@@ -216,42 +234,33 @@ public class PlayerMovement : MonoBehaviour
         else
             targetSpeed = 0.0f;
 
-        //Check if player is Aiming then disable player rotation towards move direction
-        if (playerWeaponSystem.isAiming == false)
+        //Check if player is Aiming or Reloading then disable locomotion control
+        if (playerWeaponSystem.isAiming || playerWeaponSystem.isReloading)
+            return;
+
+        HandleTankMovement();
+    }
+
+    // Tank controls: A/D rotate the character in place at a fixed turn speed (independent of
+    // movement), forward/back always translate along the character's own current facing.
+    // Backward movement is slower and can never sprint, matching classic tank-control feel.
+    private void HandleTankMovement()
+    {
+        if (Mathf.Abs(moveInput.x) > 0.1f)
+            transform.Rotate(0f, moveInput.x * tankTurnSpeed * Time.deltaTime, 0f);
+
+        moveDirection = transform.forward;
+
+        if (Mathf.Abs(moveInput.y) > 0.1f)
         {
-            //Check if player is Reloading
-            if (playerWeaponSystem.isReloading == false)
-            {
-                //Movement
-                if (Mathf.Abs(moveInput.y) > 0.1f)
-                {
-                    currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, acceleration * Time.deltaTime);
-                    Vector3 moveVector = moveDirection.normalized * currentSpeed * Time.deltaTime;
-                    _characterController.Move(moveVector);
-                }
-            }
-
-            //Look at movement direction
-            if (moveInput.magnitude > 0.1f)
-            {
-                //Only rotate when moving forward or left and right
-                if (moveInput.y > 0 || (Mathf.Abs(moveInput.y) < 0.1f && Mathf.Abs(moveInput.x) > 0.1f))
-                {
-                    Quaternion lookRotation = Quaternion.LookRotation(moveDirection);
-                    Quaternion rotation = Quaternion.Euler(transform.rotation.eulerAngles.x, lookRotation.eulerAngles.y, transform.rotation.eulerAngles.z);
-
-                    if(Mathf.Abs(moveInput.y) < 0.1f && Mathf.Abs(moveInput.x) > 0.1f)
-                    {
-                        //Strafe
-                        transform.rotation = Quaternion.Lerp(transform.rotation, rotation, strafeRotationSpeed * Time.deltaTime);
-                    }
-                    else
-                    {
-                        //Walking
-                        transform.rotation = Quaternion.Lerp(transform.rotation, rotation, rotationSpeed * Time.deltaTime);
-                    }
-                }
-            }
+            float directionMultiplier = moveInput.y > 0f ? 1f : -tankBackwardSpeedMultiplier;
+            currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, acceleration * Time.deltaTime);
+            Vector3 moveVector = moveDirection * directionMultiplier * currentSpeed * Time.deltaTime;
+            _characterController.Move(moveVector);
+        }
+        else
+        {
+            currentSpeed = Mathf.Lerp(currentSpeed, 0f, acceleration * Time.deltaTime);
         }
     }
 
@@ -279,10 +288,14 @@ public class PlayerMovement : MonoBehaviour
             player.animator.SetFloat("Velocity", Mathf.MoveTowards(currentVelocity, 0, speed * Time.deltaTime));
         }
 
+        // No strafing - pure left/right input rotates the character in place, which uses the
+        // "turn in place" animation instead of a strafe blend.
+        bool pureTurnInPlace = Mathf.Abs(moveInput.y) < 0.1f && Mathf.Abs(moveInput.x) > 0.1f;
+
         //Set Animation
-        if (Mathf.Abs(moveInput.y) < 0.1f && Mathf.Abs(moveInput.x) > 0.1f)
+        if (pureTurnInPlace)
         {
-            //Strafe
+            //Turning in place
             player.animator.SetFloat("x", Mathf.MoveTowards(currentX, 0, speed * Time.deltaTime));
             player.animator.SetFloat("y", Mathf.MoveTowards(currentY, 0, speed * Time.deltaTime));
 
@@ -293,14 +306,14 @@ public class PlayerMovement : MonoBehaviour
         {
             player.animator.SetBool("Turning", false);
 
-            //Not Strafe
-            player.animator.SetFloat("x", Mathf.MoveTowards(currentX, moveInput.x, turningAnimationSmoothness * Time.deltaTime));
+            // x-axis input is steering, not lateral movement, so it never drives the strafe blend.
+            player.animator.SetFloat("x", Mathf.MoveTowards(currentX, 0f, turningAnimationSmoothness * Time.deltaTime));
 
             if (playerWeaponSystem.isReloading == false)
                 player.animator.SetFloat("y", Mathf.MoveTowards(currentY, moveInput.y, turningAnimationSmoothness * Time.deltaTime));
             else
                 player.animator.SetFloat("y", Mathf.MoveTowards(currentY, 0, speed * Time.deltaTime));
-        }        
+        }
     }
 
     // Handle pushing rigidbodies when CharacterController collides with them
