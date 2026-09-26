@@ -30,7 +30,7 @@ public class CameraSystem : MonoBehaviour
     [SerializeField] float tankCameraMaxDegreesPerSecond = 200f;
     [Tooltip("How long (seconds) the camera's position takes to catch up to the player - gives it independent inertia instead of being rigidly glued to the player's position.")]
     [SerializeField] float tankCameraPositionSmoothTime = 0.55f;
-    [SerializeField] bool showDebugOverlay = true;
+    [SerializeField] bool showDebugOverlay = false;
     [Tooltip("Key that snaps the camera back behind the player on demand.")]
     [SerializeField] Key recenterKey = Key.F8;
 
