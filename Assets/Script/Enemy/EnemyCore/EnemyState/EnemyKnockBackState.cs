@@ -12,6 +12,17 @@ public class EnemyKnockBackState : EnemyState
     bool stateChangeTrigerred = false;
     float savedAgentSpeed = 0f;
 
+    // Colliders we've temporarily told to ignore each other so a knockback isn't stopped dead
+    // by another enemy standing in the push direction (see IgnoreNearbyEnemyCollisions). Without
+    // this, an enemy knocked back into another Enemy-layer collider collides and its rigidbody
+    // velocity gets absorbed almost instantly, which reads as the weakpoint hit reaction not
+    // playing even though the animator bool was set correctly.
+    const float nearbyIgnoreRadius = 2.5f;
+    static readonly int enemyLayerMask = LayerMask.GetMask("Enemy");
+    static readonly Collider[] nearbyOverlapBuffer = new Collider[16];
+    List<Collider> ignoredOtherColliders = new List<Collider>();
+    Collider[] ownColliders;
+
     public EnemyKnockBackState(Enemy enemy, EnemyStateMachine sm) : base(enemy, sm) 
     {
         this.enemy = enemy;
@@ -72,9 +83,11 @@ public class EnemyKnockBackState : EnemyState
 
         //Reset Heavy Knockback
         enemy.anim.SetBool("HeavyKnockback", false);
-        
+
         // Reset the weakpoint flag after knockback is complete
         enemy.health.isDamageByWeakpointHit = false;
+
+        RestoreIgnoredCollisions();
     }
 
     public override void Update()
@@ -140,11 +153,13 @@ public class EnemyKnockBackState : EnemyState
         
         enemy.rb.useGravity = true;
         enemy.rb.isKinematic = false;
-        
+
+        IgnoreNearbyEnemyCollisions();
+
         float calculatedForce = enemy.stats.knockBackForce * forceMultiplier;
         Debug.Log("Co_KnockBack: Applying force = " + calculatedForce + " (knockBackForce=" + enemy.stats.knockBackForce + ", multiplier=" + forceMultiplier + ")");
         Debug.Log("Co_KnockBack: Direction = " + direction.normalized);
-        
+
         enemy.rb.AddForce(direction.normalized * calculatedForce, ForceMode.Impulse);
 
         yield return new WaitForFixedUpdate();
@@ -172,5 +187,44 @@ public class EnemyKnockBackState : EnemyState
 
         if(!heavyKnockback)
             canLeave = true;
+    }
+
+    // Lets this enemy's colliders pass through any other Enemy-layer colliders nearby for the
+    // duration of the knockback, so the physical push isn't absorbed the instant it bumps into
+    // whoever is standing behind it.
+    void IgnoreNearbyEnemyCollisions()
+    {
+        ownColliders = enemy.GetComponentsInChildren<Collider>();
+
+        int count = Physics.OverlapSphereNonAlloc(enemy.transform.position, nearbyIgnoreRadius, nearbyOverlapBuffer, enemyLayerMask);
+        for (int i = 0; i < count; i++)
+        {
+            Collider other = nearbyOverlapBuffer[i];
+            if (other == null || other.transform.IsChildOf(enemy.transform)) continue;
+
+            foreach (Collider own in ownColliders)
+            {
+                Physics.IgnoreCollision(own, other, true);
+            }
+            ignoredOtherColliders.Add(other);
+        }
+    }
+
+    void RestoreIgnoredCollisions()
+    {
+        if (ownColliders != null)
+        {
+            foreach (Collider other in ignoredOtherColliders)
+            {
+                if (other == null) continue;
+                foreach (Collider own in ownColliders)
+                {
+                    if (own != null) Physics.IgnoreCollision(own, other, false);
+                }
+            }
+        }
+
+        ignoredOtherColliders.Clear();
+        ownColliders = null;
     }
 }

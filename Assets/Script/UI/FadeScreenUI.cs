@@ -41,6 +41,21 @@ public class FadeScreenUI : MonoBehaviour
         fadeCoroutine = StartCoroutine(Fade(1f));
     }
 
+    // Same as above but with a caller-specified duration instead of the shared default -
+    // lets one specific fade (e.g. opening the inventory) run faster without affecting every
+    // other system that fades through this same screen.
+    public void FadeIn(float duration)
+    {
+        if (fadeCoroutine != null) StopCoroutine(fadeCoroutine);
+        fadeCoroutine = StartCoroutine(FadeWithDuration(0f, duration));
+    }
+
+    public void FadeOut(float duration)
+    {
+        if (fadeCoroutine != null) StopCoroutine(fadeCoroutine);
+        fadeCoroutine = StartCoroutine(FadeWithDuration(1f, duration));
+    }
+
     //Coroutine to handle the fade effect that smoothly transitions the alpha value of the CanvasGroup
     private IEnumerator Fade(float targetAlpha)
     {

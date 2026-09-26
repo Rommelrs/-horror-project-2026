@@ -32,7 +32,7 @@ public class ImageFadeInteractable : Interactable
 
     [Header("Events")]
     [SerializeField] private UnityEvent onImageOpened;
-    [SerializeField] private UnityEvent onImageClosed;
+    [SerializeField] public UnityEvent onImageClosed;
     [SerializeField] private UnityEvent onUVLightUsed;
 
     private bool isOpen = false;

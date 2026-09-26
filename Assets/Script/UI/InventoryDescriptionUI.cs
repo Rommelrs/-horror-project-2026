@@ -341,8 +341,8 @@ public class InventoryDescriptionUI : MonoBehaviour
 
         if (currentItem != null && currentItem.itemType == ItemType.Fuse)
         {
-            //Disable Inventory Menu
-            InventoryUI.instance.DisableInventoryMenu();
+            //Hide Inventory instantly (no fade, UseFuse will handle the fade)
+            InventoryUI.instance.HideInventoryInstant();
 
             //Remove Item from inventory
             Player.instance.inventory.RemoveItem(currentItem);
@@ -396,8 +396,8 @@ public class InventoryDescriptionUI : MonoBehaviour
                 //Play SFX
                 audioSource.PlayOneShot(itemUseClip);
 
-                //Disable Inventory Menu
-                InventoryUI.instance.DisableInventoryMenu();
+                //Hide Inventory instantly (no fade, Burn will handle the fade)
+                InventoryUI.instance.HideInventoryInstant();
 
                 //Use knife (knife is NOT consumed, reusable)
                 BurnableObstacle.currentInRange.BurnFromInventory(ItemType.Knife);
@@ -411,8 +411,8 @@ public class InventoryDescriptionUI : MonoBehaviour
                 //Play SFX
                 audioSource.PlayOneShot(itemUseClip);
 
-                //Disable Inventory Menu
-                InventoryUI.instance.DisableInventoryMenu();
+                //Hide Inventory instantly (no fade, Burn will handle the fade)
+                InventoryUI.instance.HideInventoryInstant();
 
                 //Burn obstacle (lighter is not consumed)
                 BurnableObstacle.currentInRange.BurnFromInventory(ItemType.Lighter);
@@ -426,8 +426,8 @@ public class InventoryDescriptionUI : MonoBehaviour
                 //Play SFX
                 audioSource.PlayOneShot(itemUseClip);
 
-                //Disable Inventory Menu
-                InventoryUI.instance.DisableInventoryMenu();
+                //Hide Inventory instantly (no fade, Burn will handle the fade)
+                InventoryUI.instance.HideInventoryInstant();
 
                 //Remove Item from inventory
                 Player.instance.inventory.RemoveItem(currentItem);

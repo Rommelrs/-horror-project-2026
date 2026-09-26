@@ -16,6 +16,8 @@ public class Item : ScriptableObject
 
     [Header("Item Function")]
     public ItemType itemType;
+    [Tooltip("Notes show a 'Press [Read] to read' hint by default. Turn off only for notes with no actual text content (e.g. a drawing meant to just be looked at), since the read prompt would otherwise show and reveal nothing.")]
+    public bool showReadPrompt = true;
     public int healingAmount;
     public int stabilityIncreaseAmount;
     public int energyDrinkDuration;

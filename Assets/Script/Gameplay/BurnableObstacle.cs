@@ -159,11 +159,17 @@ public class BurnableObstacle : MonoBehaviour
     
     private IEnumerator Co_Burn()
     {
+        // HideInventoryInstant() (used when this is triggered from the inventory) doesn't touch
+        // the pause state, since different callers need it resolved at different points - this
+        // sequence resolves it immediately, matching what closing the inventory used to do
+        // synchronously before that path started fading instead.
+        GameManager.IsPaused = false;
+
         // Fade to black
         if (FadeScreenUI.instance != null)
             FadeScreenUI.instance.FadeOut();
-        
-        yield return new WaitForSeconds(1f);
+
+        yield return new WaitForSecondsRealtime(1f);
         
         // Move player to burn position
         if (burnPosition != null && Player.instance != null)
@@ -214,7 +220,7 @@ public class BurnableObstacle : MonoBehaviour
         }
         
         // Wait during "burning"
-        yield return new WaitForSeconds(burnDuration);
+        yield return new WaitForSecondsRealtime(burnDuration);
         
         // Fade back in
         if (FadeScreenUI.instance != null)

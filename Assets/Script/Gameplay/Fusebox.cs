@@ -88,7 +88,13 @@ public class Fusebox : Interactable
         coll.enabled = false;
         hasEnergy = true;
         Player.instance.pauseMovement = true;
-        
+
+        // HideInventoryInstant() (used when this is triggered from the inventory) doesn't touch
+        // the pause state, since different callers need it resolved at different points - this
+        // sequence resolves it immediately, matching what closing the inventory used to do
+        // synchronously before that path started fading instead.
+        GameManager.IsPaused = false;
+
         // Mark as used in save system
         if (saveableInteractable != null)
             saveableInteractable.MarkAsUsed();
@@ -102,12 +108,12 @@ public class Fusebox : Interactable
         //Fade screen to black
         FadeScreenUI.instance.FadeOut();
 
-        yield return new WaitForSeconds(fadeOutDuration);
+        yield return new WaitForSecondsRealtime(fadeOutDuration);
 
         //Play energy Restore SFX
         audioSource.PlayOneShot(energyRestoreClip);
 
-        yield return new WaitForSeconds(energyRestoreDuration);
+        yield return new WaitForSecondsRealtime(energyRestoreDuration);
 
         //Fade In
         FadeScreenUI.instance.FadeIn();
@@ -115,7 +121,7 @@ public class Fusebox : Interactable
         offObj.SetActive(false);
         onObj.SetActive(true);
 
-        yield return new WaitForSeconds(fadeInDuration);
+        yield return new WaitForSecondsRealtime(fadeInDuration);
 
         //Trigger subtitle
         energyRestoredSubtitleTrigger.TriggerSubtitle();

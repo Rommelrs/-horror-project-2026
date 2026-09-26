@@ -38,6 +38,10 @@ public class InventoryUI : MonoBehaviour
     [SerializeField] Button notesCategoryButton;
 
     Coroutine openInventoryCR;
+    Coroutine closeInventoryCR;
+
+    [Tooltip("How fast the screen fades to black and back when opening/closing the inventory. Kept separate from FadeScreenUI's shared default so this doesn't slow down/speed up unrelated fades.")]
+    [SerializeField] float menuFadeDuration = 0.5f;
 
     private void Awake()
     {
@@ -77,19 +81,27 @@ public class InventoryUI : MonoBehaviour
 
     public void DisableInventoryMenu()
     {
+        if (openInventoryCR != null)
+            StopCoroutine(openInventoryCR);
+
+        if (closeInventoryCR != null)
+            StopCoroutine(closeInventoryCR);
+        closeInventoryCR = StartCoroutine(Co_DisableInventoryMenu());
+    }
+
+    IEnumerator Co_DisableInventoryMenu()
+    {
+        FadeScreenUI.instance.FadeOut(menuFadeDuration);
+        yield return new WaitForSecondsRealtime(menuFadeDuration);
+
         //Disable Inventory Menu
         inventoryMenu.gameObject.SetActive(false);
+        inventoryCanvasGroup.alpha = 0f;
 
         //Resume the Game
         GameManager.IsPaused = false;
 
-        if (openInventoryCR != null)
-        {
-            StopCoroutine(openInventoryCR);
-            FadeScreenUI.instance.FadeIn();
-        }
-
-        inventoryCanvasGroup.alpha = 0f;
+        FadeScreenUI.instance.FadeIn(menuFadeDuration);
     }
 
     // Hide inventory without fade (for UV Light use)
@@ -169,6 +181,8 @@ public class InventoryUI : MonoBehaviour
         //Resume the Game
         GameManager.IsPaused = true;
 
+        if (closeInventoryCR != null) StopCoroutine(closeInventoryCR);
+
         if (instantEnable)
         {
             if (openInventoryCR != null) StopCoroutine(openInventoryCR);
@@ -189,11 +203,11 @@ public class InventoryUI : MonoBehaviour
 
     IEnumerator Co_EnableInventoryUI()
     {
-        FadeScreenUI.instance.FadeOut();
-        yield return new WaitForSecondsRealtime(1f);
+        FadeScreenUI.instance.FadeOut(menuFadeDuration);
+        yield return new WaitForSecondsRealtime(menuFadeDuration);
 
         inventoryCanvasGroup.alpha = 1f;
-        FadeScreenUI.instance.FadeIn();
+        FadeScreenUI.instance.FadeIn(menuFadeDuration);
     }
 
     [SerializeField] LocalizedString conditionString;

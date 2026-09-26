@@ -159,7 +159,7 @@ public class ItemInspectionHandler : MonoBehaviour
         DisableAllReadNoteUI();
 
 
-        if (item != null && item.itemType == ItemType.Note)
+        if (item != null && item.itemType == ItemType.Note && item.showReadPrompt)
             readHint.SetActive(true);
         else
             readHint.SetActive(false);
@@ -277,7 +277,7 @@ public class ItemInspectionHandler : MonoBehaviour
         if (currentItem == null)
             return;
 
-        if (currentItem.itemType == ItemType.Note)
+        if (currentItem.itemType == ItemType.Note && currentItem.showReadPrompt)
         {
             if (isReading)
             {

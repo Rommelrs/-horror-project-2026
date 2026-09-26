@@ -855,6 +855,11 @@ public class PlayerWeaponSystem : MonoBehaviour
 
         bool hitProjectile = false;
 
+        // Piercing "super shot": once the bullet has scored a weakpoint hit, every enemy
+        // further along its path also counts as weakpoint-hit, even if the bullet just clips
+        // their body rather than their own weakpoint.
+        bool pierceWeakpointActive = false;
+
         for (int i = 0; i < damageInfo.Length; i++)
         {
             if (hitCount >= maxBulletPierceCount)
@@ -921,13 +926,13 @@ public class PlayerWeaponSystem : MonoBehaviour
             {
                 float currentDamage = damage * (damageInfo[i].hitbox != null ? damageInfo[i].hitbox.damageMultiplier : 1f);
 
-                if (hitProjectile)
+                if (hitProjectile || pierceWeakpointActive)
                 {
                     currentDamage = damage * 4;
                     damageInfo[i].isHittingWeakpoint = true;
                 }
 
-                if ((damageInfo[i].hitbox != null && damageInfo[i].hitbox.damageType == DamageType.Weakpoint) || hitProjectile)
+                if ((damageInfo[i].hitbox != null && damageInfo[i].hitbox.damageType == DamageType.Weakpoint) || hitProjectile || pierceWeakpointActive)
                 {
                     //Weakpoint Damage
                     if (HitstopManager.instance != null)
@@ -989,6 +994,9 @@ public class PlayerWeaponSystem : MonoBehaviour
                 damageInfo[i].enemy.health.isDamageByWeakpointHit = damageInfo[i].isHittingWeakpoint;
                 damageInfo[i].enemy.health.SetLastHitPoint(damageInfo[i].hit.point);
                 damageInfo[i].enemy.health.Damage(Mathf.RoundToInt(currentDamage));
+
+                if (damageInfo[i].isHittingWeakpoint)
+                    pierceWeakpointActive = true;
             }
         }
 
