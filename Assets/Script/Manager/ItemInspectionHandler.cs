@@ -112,6 +112,17 @@ public class ItemInspectionHandler : MonoBehaviour
                 //Set Interaction Time
                 Player.instance.SetLastInteractionTime(Time.unscaledTime);
 
+                // Register the pickup with the save system BEFORE firing OnInteracted, since that event
+                // can trigger a checkpoint - which must see this item as picked up, not just in the inventory.
+                if (currentInspectableItem.destroyOnInteract)
+                {
+                    SaveablePickup saveablePickup = currentInspectableItem.GetComponent<SaveablePickup>();
+                    if (saveablePickup != null)
+                    {
+                        saveablePickup.MarkAsPickedUp();
+                    }
+                }
+
                 //Interaction Success
                 if (currentInspectableItem.OnInteracted != null)
                     currentInspectableItem.OnInteracted.Invoke();
@@ -120,14 +131,7 @@ public class ItemInspectionHandler : MonoBehaviour
                 if (currentInspectableItem.destroyOnInteract)
                 {
                     InspectableItemPickup itemToRemove = currentInspectableItem;
-                    
-                    // Mark as picked up for save system
-                    SaveablePickup saveablePickup = currentInspectableItem.GetComponent<SaveablePickup>();
-                    if (saveablePickup != null)
-                    {
-                        saveablePickup.MarkAsPickedUp();
-                    }
-                    
+
                     Destroy(currentInspectableItem.gameObject);
                     InspectableItemTriggerExit(itemToRemove);
                 }

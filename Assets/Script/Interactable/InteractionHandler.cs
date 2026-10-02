@@ -105,6 +105,17 @@ public class InteractionHandler : MonoBehaviour
                 if(Player.instance)
                     Player.instance.SetLastInteractionTime(Time.unscaledTime);
 
+                // Register the pickup with the save system BEFORE firing OnInteracted, since that event
+                // can trigger a checkpoint - which must see this item as picked up, not just in the inventory.
+                if (currentInteractable.destroyOnInteract)
+                {
+                    SaveablePickup saveablePickup = currentInteractable.GetComponent<SaveablePickup>();
+                    if (saveablePickup != null)
+                    {
+                        saveablePickup.MarkAsPickedUp();
+                    }
+                }
+
                 //Interaction Success
                 if (currentInteractable.OnInteracted != null)
                     currentInteractable.OnInteracted.Invoke();
@@ -112,13 +123,6 @@ public class InteractionHandler : MonoBehaviour
                 //Destory Object
                 if (currentInteractable.destroyOnInteract)
                 {
-                    // Mark as picked up for save system
-                    SaveablePickup saveablePickup = currentInteractable.GetComponent<SaveablePickup>();
-                    if (saveablePickup != null)
-                    {
-                        saveablePickup.MarkAsPickedUp();
-                    }
-                    
                     Destroy(currentInteractable.gameObject);
                     InspectableItemTriggerExit(null);
                 }

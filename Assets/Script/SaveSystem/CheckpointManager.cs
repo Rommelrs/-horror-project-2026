@@ -57,12 +57,24 @@ public class CheckpointManager : MonoBehaviour
         if (Player.instance == null) return;
         if (IsRestoring) return; // Don't overwrite checkpoint while restoring
 
+        StartCoroutine(Co_TriggerCheckpointAtEndOfFrame(checkpointName));
+    }
+
+    // Checkpoints are usually fired from events (pickups, switches, cutscenes) in the middle of a
+    // frame, before other systems have finished registering what just happened. Collecting at the
+    // end of the frame means the saved inventory and world state always agree with each other.
+    IEnumerator Co_TriggerCheckpointAtEndOfFrame(string checkpointName)
+    {
+        yield return new WaitForEndOfFrame();
+
+        if (Player.instance == null) yield break;
+        if (IsRestoring) yield break;
+
         CheckpointData data = CollectData(checkpointName);
         WriteToFile(data);
 
         if (checkpointNotification != null)
             StartCoroutine(Co_ShowNotification());
-
     }
 
     /// <summary>Returns true if a checkpoint file exists.</summary>
@@ -231,7 +243,11 @@ public class CheckpointManager : MonoBehaviour
         yield return new WaitForEndOfFrame();
 
         Player p = Player.instance;
-        if (p == null) yield break;
+        if (p == null)
+        {
+            IsRestoring = false; // Otherwise every later checkpoint would be blocked forever
+            yield break;
+        }
 
         // ─ Apply ISaveable.Load() on all objects (removes dead enemies, picked items, etc.)
         yield return new WaitForEndOfFrame();

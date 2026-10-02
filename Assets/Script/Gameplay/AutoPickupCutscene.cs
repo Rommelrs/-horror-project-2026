@@ -221,14 +221,19 @@ public class AutoPickupCutscene : MonoBehaviour
 
         Player.instance.SetLastInteractionTime(Time.unscaledTime);
 
-        targetPickup.OnInteracted?.Invoke();
-
+        // Register the pickup with the save system BEFORE firing OnInteracted, since that event
+        // can trigger a checkpoint - which must see this item as picked up, not just in the inventory.
         if (targetPickup.destroyOnInteract)
         {
             SaveablePickup saveablePickup = targetPickup.GetComponent<SaveablePickup>();
             if (saveablePickup != null)
                 saveablePickup.MarkAsPickedUp();
+        }
 
+        targetPickup.OnInteracted?.Invoke();
+
+        if (targetPickup.destroyOnInteract)
+        {
             if (ItemInspectionHandler.instance != null)
                 ItemInspectionHandler.instance.InspectableItemTriggerExit(targetPickup);
 
