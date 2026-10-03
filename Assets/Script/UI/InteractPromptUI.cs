@@ -11,12 +11,17 @@ public class InteractPromptUI : MonoBehaviour
     [Tooltip("How long the fade in/out transition takes.")]
     [SerializeField] float fadeDuration = 0.3f;
 
+    [Tooltip("The main interact/inventory hint is the one InteractPromptTrigger and FuseboxInventoryPrompt talk to. " +
+             "Turn this off on extra copies (e.g. tutorial prompts) so they don't replace it.")]
+    [SerializeField] bool registerAsInstance = true;
+
     CanvasGroup promptCanvasGroup;
     Coroutine activeRoutine;
 
     private void Awake()
     {
-        instance = this;
+        if (registerAsInstance)
+            instance = this;
         promptCanvasGroup = GetComponent<CanvasGroup>();
         promptCanvasGroup.alpha = 0f;
         gameObject.SetActive(false);

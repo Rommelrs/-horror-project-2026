@@ -197,9 +197,9 @@ public class InventoryDescriptionUI : MonoBehaviour
             || (item.itemType == ItemType.Fuse && Player.instance.fuseBoxInRange)
             || (item.itemType == ItemType.UVLight && ImageFadeInteractable.currentInRange != null && ImageFadeInteractable.currentInRange.SupportsUVLight())
             || (item.itemType == ItemType.DuctTape && WallHoleInteractable.currentInRange != null && WallHoleInteractable.currentInRange.CanApplyTape())
-            || (item.itemType == ItemType.Knife && BurnableObstacle.currentInRange != null && BurnableObstacle.currentInRange.CanUseLighter())
-            || (item.itemType == ItemType.Lighter && BurnableObstacle.currentInRange != null && BurnableObstacle.currentInRange.CanUseLighter())
-            || (item.itemType == ItemType.WoodenPlank && BurnableObstacle.currentInRange != null && BurnableObstacle.currentInRange.CanUseLighter()))
+            || (item.itemType == ItemType.Knife && BurnableObstacle.currentInRange != null && BurnableObstacle.currentInRange.CanUseItem(ItemType.Knife))
+            || (item.itemType == ItemType.Lighter && BurnableObstacle.currentInRange != null && BurnableObstacle.currentInRange.CanUseItem(ItemType.Lighter))
+            || (item.itemType == ItemType.WoodenPlank && BurnableObstacle.currentInRange != null && BurnableObstacle.currentInRange.CanUseItem(ItemType.WoodenPlank)))
         {
             useButton.gameObject.SetActive(true);
         }
@@ -391,7 +391,7 @@ public class InventoryDescriptionUI : MonoBehaviour
         
         if (currentItem != null && currentItem.itemType == ItemType.Knife)
         {
-            if (BurnableObstacle.currentInRange != null && BurnableObstacle.currentInRange.CanUseLighter())
+            if (BurnableObstacle.currentInRange != null && BurnableObstacle.currentInRange.CanUseItem(ItemType.Knife))
             {
                 //Play SFX
                 audioSource.PlayOneShot(itemUseClip);
@@ -406,7 +406,7 @@ public class InventoryDescriptionUI : MonoBehaviour
         
         if (currentItem != null && currentItem.itemType == ItemType.Lighter)
         {
-            if (BurnableObstacle.currentInRange != null && BurnableObstacle.currentInRange.CanUseLighter())
+            if (BurnableObstacle.currentInRange != null && BurnableObstacle.currentInRange.CanUseItem(ItemType.Lighter))
             {
                 //Play SFX
                 audioSource.PlayOneShot(itemUseClip);
@@ -421,7 +421,7 @@ public class InventoryDescriptionUI : MonoBehaviour
         
         if (currentItem != null && currentItem.itemType == ItemType.WoodenPlank)
         {
-            if (BurnableObstacle.currentInRange != null && BurnableObstacle.currentInRange.CanUseLighter())
+            if (BurnableObstacle.currentInRange != null && BurnableObstacle.currentInRange.CanUseItem(ItemType.WoodenPlank))
             {
                 //Play SFX
                 audioSource.PlayOneShot(itemUseClip);

@@ -31,7 +31,9 @@ public class BurnableObstacle : MonoBehaviour
     
     [Header("Events")]
     [SerializeField] private UnityEvent onBurnComplete;
-    
+    [Tooltip("When restoring an already-burned obstacle from a checkpoint/save, run onBurnComplete again (no sound or subtitles). Use for obstacles whose result is set up by that event, e.g. bridges.")]
+    [SerializeField] private bool replayCompleteEventsOnRestore = false;
+
     private bool hasBeenBurned = false;
     private bool playerInRange = false;
     private SaveableInteractable saveableInteractable;
@@ -84,6 +86,9 @@ public class BurnableObstacle : MonoBehaviour
         Collider coll = GetComponent<Collider>();
         if (coll != null)
             coll.enabled = false;
+
+        if (replayCompleteEventsOnRestore)
+            onBurnComplete?.Invoke();
     }
     
     private void OnTriggerEnter(Collider other)
@@ -249,6 +254,12 @@ public class BurnableObstacle : MonoBehaviour
     public bool CanUseLighter()
     {
         return !hasBeenBurned;
+    }
+
+    /// <summary>True only if this obstacle is still intact AND the given item is the one it requires.</summary>
+    public bool CanUseItem(ItemType itemType)
+    {
+        return !hasBeenBurned && itemType == requiredItemType;
     }
     
     public void BurnFromInventory(ItemType itemTypeBeingUsed)

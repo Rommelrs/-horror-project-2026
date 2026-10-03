@@ -46,6 +46,44 @@ public class CameraSystem : MonoBehaviour
     [Tooltip("Extra distance the camera pulls back (added on top of the normal distance) as it swings toward facing the player head-on, so the front-facing reveal has proper breathing room instead of feeling cramped.")]
     [SerializeField] float frontSwingExtraDistance = 2.2f;
 
+    [Header("Free Camera (optional)")]
+    [Tooltip("Key that switches between the classic tank camera and the free (mouse-controlled) camera. The choice is remembered between sessions.")]
+    [SerializeField] Key toggleFreeCameraKey = Key.C;
+    [Tooltip("Base look speed multiplier in free camera mode. The 'Free Camera Speed' slider in the Options menu multiplies this. Independent of the aim sensitivity setting.")]
+    [SerializeField] float freeCameraSensitivity = 1f;
+    [Tooltip("Lowest the camera can look up (degrees, negative = looking up).")]
+    [SerializeField] float freePitchMin = -20f;
+    [Tooltip("Highest the camera can look down (degrees).")]
+    [SerializeField] float freePitchMax = 55f;
+    [Tooltip("How long (seconds) the camera takes to swing back behind the player when re-centering.")]
+    [SerializeField] float recenterSmoothTime = 0.25f;
+    [Tooltip("After aiming ends, ease the free camera back behind the player.")]
+    [SerializeField] bool recenterAfterAiming = true;
+
+    public const string FreeCameraPrefKey = "FreeCameraMode";
+    public const string FreeCameraSpeedPrefKey = "FreeCameraSpeed";
+
+    /// <summary>True while the free (mouse-controlled) camera is selected instead of the classic tank camera.</summary>
+    public bool FreeCameraEnabled { get; private set; }
+
+    /// <summary>User look-speed multiplier for the free camera (Options menu slider).</summary>
+    public float FreeCameraSpeed { get; private set; } = 1f;
+
+    /// <summary>Raised whenever the free camera is switched on or off (hotkey or Options menu).</summary>
+    public event System.Action<bool> FreeCameraChanged;
+
+    Transform pitchRoot;          // RotationRoot - holds the camera's tilt
+    float defaultPitch;           // tilt of the classic camera
+    float freeYaw;
+    float freePitch;
+    bool freeSynced;
+    bool recentering;
+    bool wasAiming;
+    bool pitchDirty;
+    float recenterYawVelocity;
+    float recenterPitchVelocity;
+    float pitchRestoreVelocity;
+
     float camYawVelocity;
     Vector3 camPositionVelocity;
     Quaternion lastPlayerRotation;
@@ -70,6 +108,41 @@ public class CameraSystem : MonoBehaviour
     [SerializeField] float collisionOffset = 0.15f;
     float zoomVelocity;
 
+    [Header("Wall Avoidance")]
+    [Tooltip("Keep the camera clear of walls: it checks the whole line from the player to the camera (including the camera tilt) and the space around the camera itself, so it can't end up inside geometry.")]
+    [SerializeField] bool wallAvoidanceEnabled = true;
+    [Tooltip("How much free space (metres) must surround the camera. Roughly the size of the camera's near-clip box - raise it if you ever see through a wall's edge.")]
+    [SerializeField] float cameraClearanceRadius = 0.35f;
+    [Tooltip("How slowly (seconds) the camera eases back out once the wall is no longer in the way. Pulling IN is always instant so it never clips.")]
+    [SerializeField] float zoomOutSmoothTime = 0.3f;
+    [Tooltip("When the classic camera gets squeezed this much (0 = not at all, 1 = pushed all the way in), it swings sideways towards the side with more room.")]
+    [Range(0.1f, 0.9f)]
+    [SerializeField] float wallSqueezeThreshold = 0.35f;
+    [Tooltip("How far (degrees) the classic camera is allowed to swing sideways to find room. 0 turns the sideways swing off (the camera then only moves closer).")]
+    [SerializeField] float wallSwingAngle = 40f;
+    [Tooltip("How long (seconds) the sideways swing takes to ease in and out.")]
+    [SerializeField] float wallSwingSmoothTime = 0.6f;
+
+    [Header("Player Visibility")]
+    [Tooltip("Hide the player's body (it still casts a shadow) when the camera is squeezed so close that it would be inside the model.")]
+    [SerializeField] bool hidePlayerWhenCameraClose = true;
+    [Tooltip("The body is hidden once the camera is closer than this (metres) to the player's head.")]
+    [SerializeField] float hidePlayerDistance = 1.3f;
+    [Tooltip("The body reappears once the camera is farther than this. Keep it a bit larger than the hide distance so it doesn't flicker.")]
+    [SerializeField] float showPlayerDistance = 1.55f;
+
+    float wallYaw;           // sideways swing currently applied to the camera (degrees)
+    float wallYawVelocity;
+    bool wallSwingActive;
+
+    struct CachedRenderer
+    {
+        public Renderer renderer;
+        public UnityEngine.Rendering.ShadowCastingMode shadowMode;
+    }
+    readonly List<CachedRenderer> playerRenderers = new List<CachedRenderer>();
+    bool playerHidden;
+
     Vector3 targetFollowPosition;
     Vector2 moveInput;
     bool wantsRecenter;
@@ -81,10 +154,22 @@ public class CameraSystem : MonoBehaviour
     private void Awake()
     {
         Instance = this;
+        FreeCameraEnabled = PlayerPrefs.GetInt(FreeCameraPrefKey, 0) == 1;
+        FreeCameraSpeed = Mathf.Max(0.05f, PlayerPrefs.GetFloat(FreeCameraSpeedPrefKey, 1f));
     }
 
     private void Start()
     {
+        if (m_CameraPositionOffset != null)
+        {
+            pitchRoot = m_CameraPositionOffset.parent;
+            if (pitchRoot != null)
+                defaultPitch = NormalizeAngle(pitchRoot.localEulerAngles.x);
+        }
+        freePitch = defaultPitch;
+
+        CachePlayerRenderers();
+
         if (Player.instance)
             Player.instance.OnPlayerTelported.AddListener(OnPlayerTeleported);
 
@@ -97,6 +182,8 @@ public class CameraSystem : MonoBehaviour
 
     private void OnDestroy()
     {
+        SetPlayerHidden(false);
+
         if (Player.instance)
             Player.instance.OnPlayerTelported.RemoveListener(OnPlayerTeleported);
     }
@@ -112,6 +199,16 @@ public class CameraSystem : MonoBehaviour
 
         //Update rotation instantly
         m_CameraTransform.rotation = Quaternion.LookRotation(lookAtTarget.forward, Vector3.up);
+
+        // Free camera picks up from wherever the teleport left the camera
+        freeSynced = false;
+        recentering = false;
+
+        // Start fresh after a teleport: no leftover sideways swing, and the camera isn't pinned to the old spot's zoom
+        wallYaw = 0f;
+        wallYawVelocity = 0f;
+        wallSwingActive = false;
+        zoomVelocity = 0f;
     }
 
     private void LateUpdate()
@@ -120,16 +217,192 @@ public class CameraSystem : MonoBehaviour
         wantsRecenter = keyboard != null && keyboard[recenterKey].wasPressedThisFrame;
         moveInput = m_PlayerMovement.GetMoveInput;
 
+        if (keyboard != null && keyboard[toggleFreeCameraKey].wasPressedThisFrame && !GameManager.IsPaused && Time.timeScale > 0f)
+            SetFreeCamera(!FreeCameraEnabled, true);
+
         if (activeZone != null)
         {
+            freeSynced = false;
+            wallYaw = 0f;
+            wallYawVelocity = 0f;
+            wallSwingActive = false;
+            RestoreClassicPitch();
+            SetPlayerHidden(false);
             HandleFixedZoneCamera();
         }
         else
         {
             HandlePosition();
-            HandleRotation();
+
+            if (FreeCameraEnabled)
+            {
+                HandleFreeRotation();
+            }
+            else
+            {
+                freeSynced = false;
+                RestoreClassicPitch();
+                HandleRotation();
+            }
+
             CheckCameraCollision();
         }
+    }
+
+    /// <summary>Switches between the classic tank camera (false) and the free mouse camera (true).</summary>
+    public void SetFreeCamera(bool enabled, bool showMessage = false)
+    {
+        if (FreeCameraEnabled == enabled) return;
+
+        FreeCameraEnabled = enabled;
+        freeSynced = false;
+        recentering = false;
+
+        PlayerPrefs.SetInt(FreeCameraPrefKey, enabled ? 1 : 0);
+        PlayerPrefs.Save();
+
+        FreeCameraChanged?.Invoke(enabled);
+
+        if (showMessage && MessageHandler.instance != null)
+            MessageHandler.instance.ShowMessage(enabled ? "Free camera: ON (middle mouse to re-center)" : "Free camera: OFF (classic camera)");
+    }
+
+    /// <summary>Sets the free camera look-speed multiplier (saved).</summary>
+    public void SetFreeCameraSpeed(float speed)
+    {
+        FreeCameraSpeed = Mathf.Max(0.05f, speed);
+        PlayerPrefs.SetFloat(FreeCameraSpeedPrefKey, FreeCameraSpeed);
+    }
+
+    bool CanReadFreeLook(PlayerWeaponSystem weapon)
+    {
+        if (weapon == null || Player.instance == null) return false;
+        if (GameManager.IsPaused || Time.timeScale <= 0f) return false;
+        if (Player.instance.pauseMovement || Player.instance.IsDead()) return false;
+        if (weapon.isAiming) return false;
+        if (MapLocationReveal.IsSequenceActive) return false;
+        if (SubtitleManager.instance != null && SubtitleManager.instance.IsSubtitleBusy()) return false;
+        if (InventoryUI.instance != null && InventoryUI.instance.InventoryIsActive()) return false;
+        if (ItemInspectionHandler.instance != null && ItemInspectionHandler.instance.InspectionMenuIsActive()) return false;
+        if (EyePeakHandler.instance != null && EyePeakHandler.instance.IsEyePeakActivated()) return false;
+        if (LevelManager.instance != null && (LevelManager.instance.isGameOver || LevelManager.instance.isGameWon)) return false;
+        return true;
+    }
+
+    // Free camera: the mouse (or right stick) orbits the camera around the player. The player's
+    // tank-style movement is unaffected. Middle mouse / right-stick click / F8 swings the camera
+    // back behind the player (eased, and interrupted by any new look input), and it also eases
+    // back behind the player after aiming ends.
+    void HandleFreeRotation()
+    {
+        // Keep the classic camera's bookkeeping current so switching back never causes a false "instant cut"
+        lastPlayerRotation = m_PlayerMovement.transform.rotation;
+        hasLastPlayerRotation = true;
+        frontBlend = 0f;
+        frontBlendVelocity = 0f;
+        sustainedTurnTimer = 0f;
+        sustainedTurnDirection = 0f;
+        camYawVelocity = 0f;
+        debugLastEvent = "FREE CAMERA";
+
+        PlayerWeaponSystem weapon = Player.instance != null ? Player.instance.playerWeaponSystem : null;
+
+        if (!freeSynced)
+        {
+            // Carry over any sideways wall swing so the view doesn't jump when switching to free mode
+            freeYaw = m_CameraTransform.eulerAngles.y + wallYaw;
+            freePitch = pitchRoot != null ? NormalizeAngle(pitchRoot.localEulerAngles.x) : defaultPitch;
+            wallYaw = 0f;
+            wallYawVelocity = 0f;
+            wallSwingActive = false;
+            freeSynced = true;
+        }
+
+        bool aiming = weapon != null && weapon.isAiming;
+        if (recenterAfterAiming && wasAiming && !aiming)
+            recentering = true;
+        wasAiming = aiming;
+
+        var mouse = Mouse.current;
+        var gamepad = Gamepad.current;
+        bool recenterPressed = wantsRecenter
+            || (mouse != null && mouse.middleButton.wasPressedThisFrame)
+            || (gamepad != null && gamepad.rightStickButton.wasPressedThisFrame);
+
+        bool canLook = CanReadFreeLook(weapon);
+
+        if (canLook && recenterPressed)
+            recentering = true;
+
+        if (canLook)
+        {
+            Vector2 look = weapon.ReadLookInput();
+            if (look.sqrMagnitude > 0.0001f)
+            {
+                recentering = false;
+                float scale = Time.deltaTime * FreeCameraSpeed * freeCameraSensitivity;
+                freeYaw += look.x * scale;
+                freePitch += look.y * scale;
+            }
+        }
+
+        if (recentering)
+        {
+            float targetYaw = lookAtTarget.eulerAngles.y;
+            freeYaw = Mathf.SmoothDampAngle(freeYaw, targetYaw, ref recenterYawVelocity, recenterSmoothTime);
+            freePitch = Mathf.SmoothDampAngle(freePitch, defaultPitch, ref recenterPitchVelocity, recenterSmoothTime);
+
+            if (Mathf.Abs(Mathf.DeltaAngle(freeYaw, targetYaw)) < 0.5f && Mathf.Abs(Mathf.DeltaAngle(freePitch, defaultPitch)) < 0.5f)
+            {
+                freeYaw = targetYaw;
+                freePitch = defaultPitch;
+                recentering = false;
+            }
+        }
+        else
+        {
+            recenterYawVelocity = 0f;
+            recenterPitchVelocity = 0f;
+        }
+
+        freeYaw = Mathf.Repeat(freeYaw, 360f);
+        freePitch = Mathf.Clamp(freePitch, freePitchMin, freePitchMax);
+
+        m_CameraTransform.rotation = Quaternion.Euler(0f, freeYaw, 0f);
+        if (pitchRoot != null)
+        {
+            pitchRoot.localRotation = Quaternion.Euler(freePitch, 0f, 0f);
+            pitchDirty = true;
+        }
+    }
+
+    // After leaving free camera mode (or entering a fixed camera zone) the tilt eases back to the
+    // classic camera's angle.
+    void RestoreClassicPitch()
+    {
+        if (!pitchDirty || pitchRoot == null) return;
+
+        float current = NormalizeAngle(pitchRoot.localEulerAngles.x);
+        bool pitchDone = Mathf.Abs(Mathf.DeltaAngle(current, defaultPitch)) < 0.05f;
+
+        if (pitchDone && Mathf.Abs(wallYaw) < 0.05f)
+        {
+            wallYaw = 0f;
+            pitchRoot.localRotation = Quaternion.Euler(defaultPitch, 0f, 0f);
+            pitchDirty = false;
+            pitchRestoreVelocity = 0f;
+            return;
+        }
+
+        current = pitchDone ? defaultPitch : Mathf.SmoothDampAngle(current, defaultPitch, ref pitchRestoreVelocity, 0.3f);
+
+        // Keep any sideways wall swing that is currently applied (it eases out on its own)
+        pitchRoot.localRotation = Quaternion.Euler(current, wallYaw, 0f);
+    }
+
+    static float NormalizeAngle(float angle)
+    {
+        return Mathf.DeltaAngle(0f, angle);
     }
 
     // Called by CameraFixedZone triggers when the player enters/exits a designer-placed
@@ -313,7 +586,211 @@ public class CameraSystem : MonoBehaviour
             " effectiveTimeToFront=" + Mathf.Lerp(standingTurnTimeToFront, sprintTurnTimeToFront, debugSpeedRatio).ToString("F2"));
     }
 
+    // Keeps the camera out of walls. Instead of one line cast straight back, it checks the whole
+    // line from the player's head to where the camera REALLY is (so the camera's tilt and its lag
+    // behind the player are accounted for) plus a clearance sphere around the camera itself
+    // (so side walls, ceilings and floors count too). Pulling in is instant so it can never
+    // clip; easing back out is gradual so grazing a wall doesn't make it jitter. In classic mode,
+    // when the camera is being squeezed it also swings sideways towards the side with more room.
     void CheckCameraCollision()
+    {
+        if (!wallAvoidanceEnabled)
+        {
+            CheckCameraCollisionLegacy();
+            return;
+        }
+
+        float offsetY = m_CameraPositionOffset.localPosition.y;
+        Vector3 head = followTarget.position + new Vector3(0f, offsetY, 0f);
+        float desiredZoom = zoomMax - (frontSwingExtraDistance * frontBlend);
+
+        // Sideways swing (classic camera only - the free camera is under the player's control)
+        UpdateWallSwing(head, offsetY, desiredZoom);
+
+        Transform tilt = pitchRoot != null ? pitchRoot : m_CameraTransform;
+        float safeZoom = FindSafeZoom(tilt.rotation, tilt.position, head, offsetY, desiredZoom);
+
+        float currentZoom = m_CameraPositionOffset.localPosition.z;
+        float newZoom;
+        if (safeZoom > currentZoom)
+        {
+            // Needs to be closer than it is now: do it at once, never let the camera sit inside geometry
+            newZoom = safeZoom;
+            zoomVelocity = 0f;
+        }
+        else
+        {
+            newZoom = Mathf.SmoothDamp(currentZoom, safeZoom, ref zoomVelocity, zoomOutSmoothTime);
+        }
+
+        Vector3 localPos = m_CameraPositionOffset.localPosition;
+        localPos.z = newZoom;
+        m_CameraPositionOffset.localPosition = localPos;
+
+        UpdatePlayerVisibility(head);
+    }
+
+    Vector3 CameraPositionAtZoom(Quaternion tiltRotation, Vector3 rootPosition, float offsetY, float zoom)
+    {
+        return rootPosition + tiltRotation * new Vector3(0f, offsetY, zoom);
+    }
+
+    bool IsCameraSpotClear(Vector3 head, Vector3 cameraPosition)
+    {
+        Vector3 toCamera = cameraPosition - head;
+        float distance = toCamera.magnitude;
+
+        if (distance > 0.0001f &&
+            Physics.SphereCast(head, collisionRadius, toCamera / distance, out RaycastHit hit, distance, cameraCollisionLayer, QueryTriggerInteraction.Ignore))
+            return false;
+
+        return !Physics.CheckSphere(cameraPosition, cameraClearanceRadius, cameraCollisionLayer, QueryTriggerInteraction.Ignore);
+    }
+
+    // Finds how far back the camera can sit (zoom values are negative: more negative = farther)
+    // before the line to the player is blocked or the camera would be touching something.
+    float FindSafeZoom(Quaternion tiltRotation, Vector3 rootPosition, Vector3 head, float offsetY, float desiredZoom)
+    {
+        if (IsCameraSpotClear(head, CameraPositionAtZoom(tiltRotation, rootPosition, offsetY, desiredZoom)))
+            return desiredZoom;
+
+        float blocked = desiredZoom;
+        float clear = zoomMin; // closest the camera is allowed to get
+        for (int i = 0; i < 6; i++)
+        {
+            float mid = (blocked + clear) * 0.5f;
+            if (IsCameraSpotClear(head, CameraPositionAtZoom(tiltRotation, rootPosition, offsetY, mid)))
+                clear = mid;
+            else
+                blocked = mid;
+        }
+
+        return clear;
+    }
+
+    // 0 = camera can sit at its full distance, 1 = it is pushed all the way in
+    float SqueezeAmount(float zoom, float desiredZoom)
+    {
+        return Mathf.InverseLerp(desiredZoom, zoomMin, zoom);
+    }
+
+    // Swings the classic camera sideways (by turning the tilt rig around the player) when the
+    // spot straight behind the player is cramped and one side has clearly more room. It always
+    // evaluates the camera's NATURAL position (without the swing), so it doesn't flip back and
+    // forth: once the swing opens up room, the natural spot is still judged cramped and the swing stays.
+    void UpdateWallSwing(Vector3 head, float offsetY, float desiredZoom)
+    {
+        if (pitchRoot == null) return;
+
+        bool allowed = !FreeCameraEnabled && wallSwingAngle > 0.01f;
+        if (allowed)
+        {
+            PlayerWeaponSystem weapon = Player.instance != null ? Player.instance.playerWeaponSystem : null;
+            if (weapon != null && weapon.isAiming) allowed = false;
+        }
+
+        float targetYaw = 0f;
+
+        if (allowed)
+        {
+            float tiltX = NormalizeAngle(pitchRoot.localEulerAngles.x);
+            Quaternion natural = m_CameraTransform.rotation * Quaternion.Euler(tiltX, 0f, 0f);
+            Vector3 root = pitchRoot.position;
+
+            float naturalZoom = FindSafeZoom(natural, root, head, offsetY, desiredZoom);
+            float naturalSqueeze = SqueezeAmount(naturalZoom, desiredZoom);
+
+            // Hysteresis so it doesn't flicker on/off around the threshold
+            if (!wallSwingActive && naturalSqueeze > wallSqueezeThreshold)
+                wallSwingActive = true;
+            else if (wallSwingActive && naturalSqueeze < wallSqueezeThreshold * 0.6f)
+                wallSwingActive = false;
+
+            if (wallSwingActive)
+            {
+                Quaternion leftRot = Quaternion.AngleAxis(-wallSwingAngle, Vector3.up) * natural;
+                Quaternion rightRot = Quaternion.AngleAxis(wallSwingAngle, Vector3.up) * natural;
+                float leftSqueeze = SqueezeAmount(FindSafeZoom(leftRot, root, head, offsetY, desiredZoom), desiredZoom);
+                float rightSqueeze = SqueezeAmount(FindSafeZoom(rightRot, root, head, offsetY, desiredZoom), desiredZoom);
+
+                float best = Mathf.Min(leftSqueeze, rightSqueeze);
+                // Only worth swinging if it genuinely gains room
+                if (best < naturalSqueeze - 0.2f)
+                    targetYaw = leftSqueeze < rightSqueeze ? -wallSwingAngle : wallSwingAngle;
+            }
+        }
+        else
+        {
+            wallSwingActive = false;
+        }
+
+        wallYaw = Mathf.SmoothDampAngle(wallYaw, targetYaw, ref wallYawVelocity, wallSwingSmoothTime);
+
+        if (!FreeCameraEnabled && (Mathf.Abs(wallYaw) > 0.05f || pitchDirty))
+        {
+            float tiltNow = NormalizeAngle(pitchRoot.localEulerAngles.x);
+            pitchRoot.localRotation = Quaternion.Euler(tiltNow, wallYaw, 0f);
+            pitchDirty = true; // lets RestoreClassicPitch clear the swing again if we leave classic mode
+        }
+    }
+
+    void CachePlayerRenderers()
+    {
+        playerRenderers.Clear();
+        if (Player.instance == null) return;
+
+        Transform playerTransform = Player.instance.transform;
+        Transform aimRoot = playerTransform.Find("AimRoot"); // first-person arms/weapon live here and manage themselves
+
+        foreach (Renderer r in playerTransform.GetComponentsInChildren<Renderer>(true))
+        {
+            if (!(r is SkinnedMeshRenderer) && !(r is MeshRenderer)) continue;
+            if (!r.enabled) continue;
+            if (aimRoot != null && r.transform.IsChildOf(aimRoot)) continue;
+
+            playerRenderers.Add(new CachedRenderer { renderer = r, shadowMode = r.shadowCastingMode });
+        }
+    }
+
+    // Hides the player's body (shadow stays) while the camera is squeezed up against them, so the
+    // camera never shows the inside of the model. Uses a distance gap between hide and show so it doesn't flicker.
+    void UpdatePlayerVisibility(Vector3 head)
+    {
+        if (!hidePlayerWhenCameraClose)
+        {
+            SetPlayerHidden(false);
+            return;
+        }
+
+        PlayerWeaponSystem weapon = Player.instance != null ? Player.instance.playerWeaponSystem : null;
+        if (weapon != null && weapon.isAiming)
+        {
+            SetPlayerHidden(false);
+            return;
+        }
+
+        float distance = Vector3.Distance(m_CameraPositionOffset.position, head);
+        if (!playerHidden && distance < hidePlayerDistance)
+            SetPlayerHidden(true);
+        else if (playerHidden && distance > showPlayerDistance)
+            SetPlayerHidden(false);
+    }
+
+    void SetPlayerHidden(bool hidden)
+    {
+        if (playerHidden == hidden) return;
+        playerHidden = hidden;
+
+        for (int i = 0; i < playerRenderers.Count; i++)
+        {
+            Renderer r = playerRenderers[i].renderer;
+            if (r == null) continue;
+            r.shadowCastingMode = hidden ? UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly : playerRenderers[i].shadowMode;
+        }
+    }
+
+    // The original single-line collision check, kept for when Wall Avoidance is turned off.
+    void CheckCameraCollisionLegacy()
     {
         Vector3 pivotPosition = followTarget.position + new Vector3(0f, m_CameraPositionOffset.localPosition.y, 0f);
 
@@ -324,7 +801,17 @@ public class CameraSystem : MonoBehaviour
         float desiredZoom = zoomMax - (frontSwingExtraDistance * frontBlend);
         float distance = Mathf.Abs(desiredZoom);
 
-        Vector3 desiredWorldPos = pivotPosition + (-m_CameraTransform.forward * distance);
+        Vector3 backDirection = -m_CameraTransform.forward;
+
+        // The free camera tilts up/down, so the camera sits along the tilted rig's back axis -
+        // cast along that instead so walls/floor are detected where the camera really is.
+        if (FreeCameraEnabled && pitchRoot != null)
+        {
+            pivotPosition = followTarget.position + pitchRoot.rotation * new Vector3(0f, m_CameraPositionOffset.localPosition.y, 0f);
+            backDirection = -pitchRoot.forward;
+        }
+
+        Vector3 desiredWorldPos = pivotPosition + (backDirection * distance);
         Vector3 direction =  desiredWorldPos - pivotPosition;
 
         if (Physics.SphereCast(pivotPosition,collisionRadius,direction.normalized,out RaycastHit hit,distance,cameraCollisionLayer))

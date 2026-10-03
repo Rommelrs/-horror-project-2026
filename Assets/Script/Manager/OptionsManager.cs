@@ -22,7 +22,12 @@ public class OptionsManager : MonoBehaviour
     [SerializeField] Slider musicSlider;
 
     [Header("Controls")]
+    [Tooltip("Aim sensitivity (mouse/stick look speed while aiming).")]
     [SerializeField] Slider sensitivitySlider;
+    [Tooltip("Switches between the classic tank camera and the free (mouse-controlled) camera.")]
+    [SerializeField] Toggle freeCameraToggle;
+    [Tooltip("Look speed of the free camera.")]
+    [SerializeField] Slider cameraSpeedSlider;
 
     [Header("Graphics")]
     [SerializeField] TMP_Dropdown resolutionDropdown;
@@ -88,10 +93,29 @@ public class OptionsManager : MonoBehaviour
             LoadSensitivityValue();
             sensitivitySlider.onValueChanged.AddListener(delegate { OnSensitivityChanged(); });
         }
+
+        if (freeCameraToggle != null)
+        {
+            freeCameraToggle.SetIsOnWithoutNotify(PlayerPrefs.GetInt(CameraSystem.FreeCameraPrefKey, 0) == 1);
+            freeCameraToggle.onValueChanged.AddListener(OnFreeCameraToggled);
+        }
+
+        if (cameraSpeedSlider != null)
+        {
+            cameraSpeedSlider.SetValueWithoutNotify(PlayerPrefs.GetFloat(CameraSystem.FreeCameraSpeedPrefKey, 1f));
+            cameraSpeedSlider.onValueChanged.AddListener(OnCameraSpeedChanged);
+        }
+
+        // Keep the toggle in step when the camera is switched with the hotkey instead
+        if (CameraSystem.Instance != null)
+            CameraSystem.Instance.FreeCameraChanged += OnFreeCameraChangedElsewhere;
     }
 
     private void OnDestroy()
     {
+        if (CameraSystem.Instance != null)
+            CameraSystem.Instance.FreeCameraChanged -= OnFreeCameraChangedElsewhere;
+
         //Unsubscribe to the Slider value change event
         sfxSlider.onValueChanged.RemoveListener(delegate { OnSoundEffectValueChagned(); });
         musicSlider.onValueChanged.RemoveListener(delegate { OnMusicSliderValueChanged(); });
@@ -150,6 +174,30 @@ public class OptionsManager : MonoBehaviour
         if (Player.instance != null)
             Player.instance.playerWeaponSystem.Sensitivity = saved;
     }
+
+    #region Free Camera
+    void OnFreeCameraToggled(bool enabled)
+    {
+        if (CameraSystem.Instance != null)
+            CameraSystem.Instance.SetFreeCamera(enabled);
+        else
+            PlayerPrefs.SetInt(CameraSystem.FreeCameraPrefKey, enabled ? 1 : 0);
+    }
+
+    void OnFreeCameraChangedElsewhere(bool enabled)
+    {
+        if (freeCameraToggle != null)
+            freeCameraToggle.SetIsOnWithoutNotify(enabled);
+    }
+
+    void OnCameraSpeedChanged(float value)
+    {
+        if (CameraSystem.Instance != null)
+            CameraSystem.Instance.SetFreeCameraSpeed(value);
+        else
+            PlayerPrefs.SetFloat(CameraSystem.FreeCameraSpeedPrefKey, value);
+    }
+    #endregion
 
     #region Graphics
     //Set fullscreen mode

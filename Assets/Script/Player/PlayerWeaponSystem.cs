@@ -24,6 +24,15 @@ public class PlayerWeaponSystem : MonoBehaviour
     [SerializeField] InputActionReference moveInput;
     [SerializeField] InputActionReference reloadInput;
 
+    /// <summary>Raised each time the player actually fires a shot (aiming, ammo available).</summary>
+    public event System.Action OnShotFired;
+
+    /// <summary>Current look input (mouse delta / right stick), same scaling the aim camera uses.</summary>
+    public Vector2 ReadLookInput()
+    {
+        return lookInput != null ? lookInput.action.ReadValue<Vector2>() : Vector2.zero;
+    }
+
     public CinemachineVirtualCamera aimCam;
     public bool isAiming = false;
     [SerializeField] Image aimCrosshairImage;
@@ -497,6 +506,7 @@ public class PlayerWeaponSystem : MonoBehaviour
 
                     //Trigger Shoot Animation
                     firstPersonAnimRoot.SetTrigger("Shoot");
+                    OnShotFired?.Invoke();
 
                     ////Play SFX
                     //audioSource.PlayOneShot(pistolShootClip);
@@ -882,6 +892,11 @@ public class PlayerWeaponSystem : MonoBehaviour
             {
                 //Damage Lock if hit - check FIRST before projectile check
                 Lock lockObject = damageInfo[i].hit.collider.GetComponentInParent<Lock>();
+
+                // Puzzle locks (e.g. the combination lock) can't be shot open: treat them as ordinary scenery
+                if (lockObject != null && !lockObject.IsShootable)
+                    lockObject = null;
+
                 if(lockObject != null)
                 {
                     SpawnDecal(damageInfo[i].hit, metalHitEffect, false);

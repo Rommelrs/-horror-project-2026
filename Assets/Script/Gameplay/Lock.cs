@@ -9,7 +9,13 @@ public class Lock : MonoBehaviour
     public AudioClip destoryClip;
     [SerializeField] private GameObject visualsObject; // The mesh/model to hide immediately
     [SerializeField] private GameObject destroyParticleEffect; // Particle effect when lock is destroyed
-    
+
+    [Tooltip("If off, shooting this lock does nothing - it can only be opened by solving its puzzle (e.g. a combination lock, which calls UnlockDoor() when the code is right).")]
+    [SerializeField] private bool shootable = true;
+
+    /// <summary>Whether bullets (and enemy projectiles) can break this lock.</summary>
+    public bool IsShootable => shootable;
+
     private SaveableInteractable saveableInteractable;
     private bool isDamaged = false;
     
@@ -35,7 +41,10 @@ public class Lock : MonoBehaviour
 
     public void LockDamaged()
     {
-        
+        // Puzzle locks can't be shot open
+        if (!shootable)
+            return;
+
         if (isDamaged)
         {
             return; // Prevent multiple calls
