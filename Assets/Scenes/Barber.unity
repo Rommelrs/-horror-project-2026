@@ -77300,6 +77300,12 @@ Mesh:
       - serializedVersion: 1
         m_IndexStart: 0
         m_IndexCount: 0
+--- !u!1 &442161605 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2735510343018477526, guid: 6edbdb288cbed464a9300b27d07c910c,
+    type: 3}
+  m_PrefabInstance: {fileID: 953113207}
+  m_PrefabAsset: {fileID: 0}
 --- !u!43 &442244287
 Mesh:
   m_ObjectHideFlags: 0
@@ -221571,6 +221577,16 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7558208034453878357, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -117
+      objectReference: {fileID: 0}
+    - target: {fileID: 7558208034453878357, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 57
+      objectReference: {fileID: 0}
     - target: {fileID: 7603819192184259670, guid: 6edbdb288cbed464a9300b27d07c910c,
         type: 3}
       propertyPath: m_IsActive
@@ -248036,6 +248052,7 @@ MonoBehaviour:
   destoryClip: {fileID: 8300000, guid: 4814d1a12b7a16147add6add8b9b9c5b, type: 3}
   visualsObject: {fileID: 0}
   destroyParticleEffect: {fileID: 0}
+  shootable: 1
 --- !u!65 &1106085124
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -297365,7 +297382,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isAddionalCamera: 0
-  material: {fileID: 0}
+  material: {fileID: 1617859414}
   simpleFog: 0
 --- !u!114 &1258470605
 MonoBehaviour:
@@ -323928,6 +323945,11 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 9106262857249923814, guid: c61d6da4a595dfe4d8a101c7e2310cfe,
+        type: 3}
+      propertyPath: exitHint
+      value: 
+      objectReference: {fileID: 442161605}
     - target: {fileID: 9106262857249923814, guid: c61d6da4a595dfe4d8a101c7e2310cfe,
         type: 3}
       propertyPath: readHint
@@ -352051,12 +352073,28 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_CameraTransform: {fileID: 1089361222}
   m_PlayerMovement: {fileID: 768477864}
-  m_PlayerWeaponSystem: {fileID: 768477861}
   followTarget: {fileID: 768477859}
   followSpeed: 5
   lookAtTarget: {fileID: 768477858}
   lookAtSpeed: 1.5
-  lookAtSpeedMultiplier: 2
+  rotationEngageAngle: 12
+  instantCutAngle: 150
+  tankCameraRotationSmoothTime: 0.85
+  tankCameraMaxDegreesPerSecond: 200
+  tankCameraPositionSmoothTime: 0.55
+  showDebugOverlay: 0
+  recenterKey: 101
+  standingTurnTimeToFront: 0.9
+  sprintTurnTimeToFront: 3.5
+  frontBlendSmoothTime: 0.5
+  sustainedTurnInputThreshold: 0.3
+  frontSwingExtraDistance: 2.2
+  toggleFreeCameraKey: 17
+  freeCameraSensitivity: 1
+  freePitchMin: -20
+  freePitchMax: 55
+  recenterSmoothTime: 0.25
+  recenterAfterAiming: 1
   m_CameraPositionOffset: {fileID: 1846243813}
   collisionRadius: 0.2
   zoomSmoothTime: 0.5
@@ -352066,6 +352104,15 @@ MonoBehaviour:
   zoomMin: -1.03
   zoomMax: -3.5
   collisionOffset: 0.15
+  wallAvoidanceEnabled: 1
+  cameraClearanceRadius: 0.35
+  zoomOutSmoothTime: 0.3
+  wallSqueezeThreshold: 0.35
+  wallSwingAngle: 40
+  wallSwingSmoothTime: 0.6
+  hidePlayerWhenCameraClose: 1
+  hidePlayerDistance: 1.3
+  showPlayerDistance: 1.55
 --- !u!1 &1585620329
 GameObject:
   m_ObjectHideFlags: 0
@@ -357724,6 +357771,34 @@ Mesh:
       - serializedVersion: 1
         m_IndexStart: 0
         m_IndexCount: 0
+--- !u!21 &1617859414
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Enviro/Lite/EnviroFogRendering
+  m_Shader: {fileID: 4800000, guid: 5b0160f40adf130428015ffb5bfdb8a5, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats: []
+    m_Colors: []
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!1 &1620880901
 GameObject:
   m_ObjectHideFlags: 0

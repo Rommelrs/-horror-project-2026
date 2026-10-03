@@ -3927,6 +3927,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac0b09e7857660247b1477e93731de29, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &252132544 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2735510343018477526, guid: 6edbdb288cbed464a9300b27d07c910c,
+    type: 3}
+  m_PrefabInstance: {fileID: 1854897561}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &264164828
 GameObject:
   m_ObjectHideFlags: 0
@@ -5781,6 +5787,12 @@ MonoBehaviour:
   frontBlendSmoothTime: 0.5
   sustainedTurnInputThreshold: 0.3
   frontSwingExtraDistance: 2.2
+  toggleFreeCameraKey: 17
+  freeCameraSensitivity: 1
+  freePitchMin: -20
+  freePitchMax: 55
+  recenterSmoothTime: 0.25
+  recenterAfterAiming: 1
   m_CameraPositionOffset: {fileID: 1121815699}
   collisionRadius: 0.2
   zoomSmoothTime: 0.5
@@ -5790,6 +5802,15 @@ MonoBehaviour:
   zoomMin: -1.03
   zoomMax: -3.5
   collisionOffset: 0.15
+  wallAvoidanceEnabled: 1
+  cameraClearanceRadius: 0.35
+  zoomOutSmoothTime: 0.3
+  wallSqueezeThreshold: 0.35
+  wallSwingAngle: 40
+  wallSwingSmoothTime: 0.6
+  hidePlayerWhenCameraClose: 1
+  hidePlayerDistance: 1.3
+  showPlayerDistance: 1.55
 --- !u!1 &402553528
 GameObject:
   m_ObjectHideFlags: 0
@@ -25322,6 +25343,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9106262857249923814, guid: c61d6da4a595dfe4d8a101c7e2310cfe,
         type: 3}
+      propertyPath: exitHint
+      value: 
+      objectReference: {fileID: 252132544}
+    - target: {fileID: 9106262857249923814, guid: c61d6da4a595dfe4d8a101c7e2310cfe,
+        type: 3}
       propertyPath: readHint
       value: 
       objectReference: {fileID: 1854897581}
@@ -29751,6 +29777,16 @@ PrefabInstance:
         type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7558208034453878357, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -117
+      objectReference: {fileID: 0}
+    - target: {fileID: 7558208034453878357, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 57
       objectReference: {fileID: 0}
     - target: {fileID: 7603819192184259670, guid: 6edbdb288cbed464a9300b27d07c910c,
         type: 3}

@@ -23,6 +23,10 @@ public class ItemInspectionHandler : MonoBehaviour
     [SerializeField] GameObject []inspectionItemObjects;
 
     [SerializeField] GameObject readHint;
+    [Tooltip("\"ESC Close\" hint, shown while any item is being inspected (including the full-screen note reader).")]
+    [SerializeField] GameObject exitHint;
+    [Tooltip("Vertical gap between the \"F Read\" hint and the exit hint under it.")]
+    [SerializeField] float exitHintSpacing = 58f;
     [SerializeField] GameObject[] readNoteUIs;
     [SerializeField] AudioClip noteInspectionClip;
 
@@ -168,6 +172,11 @@ public class ItemInspectionHandler : MonoBehaviour
         else
             readHint.SetActive(false);
 
+        //Let the player know ESC closes the inspection
+        if (exitHint != null)
+            exitHint.SetActive(item != null);
+        PositionExitHint();
+
         //Play Note Pickup Clip
         if(item != null && item.itemType == ItemType.Note)
         {
@@ -302,8 +311,20 @@ public class ItemInspectionHandler : MonoBehaviour
                 }
 
                 readHint.SetActive(false);
+                PositionExitHint();
             }
         }
+    }
+
+    // The exit hint sits right under "F Read"; when "F Read" is hidden it moves up into its slot
+    void PositionExitHint()
+    {
+        if (exitHint == null || readHint == null)
+            return;
+
+        RectTransform exitRect = (RectTransform)exitHint.transform;
+        RectTransform readRect = (RectTransform)readHint.transform;
+        exitRect.anchoredPosition = readRect.anchoredPosition + (readHint.activeSelf ? new Vector2(0f, -exitHintSpacing) : Vector2.zero);
     }
 
     public bool IsNoteAndReading()
@@ -316,6 +337,7 @@ public class ItemInspectionHandler : MonoBehaviour
         DisableAllReadNoteUI();
 
         readHint.SetActive(true);
+        PositionExitHint();
 
         isReading = false;
     }

@@ -10,9 +10,17 @@ public class TimelineEnemyController : MonoBehaviour
     [SerializeField] Enemy []enemies;
 
 
+    // A timeline must only run once: a second PlayTimeline() (e.g. from another trigger) would re-enable and
+    // pause the enemies in the middle of the fight and stack up duplicate 'stopped' handlers.
+    bool hasPlayed;
+
     [ContextMenu("Run Test Function")]
     public void PlayTimeline()
     {
+        if (hasPlayed)
+            return;
+
+        hasPlayed = true;
         StartCoroutine(Co_PlayTimeline());
     }
 
@@ -26,12 +34,14 @@ public class TimelineEnemyController : MonoBehaviour
 
         StopEnemyState();
 
-        playableDirector.Play();
+        playableDirector.stopped -= TimelineFinish;
         playableDirector.stopped += TimelineFinish;
+        playableDirector.Play();
     }
 
     void TimelineFinish(PlayableDirector pd)
     {
+        playableDirector.stopped -= TimelineFinish;
         ResetEnemyState();
     }
 
