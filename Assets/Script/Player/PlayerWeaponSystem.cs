@@ -123,6 +123,45 @@ public class PlayerWeaponSystem : MonoBehaviour
     public ReloadTimeThreshold []reloadTimeThresholds;
     private Coroutine reloadCoroutine = null;
 
+    // ---- Reload skill check support (see ReloadSkillCheck) ----
+    // The reload timer runs on "progress" instead of a fixed wait, so its speed can be raised mid-reload.
+    float reloadSpeedScale = 1f;            // 1 = normal speed
+    float reloadBaseAnimMultiplier = 1f;    // animation speed the stability slowdown asked for
+    float reloadTotalTime;
+    float reloadTimeRemaining;
+    Animator reloadAnimator;                // the animator currently playing the reload
+    bool reloadAnimatorIsFirstPerson;
+
+    public float ReloadSpeedScale => reloadSpeedScale;
+    public float ReloadTotalTime => reloadTotalTime;
+    public float ReloadTimeRemaining => reloadTimeRemaining;
+    public float ReloadProgress01 => reloadTotalTime > 0f ? Mathf.Clamp01(1f - reloadTimeRemaining / reloadTotalTime) : 0f;
+    public bool ReloadPressedThisFrame => reloadInput != null && reloadInput.action.WasPressedThisFrame();
+
+    /// <summary>0 = shaky hands, 1 = fully steady (the calming inhaler counts as steady).</summary>
+    public float StabilityFraction
+    {
+        get
+        {
+            if (playerStability == null || playerStability.calmingInhalerIsActive) return 1f;
+            return Mathf.Clamp01(playerStability.stability / (float)Mathf.Max(1, playerStability.maxStability));
+        }
+    }
+
+    /// <summary>Speeds up the reload that is currently in progress (timer and animation): 2 = twice as fast, 5 = five times.</summary>
+    public void SetReloadSpeedScale(float scale)
+    {
+        if (!isReloading) return;
+
+        reloadSpeedScale = Mathf.Max(1f, scale);
+        float animSpeed = reloadBaseAnimMultiplier * reloadSpeedScale;
+
+        if (reloadAnimator != null)
+            reloadAnimator.SetFloat("ReloadTimeMultiplier", animSpeed);
+        if (reloadAnimatorIsFirstPerson && firstPersonAnimRoot != null)
+            firstPersonAnimRoot.SetFloat("ReloadTimeMultiplier", animSpeed);
+    }
+
     [Header("Weapon Spread")]
     [Tooltip("How inaccurate the weapon is. 0 = perfect accuracy.")]
     public float bulletSpread = 0.02f;
@@ -284,6 +323,15 @@ public class PlayerWeaponSystem : MonoBehaviour
     {
         if(ammoTxt != null)
             ammoTxt.text = currentAmmo.ToString();
+    }
+
+    /// <summary>Spare rounds for this weapon in the player's inventory (what a reload draws from).</summary>
+    public int GetReserveAmmo()
+    {
+        if (inventory != null && weaponAmmoItem != null && inventory.HasWeaponAmmo(weaponAmmoItem, out int reserve))
+            return reserve;
+
+        return 0;
     }
 
     void HandleAiming()
@@ -615,6 +663,9 @@ public class PlayerWeaponSystem : MonoBehaviour
 
                     firstPersonAnimRoot.SetFloat("ReloadTimeMultiplier", reloadTimeMultiplier);
                     firstPersonAnimRoot.SetTrigger("Reload");
+                    reloadBaseAnimMultiplier = reloadTimeMultiplier;
+                    reloadAnimator = firstPersonAnimator;
+                    reloadAnimatorIsFirstPerson = true;
                     reloadCoroutine = StartCoroutine(Co_ResetReloadTrigger(firstPersonAnimator, processesReloadTime));
                 }
                 else
@@ -625,7 +676,10 @@ public class PlayerWeaponSystem : MonoBehaviour
 
                     animator.SetFloat("ReloadTimeMultiplier", reloadTimeMultiplier);
                     animator.SetBool("Reload", true);
-                    
+
+                    reloadBaseAnimMultiplier = reloadTimeMultiplier;
+                    reloadAnimator = animator;
+                    reloadAnimatorIsFirstPerson = false;
                     reloadCoroutine = StartCoroutine(Co_ResetReloadTrigger(animator, processesReloadTime));
                 }
             }
@@ -665,9 +719,19 @@ public class PlayerWeaponSystem : MonoBehaviour
 
     IEnumerator Co_ResetReloadTrigger(Animator anim, float duration)
     {
-        // Wait for the exact calculated reload duration (base duration * stability multiplier)
-        yield return new WaitForSeconds(duration);
-        
+        // Wait for the calculated reload duration (base duration * stability multiplier). It counts down
+        // at reloadSpeedScale, so a successful skill check can shorten what is left of it.
+        reloadSpeedScale = 1f;
+        reloadTotalTime = duration;
+        reloadTimeRemaining = duration;
+        while (reloadTimeRemaining > 0f)
+        {
+            reloadTimeRemaining -= Time.deltaTime * reloadSpeedScale;
+            yield return null;
+        }
+        reloadSpeedScale = 1f;
+        reloadTotalTime = 0f;
+
         // Always unlock after duration - no dependency on animation events
         anim.SetBool("Reload", false);
         pistolReloadAudioSource.Stop();

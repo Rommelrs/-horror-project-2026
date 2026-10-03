@@ -28,6 +28,8 @@ public class OptionsManager : MonoBehaviour
     [SerializeField] Toggle freeCameraToggle;
     [Tooltip("Look speed of the free camera.")]
     [SerializeField] Slider cameraSpeedSlider;
+    [Tooltip("Shows or hides the small ammo counter that appears while aiming.")]
+    [SerializeField] Toggle ammoCounterToggle;
 
     [Header("Graphics")]
     [SerializeField] TMP_Dropdown resolutionDropdown;
@@ -106,6 +108,12 @@ public class OptionsManager : MonoBehaviour
             cameraSpeedSlider.onValueChanged.AddListener(OnCameraSpeedChanged);
         }
 
+        if (ammoCounterToggle != null)
+        {
+            ammoCounterToggle.SetIsOnWithoutNotify(AmmoCounterUI.Enabled);
+            ammoCounterToggle.onValueChanged.AddListener(OnAmmoCounterToggled);
+        }
+
         // Keep the toggle in step when the camera is switched with the hotkey instead
         if (CameraSystem.Instance != null)
             CameraSystem.Instance.FreeCameraChanged += OnFreeCameraChangedElsewhere;
@@ -182,6 +190,11 @@ public class OptionsManager : MonoBehaviour
             CameraSystem.Instance.SetFreeCamera(enabled);
         else
             PlayerPrefs.SetInt(CameraSystem.FreeCameraPrefKey, enabled ? 1 : 0);
+    }
+
+    void OnAmmoCounterToggled(bool enabled)
+    {
+        AmmoCounterUI.Enabled = enabled;
     }
 
     void OnFreeCameraChangedElsewhere(bool enabled)
