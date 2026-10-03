@@ -28,6 +28,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _CrackTex:
+        m_Texture: {fileID: 2800000, guid: fd36b0762452bbf4a8b747f445b947a0, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _DetailAlbedoMap:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
@@ -72,6 +76,8 @@ Material:
     - _CameraFarFadeDistance: 2
     - _CameraNearFadeDistance: 1
     - _ColorMode: 0
+    - _CrackAmount: 0.9
+    - _CrackTile: 9
     - _Cull: 2
     - _Cutoff: 0.5
     - _DetailAmount: 0.8
