@@ -194,7 +194,7 @@ public class InventoryDescriptionUI : MonoBehaviour
             || item.itemType == ItemType.HealingAndAddStability
             || item.itemType == ItemType.Bandage
             || item.itemType == ItemType.CalmingInhaler
-            || (item.itemType == ItemType.Fuse && Player.instance.fuseBoxInRange)
+            || (item.itemType == ItemType.Fuse && Player.instance.fuseBoxInRange && (Player.instance.currentFuseboxInRange == null || !Player.instance.currentFuseboxInRange.useBlocked))
             || (item.itemType == ItemType.UVLight && ImageFadeInteractable.currentInRange != null && ImageFadeInteractable.currentInRange.SupportsUVLight())
             || (item.itemType == ItemType.DuctTape && WallHoleInteractable.currentInRange != null && WallHoleInteractable.currentInRange.CanApplyTape())
             || (item.itemType == ItemType.Knife && BurnableObstacle.currentInRange != null && BurnableObstacle.currentInRange.CanUseItem(ItemType.Knife))
@@ -339,7 +339,8 @@ public class InventoryDescriptionUI : MonoBehaviour
             InventoryUI.instance.EnableInventoryUI(true);
         }
 
-        if (currentItem != null && currentItem.itemType == ItemType.Fuse)
+        if (currentItem != null && currentItem.itemType == ItemType.Fuse
+            && !(Player.instance.currentFuseboxInRange != null && Player.instance.currentFuseboxInRange.useBlocked))
         {
             //Hide Inventory instantly (no fade, UseFuse will handle the fade)
             InventoryUI.instance.HideInventoryInstant();

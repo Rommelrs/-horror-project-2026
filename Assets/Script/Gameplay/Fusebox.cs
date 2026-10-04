@@ -1,10 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class Fusebox : Interactable
 {
     public bool hasEnergy = false;
+
+    [Tooltip("While true the fuse cannot be installed (the store sequence keeps this on until the blackout has happened).")]
+    public bool useBlocked = false;
 
     [SerializeField] AudioClip noFuseClip;
     [SerializeField] AudioClip fuseAddedClip;
@@ -17,6 +21,10 @@ public class Fusebox : Interactable
 
     [SerializeField] GameObject offObj;
     [SerializeField] GameObject onObj;
+
+    [Header("Events")]
+    [Tooltip("Fires when the fuse is in and the lights come back (the screen is still fading in).")]
+    public UnityEvent onEnergyRestored;
 
     [Header("Timing")]
     [SerializeField] float fadeOutDuration = 1.5f;
@@ -74,6 +82,10 @@ public class Fusebox : Interactable
             return;
         }
 
+        //The power has not been cut yet: nothing to say, nothing to do
+        if (useBlocked)
+            return;
+
         //Trigger Have Subtitle
         haveFuseSubtitleTrigger.TriggerSubtitle();
     }
@@ -120,6 +132,7 @@ public class Fusebox : Interactable
 
         offObj.SetActive(false);
         onObj.SetActive(true);
+        onEnergyRestored?.Invoke();
 
         yield return new WaitForSecondsRealtime(fadeInDuration);
 

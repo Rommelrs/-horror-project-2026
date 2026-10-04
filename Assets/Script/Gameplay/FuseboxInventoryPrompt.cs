@@ -20,6 +20,7 @@ public class FuseboxInventoryPrompt : MonoBehaviour
     {
         bool shouldShow = playerInRange
             && !fusebox.hasEnergy
+            && !fusebox.useBlocked
             && Player.instance != null && Player.instance.inventory.HasFuse()
             && (InventoryUI.instance == null || !InventoryUI.instance.InventoryIsActive());
 
