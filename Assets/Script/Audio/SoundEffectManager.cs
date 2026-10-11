@@ -46,6 +46,18 @@ public class SoundEffectManager : MonoBehaviour
         audioPoint.PlayAudio(clip, volume * masterVolume, randomPitch);
     }
 
+    // Same, with a custom range: full volume within minDistance, fading out to maxDistance (the default is 1 m to 50 m).
+    public void PlaySFXAtPosition(AudioClip clip, Vector3 position, float volume, bool randomPitch, float minDistance, float maxDistance)
+    {
+        if (clip == null)
+            return;
+
+        AudioPoint audioPoint = audioPointPrefab.gameObject.Reuse(position, Quaternion.identity).GetComponent<AudioPoint>();
+        audioPoint.lifeTime = clip.length + 0.4f;
+        audioPoint.SetRange(minDistance, maxDistance);
+        audioPoint.PlayAudio(clip, volume * masterVolume, randomPitch);
+    }
+
     public void PlaySFX(AudioClip clip, float volume = 1f, bool randomPitch = false)
     {
         if (clip == null)

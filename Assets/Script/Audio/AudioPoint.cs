@@ -10,14 +10,28 @@ public class AudioPoint : MonoBehaviour, IPoolable
     AudioSource audioSource;
     Coroutine releaseCR;
 
+    float defaultMinDistance, defaultMaxDistance;
+
     private void Awake()
     {
         audioSource = GetComponent<AudioSource>();
+        defaultMinDistance = audioSource.minDistance;
+        defaultMaxDistance = audioSource.maxDistance;
     }
 
     public void OnDepool()
     {
         if (releaseCR != null) StopCoroutine(releaseCR);
+        // pooled: undo any range a previous sound set
+        audioSource.minDistance = defaultMinDistance;
+        audioSource.maxDistance = defaultMaxDistance;
+    }
+
+    // Full volume inside minDistance, fading out to maxDistance. Applies to the next sound played on this source only.
+    public void SetRange(float minDistance, float maxDistance)
+    {
+        audioSource.minDistance = minDistance;
+        audioSource.maxDistance = Mathf.Max(maxDistance, minDistance + 0.1f);
     }
 
     public void OnPool()

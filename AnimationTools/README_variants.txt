@@ -55,3 +55,22 @@ Khalid_Run_IRL (game speed 3.1 m/s, WIRED): params in Blender ns['IRL_C4']: V=3.
   Intensity reduced vs the video: hip bob 3 cm (video ~8), arm swing x.92, stance knee <= ~15 deg. Stance leg ratio .93-.98, toe-off not overstretched (.976).
 Khalid_Run_IRL_Jog (video speed 2.3 m/s, NOT wired; needs SprintSpeed ~2.3): same but V=2.3/1.1 K_D=.44 and the video swing mapped from s=.074 (Blender ns['IRL_JOG_0.44']).
 Bugs fixed while building: arm angles must ADD the trunk lean (a leaning chest carries a hanging arm back); swing-curve slope at toe-off is capped (K_TAN_MAX) because a fully stretched leg has an infinite IK slope.
+Khalid_Run_IRL_Feet (WIRED 2026-10-10): Khalid_Run_IRL + K_SWANKLE=[(.2,20),(.45,8),(.7,0),(.88,-3)]. Bug in all KEYED_LEGS clips (Keyed, Jog, IRL, IRL_Jog): the swing foot pitch was keyed in WORLD terms (K_SWPITCH), so with the shin horizontal behind the ankle was dorsiflexed ~65-70 deg (foot folded up against the shin, looked like a block sticking out). Now the swing foot is keyed relative to the shin: plantarflexed ~30 at toe-off -> neutral by mid/late swing -> ~5 dorsiflexed before heel strike.
+Blender helpers (S_stand, load_variant, export_action, bake_clip, sheetG, leg_metrics, IRL params) now live in AnimationTools/blender_helpers.py: exec it in Blender after a restart. Blender session backup with all 62 actions: AnimationTools/blender_recovery/quit_2026-10-10_0011.blend
+
+=== 2026-10-10 Untouched mocap retargets (user: STOP procedural generation, preserve the Mixamo capture) ===
+AnimationTools/mocap_retarget.py: pure rotation transfer. Each Khalid segment gets the same world-space rotation change as the Mixamo bone has from its own
+rest T-pose: R_k(t) = R_m(t) * R_m_rest^-1 * C * R_k_rest. C (rest-pose correction) only on upper arm / forearm (+ hand & fingers inherit the forearm's) and
+thigh / shin, where the rest POSES differ (Khalid's arms hang ~10 deg lower with a slightly bent elbow); pelvis/spine/neck/head/clavicles/feet/toes get none
+(same neutral pose, only bone placement differs). Hips position = Khalid rest hip + mocap hip displacement x leg-length ratio 0.908. No IK, no foot locking.
+Twist bones follow 90% of the upper-arm rotation (rig convention). Mixamo source imported into Blender collection zz_mocap_src (excluded from view layer),
+source actions SRC_Mixamo_Slow / SRC_Mixamo_Normal.
+Khalid_Run_Mocap_Slow: 22 frames @30 (163.6 spm), in place, seamless loop, native ground speed on Khalid 3.09 m/s in Unity (matches SprintSpeed 3.1-3.2).
+Khalid_Run_Mocap_Normal: 19 frames @30 (189.5 spm), native speed 5.9 m/s (a fast run; slides at game speed unless sprint ~5.9 or played slower).
+Checks: limb directions identical to Mixamo every frame (0.00 deg), elbow/knee angles identical; foot mesh 0.5-1 cm under the floor in flat stance and the
+toes 2-3.5 cm under at push-off for 2-3 frames (Mixamo character itself stays at 0) -> Khalid's ankle/ball joint placement differs from the Mixamo foot.
+Imported into Unity (not wired). Review videos: AnimationTools/mocap_review/*.mp4|gif (Mixamo original side | Khalid side | front | rear, 30 fps).
+Khalid_Run_Mocap_Normal WIRED 2026-10-10 (timeScale 1, untouched; replaced Khalid_Run_IRL_Feet).
+Khalid_Run_Mocap_Slow WIRED 2026-10-10 instead of Mocap_Normal (timeScale 1, untouched).
+Khalid_Run_Mocap_Normal WIRED again 2026-10-10 + SprintSpeed 5.9 (prefab 3->5.9; Game/Gym/Barber/_Recovery overrides 3.2->5.9).
+REVERTED 2026-10-10: Khalid_Run_Mocap_Slow wired again; SprintSpeed back to prefab 3 / scenes 3.2.

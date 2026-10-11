@@ -21,13 +21,13 @@ public class CameraSystem : MonoBehaviour
 
     [Header("Tank Camera Behavior")]
     [Tooltip("How far the player's facing has to drift from the current camera angle before the camera starts catching up. Keeps the camera from constantly self-correcting on every small turn.")]
-    [SerializeField] float rotationEngageAngle = 12f;
+    [SerializeField] float rotationEngageAngle = 1f;
     [Tooltip("If the CHARACTER's own facing snaps by more than this in a single frame (the dedicated quick-180 action), the camera cuts instantly instead of swinging through it. Ordinary sustained turning never triggers this, no matter how far the camera ends up lagging behind.")]
     [SerializeField] float instantCutAngle = 150f;
     [Tooltip("Roughly how long (seconds) the camera takes to ease into catching up - gives it real weight/momentum instead of a mechanical constant-speed correction. Larger = more visible independent swing.")]
-    [SerializeField] float tankCameraRotationSmoothTime = 0.85f;
+    [SerializeField] float tankCameraRotationSmoothTime = 0.4f;
     [Tooltip("Hard cap on turn speed while catching up - must stay above the character's own turn speed (150 deg/sec) or the camera will never fully close the gap during a sustained turn.")]
-    [SerializeField] float tankCameraMaxDegreesPerSecond = 200f;
+    [SerializeField] float tankCameraMaxDegreesPerSecond = 170f;
     [Tooltip("How long (seconds) the camera's position takes to catch up to the player - gives it independent inertia instead of being rigidly glued to the player's position.")]
     [SerializeField] float tankCameraPositionSmoothTime = 0.55f;
     [SerializeField] bool showDebugOverlay = false;
@@ -35,16 +35,18 @@ public class CameraSystem : MonoBehaviour
     [SerializeField] Key recenterKey = Key.F8;
 
     [Header("Continuous-Turn Front Swing")]
-    [Tooltip("How many seconds of continuous turning in one direction before the camera fully swings around to face the player from the front, when the player is standing still (not moving forward). Should be quick, but not instant.")]
-    [SerializeField] float standingTurnTimeToFront = 0.9f;
-    [Tooltip("How many seconds of continuous turning before the front swing triggers while sprinting at full speed - deliberately much longer, so casually turning while sprinting doesn't yank the camera around.")]
-    [SerializeField] float sprintTurnTimeToFront = 3.5f;
+    [Tooltip("How many FULL 360-degree turns the player must make in the same direction, without letting go of the turn key, before the camera swings around to face the player from the front. Ordinary turning (corners, a U-turn, even a couple of spins) keeps the camera behind the player.")]
+    [SerializeField] float turnsToFront = 4f;
     [Tooltip("How long (seconds) the front/behind blend takes to ease in and out - gives it a natural deceleration instead of stopping dead.")]
     [SerializeField] float frontBlendSmoothTime = 0.5f;
     [Tooltip("Minimum turn input required to count as 'sustaining a turn' (ignores tiny stick drift).")]
     [SerializeField] float sustainedTurnInputThreshold = 0.3f;
     [Tooltip("Extra distance the camera pulls back (added on top of the normal distance) as it swings toward facing the player head-on, so the front-facing reveal has proper breathing room instead of feeling cramped.")]
     [SerializeField] float frontSwingExtraDistance = 2.2f;
+
+    [Header("Spawn / Teleport")]
+    [Tooltip("If the player ends up more than this many metres from where they were last frame (spawn point, checkpoint load, save load, teleport), the camera cuts straight to behind them instead of gliding over from the old spot. It also always cuts behind the player on the very first frame.")]
+    [SerializeField] float teleportSnapDistance = 4f;
 
     [Header("Free Camera (optional)")]
     [Tooltip("Key that switches between the classic tank camera and the free (mouse-controlled) camera. The choice is remembered between sessions.")]
@@ -79,6 +81,9 @@ public class CameraSystem : MonoBehaviour
     bool freeSynced;
     bool recentering;
     bool wasAiming;
+    Vector3 lastFollowPosition;
+    bool hasFollowPosition;
+    bool aimWasActive;            // aiming state last frame, used to re-seat the camera when aiming ends
     bool pitchDirty;
     float recenterYawVelocity;
     float recenterPitchVelocity;
@@ -89,7 +94,7 @@ public class CameraSystem : MonoBehaviour
     Quaternion lastPlayerRotation;
     bool hasLastPlayerRotation;
     float sustainedTurnDirection;
-    float sustainedTurnTimer;
+    float sustainedTurnAngle;     // degrees the player has turned in sustainedTurnDirection without a break
     float frontBlend;
     float frontBlendVelocity;
 
@@ -148,6 +153,8 @@ public class CameraSystem : MonoBehaviour
     bool wantsRecenter;
 
     CameraFixedZone activeZone;
+    Vector3 fixedCamPos, fixedCamVelocity, fixedLookPoint, fixedLookVelocity;
+    Quaternion fixedCamRot = Quaternion.identity;
     float lastZoneSwitchTime = -999f;
     const float zoneSwitchCooldown = 0.3f;
 
@@ -220,6 +227,18 @@ public class CameraSystem : MonoBehaviour
         if (keyboard != null && keyboard[toggleFreeCameraKey].wasPressedThisFrame && !GameManager.IsPaused && Time.timeScale > 0f)
             SetFreeCamera(!FreeCameraEnabled, true);
 
+        // First frame, or the player was moved a long way in one go (spawn point, checkpoint/save
+        // load, teleport): cut straight to behind them rather than gliding over from the old spot.
+        if (followTarget != null && lookAtTarget != null)
+        {
+            bool teleported = !hasFollowPosition ||
+                (followTarget.position - lastFollowPosition).sqrMagnitude > teleportSnapDistance * teleportSnapDistance;
+            if (teleported && activeZone == null)
+                SnapBehindPlayer();
+            lastFollowPosition = followTarget.position;
+            hasFollowPosition = true;
+        }
+
         if (activeZone != null)
         {
             freeSynced = false;
@@ -232,6 +251,12 @@ public class CameraSystem : MonoBehaviour
         }
         else
         {
+            PlayerWeaponSystem aimWeapon = Player.instance != null ? Player.instance.playerWeaponSystem : null;
+            bool aimingNow = aimWeapon != null && aimWeapon.isAiming;
+            if (aimWasActive && !aimingNow && !FreeCameraEnabled)
+                SnapBehindPlayer();
+            aimWasActive = aimingNow;
+
             HandlePosition();
 
             if (FreeCameraEnabled)
@@ -247,6 +272,32 @@ public class CameraSystem : MonoBehaviour
 
             CheckCameraCollision();
         }
+    }
+
+    // Cuts the rig straight to behind the player (first frame, teleports, end of aiming).
+    // While aiming, the first-person aim camera is live and the player can spin to any direction, so
+    // this rig keeps its old position/heading. When aiming ends, put it straight back behind the
+    // player (the Cinemachine blend then eases the view there) instead of waiting for the player
+    // to move and the camera to swing round from wherever it was left.
+    void SnapBehindPlayer()
+    {
+        m_CameraTransform.rotation = Quaternion.LookRotation(lookAtTarget.forward, Vector3.up);
+        m_CameraTransform.position = followTarget.position;
+        camYawVelocity = 0f;
+        camPositionVelocity = Vector3.zero;
+        frontBlend = 0f;
+        frontBlendVelocity = 0f;
+        sustainedTurnDirection = 0f;
+        sustainedTurnAngle = 0f;
+        wallYaw = 0f;
+        wallYawVelocity = 0f;
+        wallSwingActive = false;
+        zoomVelocity = 0f;
+        freeSynced = false;
+        recentering = false;
+        lastPlayerRotation = m_PlayerMovement.transform.rotation;
+        hasLastPlayerRotation = true;
+        debugLastEvent = "SNAP BEHIND";
     }
 
     /// <summary>Switches between the classic tank camera (false) and the free mouse camera (true).</summary>
@@ -300,7 +351,7 @@ public class CameraSystem : MonoBehaviour
         hasLastPlayerRotation = true;
         frontBlend = 0f;
         frontBlendVelocity = 0f;
-        sustainedTurnTimer = 0f;
+        sustainedTurnAngle = 0f;
         sustainedTurnDirection = 0f;
         camYawVelocity = 0f;
         debugLastEvent = "FREE CAMERA";
@@ -415,24 +466,72 @@ public class CameraSystem : MonoBehaviour
         activeZone = zone;
         lastZoneSwitchTime = Time.time;
 
+        RestoreClassicPitch();
+        Vector3 playerPos = m_PlayerMovement.transform.position;
+        fixedLookPoint = playerPos + Vector3.up * zone.lookHeight;
+        fixedLookVelocity = Vector3.zero;
         if (zone.cutOnEnter)
         {
-            m_CameraTransform.position = zone.cameraAnchor.position;
-            m_CameraTransform.rotation = zone.cameraAnchor.rotation;
+            fixedCamPos = zone.GetCameraPosition(playerPos);
+            fixedCamRot = zone.trackPlayer ? zone.GetTrackingRotation(fixedCamPos, fixedLookPoint) : zone.GetCameraRotation();
         }
+        else
+        {
+            // blend in from wherever the camera is right now
+            fixedCamPos = m_CameraPositionOffset.position;
+            fixedCamRot = m_CameraPositionOffset.rotation;
+        }
+        fixedCamVelocity = Vector3.zero;
+        PlaceRigForCamera(fixedCamPos, fixedCamRot);
     }
 
-    public void ExitFixedZone(CameraFixedZone zone)
+    // snapBehind: cut straight back behind the player (used when leaving a zone by teleport, e.g. walking out of an interior)
+    public void ExitFixedZone(CameraFixedZone zone, bool snapBehind = false)
     {
-        if (activeZone == zone)
-            activeZone = null;
+        if (activeZone != zone) return;
+        activeZone = null;
+        // (targets can already be gone when this comes from OnDisable during scene unload / leaving Play mode)
+        if (snapBehind && lookAtTarget != null && followTarget != null && m_CameraTransform != null && m_PlayerMovement != null)
+            SnapBehindPlayer();
     }
 
+    // The camera's own pose is what gets smoothed (not the rig root's), so moving/rotating the anchor turns the camera in place
+    // instead of swinging it around the rig's pivot 2.5 m away. blendTime 0 = locked exactly on the anchor.
+    // Tracking zones: the camera stays around the anchor (drifting a little with the player, kept in the zone's bounds) and
+    // turns to keep the player in view; the aim point is smoothed so the view follows lazily instead of jittering.
     void HandleFixedZoneCamera()
     {
-        Transform anchor = activeZone.cameraAnchor;
-        m_CameraTransform.position = Vector3.Lerp(m_CameraTransform.position, anchor.position, followSpeed * Time.deltaTime);
-        m_CameraTransform.rotation = Quaternion.Lerp(m_CameraTransform.rotation, anchor.rotation, lookAtSpeed * Time.deltaTime);
+        CameraFixedZone z = activeZone;
+        Vector3 playerPos = m_PlayerMovement.transform.position;
+        Vector3 targetPos = z.GetCameraPosition(playerPos);
+        float drift = z.blendTime > 0f ? z.blendTime : 0.5f;           // drift always glides; blendTime 0 only locks a static anchor
+        if (z.followAmount <= 0f && z.blendTime <= 0f) { fixedCamPos = targetPos; fixedCamVelocity = Vector3.zero; }
+        else fixedCamPos = Vector3.SmoothDamp(fixedCamPos, targetPos, ref fixedCamVelocity, drift);
+
+        Quaternion targetRot;
+        if (z.trackPlayer)
+        {
+            Vector3 look = playerPos + Vector3.up * z.lookHeight;
+            fixedLookPoint = z.trackSmoothTime <= 0f ? look : Vector3.SmoothDamp(fixedLookPoint, look, ref fixedLookVelocity, z.trackSmoothTime);
+            targetRot = z.GetTrackingRotation(fixedCamPos, fixedLookPoint);
+            fixedCamRot = targetRot;
+        }
+        else
+        {
+            targetRot = z.GetCameraRotation();
+            fixedCamRot = z.blendTime <= 0f ? targetRot : Quaternion.Slerp(fixedCamRot, targetRot, 1f - Mathf.Exp(-3f * Time.deltaTime / z.blendTime));
+        }
+        PlaceRigForCamera(fixedCamPos, fixedCamRot);
+    }
+
+    // The virtual camera sits under the rig root (pitch + offset), so putting the ROOT on the anchor would leave the actual
+    // view 2.5 m behind and pitched down from it. Undo that chain so the camera itself ends up exactly at camPos/camRot.
+    void PlaceRigForCamera(Vector3 camPos, Quaternion camRot)
+    {
+        Quaternion localRot = Quaternion.Inverse(m_CameraTransform.rotation) * m_CameraPositionOffset.rotation;
+        Vector3 localPos = Quaternion.Inverse(m_CameraTransform.rotation) * (m_CameraPositionOffset.position - m_CameraTransform.position);
+        Quaternion rigRot = camRot * Quaternion.Inverse(localRot);
+        m_CameraTransform.SetPositionAndRotation(camPos - rigRot * localPos, rigRot);
     }
 
     void HandlePosition()
@@ -478,7 +577,7 @@ public class CameraSystem : MonoBehaviour
         if (wantsRecenter)
         {
             frontBlend = 0f;
-            sustainedTurnTimer = 0f;
+            sustainedTurnAngle = 0f;
             sustainedTurnDirection = 0f;
             m_CameraTransform.rotation = behindRotation;
             camYawVelocity = 0f;
@@ -522,11 +621,11 @@ public class CameraSystem : MonoBehaviour
         debugLastEvent += " | frontBlend=" + frontBlend.ToString("F2");
     }
 
-    // Tracks how long the player has been turning continuously in one direction, and blends
-    // frontBlend from 0 (normal, camera behind the player) toward 1 (camera fully swung
-    // around, facing back at the player) the longer that sustains. Reversing direction
-    // restarts the ramp. Freezes entirely while the player is fully idle, consistent with
-    // the rest of the camera settling in place rather than drifting with no input.
+    // Tracks how far (in degrees) the player has turned continuously in one direction, and only
+    // once that reaches turnsToFront full rotations does frontBlend ease from 0 (camera behind the
+    // player) to 1 (camera swung around, facing back at the player). Releasing the turn key or
+    // reversing direction restarts the count and eases the camera back behind. Freezes while the
+    // player is fully idle, consistent with the rest of the camera settling in place.
     void UpdateFrontSwingBlend()
     {
         bool hasAnyInput = moveInput.magnitude > 0.1f;
@@ -540,33 +639,25 @@ public class CameraSystem : MonoBehaviour
             if (!Mathf.Approximately(dir, sustainedTurnDirection))
             {
                 sustainedTurnDirection = dir;
-                sustainedTurnTimer = 0f;
+                sustainedTurnAngle = 0f;
             }
-            else
+            else if (hasLastPlayerRotation)
             {
-                sustainedTurnTimer += Time.deltaTime;
+                float yawDelta = Mathf.DeltaAngle(lastPlayerRotation.eulerAngles.y, m_PlayerMovement.transform.eulerAngles.y);
+                if (Mathf.Abs(yawDelta) < instantCutAngle) // ignore the quick-180 flip
+                    sustainedTurnAngle += Mathf.Abs(yawDelta);
             }
         }
         else
         {
             sustainedTurnDirection = 0f;
-            sustainedTurnTimer = 0f;
+            sustainedTurnAngle = 0f;
         }
 
-        // Scale how long a sustained turn needs to hold before swinging to the front based on
-        // how fast the player is currently moving - standing still swings around quickly (but
-        // not instantly), while sprinting deliberately takes much longer, so casually tapping
-        // a direction while running doesn't yank the camera around.
-        float speedRatio = m_PlayerMovement.SprintSpeed > 0f
-            ? Mathf.Clamp01(m_PlayerMovement.CurrentSpeed / m_PlayerMovement.SprintSpeed)
-            : 0f;
-        float effectiveTimeToFront = Mathf.Lerp(standingTurnTimeToFront, sprintTurnTimeToFront, speedRatio);
-
-        float targetBlend = Mathf.Clamp01(sustainedTurnTimer / effectiveTimeToFront);
+        float targetBlend = sustainedTurnAngle >= turnsToFront * 360f ? 1f : 0f;
 
         // SmoothDamp instead of MoveTowards - MoveTowards moves at a flat constant rate and
-        // then halts dead the instant it reaches the target, with zero deceleration, which is
-        // exactly what read as a "sudden stop" once the swing finished or fully relaxed back.
+        // then halts dead the instant it reaches the target, with zero deceleration.
         frontBlend = Mathf.SmoothDamp(frontBlend, targetBlend, ref frontBlendVelocity, frontBlendSmoothTime);
         frontBlend = Mathf.Clamp01(frontBlend);
     }
@@ -580,10 +671,7 @@ public class CameraSystem : MonoBehaviour
         GUI.Label(new Rect(10, 80, 500, 20), "State: " + debugLastEvent);
         GUI.Label(new Rect(10, 100, 500, 20), "Rotation smoothTime=" + tankCameraRotationSmoothTime + " maxSpeed=" + tankCameraMaxDegreesPerSecond);
         GUI.Label(new Rect(10, 120, 500, 20), "Position smoothTime=" + tankCameraPositionSmoothTime);
-        GUI.Label(new Rect(10, 140, 500, 20), "Front swing blend: " + frontBlend.ToString("F2") + " (0=behind, 1=facing player from front) sustainedTurnTimer=" + sustainedTurnTimer.ToString("F1"));
-        float debugSpeedRatio = m_PlayerMovement.SprintSpeed > 0f ? Mathf.Clamp01(m_PlayerMovement.CurrentSpeed / m_PlayerMovement.SprintSpeed) : 0f;
-        GUI.Label(new Rect(10, 160, 500, 20), "CurrentSpeed=" + m_PlayerMovement.CurrentSpeed.ToString("F2") + " speedRatio=" + debugSpeedRatio.ToString("F2") +
-            " effectiveTimeToFront=" + Mathf.Lerp(standingTurnTimeToFront, sprintTurnTimeToFront, debugSpeedRatio).ToString("F2"));
+        GUI.Label(new Rect(10, 140, 500, 20), "Front swing blend: " + frontBlend.ToString("F2") + " (0=behind, 1=facing player from front) turned=" + sustainedTurnAngle.ToString("F0") + "/" + (turnsToFront * 360f).ToString("F0") + " deg");
     }
 
     // Keeps the camera out of walls. Instead of one line cast straight back, it checks the whole

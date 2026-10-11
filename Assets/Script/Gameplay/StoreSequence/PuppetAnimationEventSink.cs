@@ -9,6 +9,7 @@ public class PuppetAnimationEventSink : MonoBehaviour
     public void OnFootstep() { }
     public void PlayFootstep() { }
     public void OnAttack() { }
+    public void TriggerAttack() { }          // the Questioner's attack clip
     public void PlayThrowSound() { }
     public void StopThrowSound() { }
 }

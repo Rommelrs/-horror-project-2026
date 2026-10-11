@@ -49,6 +49,7 @@ K_PLOW = 0.45
 K_TAN_MAX = 100000.0              # cap (deg per unit swing) on the swing-curve slopes at toe-off / heel strike
 K_SWING = [(0.22, -6.0, 70.0), (0.45, 8.0, 98.0), (0.68, 28.0, 80.0), (0.86, 30.0, 25.0)]   # swing keys (s, visible thigh deg, visible knee bend deg)
 K_SWPITCH = [(0.25, -40.0), (0.55, -20.0), (0.82, 10.0)]                                       # swing foot pitch keys (s, deg vs flat, + = toes up)
+K_SWANKLE = []                    # if set: swing ankle keys (s, plantarflexion deg vs neutral) used instead of K_SWPITCH, so the foot stays square to the shin
 FLIGHT_LIFT = 0.0                 # BU: the whole body (hips + both airborne feet) rises in a small arc while both feet are off the ground
 HEEL_LAND = 0.0                   # 0..1: in the late swing the foot turns toes-up so it lands on the heel
 HEEL_LAND_FROM = 0.55
@@ -352,6 +353,9 @@ if KEYED_LEGS:
             return (keys[m + 1][j] - keys[m - 1][j]) / (keys[m + 1][0] - keys[m - 1][0])
         return _herm(pa, tang(k), pb, tang(k + 1), (s_ - sa) / span, span)
     _pkeys = [(0.0, -_PT)] + [(s_, math.radians(v)) for (s_, v) in K_SWPITCH] + [(1.0, _P0)]
+    _SHREST = _THOFF - _OFFK                                                               # shin bone angle when standing (foot flat = neutral ankle)
+    _psi0 = (_TO[0] - _TO[1]) - _SHREST; _psi1 = (_HSa[0] - _HSa[1]) - _SHREST
+    _akeys = [(0.0, _psi0 + _PT)] + [(s_, math.radians(v)) for (s_, v) in (K_SWANKLE or [])] + [(1.0, _psi1 - _P0)]   # plantarflexion (+ = toes pointed)
     for _s, _off in (("Left", 0.0), ("Right", 0.5)):
         for i in range(N):
             phi = (i / N - TD / N - _off) % 1.0
@@ -365,6 +369,9 @@ if KEYED_LEGS:
                 kap = max(kap, _OFFK + math.radians(2.0))                  # never past straight
                 f, rz = _fk(thb, kap, h); z = rz
                 th = _spline(_pkeys, 0.0, 0.0, s_, 1)
+                if K_SWANKLE:                                              # foot angle follows the shin (ankle plantarflexion keys), not the world
+                    psi = (thb - kap) - _SHREST
+                    th = psi - _spline(_akeys, 0.0, 0.0, s_, 1)
                 t = 0.9 * _PT * (1.0 - sm(s_ / 0.3))
                 zok = max(0.084 * math.cos(th) - 0.143 * math.sin(th), 0.084 * math.cos(th) + 0.085 * math.sin(th)) + 0.01
                 z = max(z, zok)
