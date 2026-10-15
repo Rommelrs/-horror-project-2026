@@ -20,6 +20,17 @@ public class SaveableEnemy : MonoBehaviour, ISaveable
     
     private void Start()
     {
+        // Already dead in the save / checkpoint that was loaded: remove it. This is done here as well as in Load() because Load() is
+        // only called by a manual load, and only reaches objects that are active at that moment: a checkpoint restore ("Continue"
+        // after dying) never calls it, and enemies that start inactive (encounters, ambushes) would come back to life as soon as
+        // they were activated.
+        if (SaveManager.instance != null && uniqueID != null && SaveManager.instance.IsEnemyDead(uniqueID.ID))
+        {
+            Debug.Log("[Save] '" + gameObject.name + "' was already dead in the loaded state: removed");
+            Destroy(gameObject);
+            return;
+        }
+
         // Subscribe to enemy death
         if (enemy != null && enemy.health != null)
         {

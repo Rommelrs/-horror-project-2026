@@ -449,6 +449,30 @@ MonoBehaviour:
   exitPoint: {fileID: 0}
   requiresKey: 0
   keyCodeRequired: 0
+  unlockStepWithKey: 0
+  lockedLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  unlockedLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  unlockClip: {fileID: 0}
+  freezeGameOnSubtitle: 0
+  OnUnlocked:
+    m_PersistentCalls:
+      m_Calls: []
   hasDoorLock: 1
   doorLock: {fileID: 0}
   lockedSubtitleTrigger: {fileID: 0}
@@ -465,6 +489,9 @@ MonoBehaviour:
   OnInteractionFailed:
     m_PersistentCalls:
       m_Calls: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &2781122813028099897
 GameObject:
   m_ObjectHideFlags: 0
@@ -859,6 +886,30 @@ MonoBehaviour:
   exitPoint: {fileID: 1739906183681731813}
   requiresKey: 0
   keyCodeRequired: 0
+  unlockStepWithKey: 0
+  lockedLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  unlockedLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  unlockClip: {fileID: 0}
+  freezeGameOnSubtitle: 0
+  OnUnlocked:
+    m_PersistentCalls:
+      m_Calls: []
   hasDoorLock: 0
   doorLock: {fileID: 0}
   lockedSubtitleTrigger: {fileID: 0}
@@ -875,6 +926,9 @@ MonoBehaviour:
   OnInteractionFailed:
     m_PersistentCalls:
       m_Calls: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &5909917185971399336
 GameObject:
   m_ObjectHideFlags: 0

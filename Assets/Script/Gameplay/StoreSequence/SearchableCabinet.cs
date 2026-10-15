@@ -5,7 +5,8 @@ using UnityEngine.Events;
 
 /// <summary>
 /// A cabinet / box the player can search with E. Pressing E opens all of its drawers / doors, pressing E again (or walking
-/// away) closes them. Every time it opens it tells FuseHuntManager, which decides what the player finds / what Khalid says.
+/// away) closes them. Until the player knows what is wrong (FuseHuntManager.CanSearch) it stays shut and Khalid says he has no
+/// time for that. Every time it opens it tells FuseHuntManager, which decides what the player finds / what Khalid says.
 /// One cabinet = one search location (the fuse is placed in the last cabinet the player searches).
 /// </summary>
 public class SearchableCabinet : Interactable
@@ -87,10 +88,17 @@ public class SearchableCabinet : Interactable
         }
         else
         {
-            // tell the hunt manager first, so a fuse can be placed in the slot before the drawers slide out
-            if (FuseHuntManager.instance != null)
-                FuseHuntManager.instance.NotifyOpened(this);
-            Open();
+            var hunt = FuseHuntManager.instance;
+            if (hunt != null && !hunt.CanSearch)
+            {
+                hunt.NotifyBlocked(this);   // "I don't have time for that": the cabinet stays shut
+            }
+            else
+            {
+                // tell the hunt manager first, so a fuse can be placed in the slot before the drawers slide out
+                if (hunt != null) hunt.NotifyOpened(this);
+                Open();
+            }
         }
 
         StartCoroutine(Co_ReRegister());

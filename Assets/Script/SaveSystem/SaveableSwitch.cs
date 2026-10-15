@@ -41,6 +41,13 @@ public class SaveableSwitch : MonoBehaviour, ISaveable
         }
     }
     
+    /// <summary>True if this switch was activated (live, or in the save / checkpoint that was loaded).</summary>
+    public bool IsActivated()
+    {
+        if (uniqueID == null) uniqueID = GetComponent<UniqueID>();
+        return SaveManager.instance != null && uniqueID != null && SaveManager.instance.IsSwitchActivated(uniqueID.ID);
+    }
+
     /// <summary>
     /// Call this when the switch/button is activated
     /// </summary>

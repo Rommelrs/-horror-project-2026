@@ -77,6 +77,54 @@ public class CheckpointManager : MonoBehaviour
             StartCoroutine(Co_ShowNotification());
     }
 
+    /// <summary>
+    /// Replaces the checkpoint with the state of a manual save, so "Continue" always returns to the most recent of: the last
+    /// checkpoint reached, the last game saved, the last save loaded. Without this a manual save made after a checkpoint is ignored
+    /// by Continue (enemies killed since that checkpoint come back).
+    /// </summary>
+    public void WriteCheckpointFromSave(SaveData save, string checkpointName)
+    {
+        if (save == null || save.playerData == null) return;
+
+        CheckpointData data = new CheckpointData();
+        data.checkpointName = checkpointName;
+        data.sceneName = save.sceneName;
+        data.saveDate = DateTime.Now.ToString();
+
+        PlayerData pd = save.playerData;
+        data.posX = pd.position.x; data.posY = pd.position.y; data.posZ = pd.position.z;
+        data.rotY = pd.rotation.y;
+        data.health = pd.health; data.maxHealth = pd.maxHealth;
+        data.stability = pd.stability; data.maxStability = pd.maxStability;
+        data.currentAmmo = pd.currentAmmo;
+        data.hasMap = pd.hasMap; data.hasMap1 = pd.hasMap1; data.hasMap2 = pd.hasMap2;
+
+        // manual saves do not store whether the weapon is drawn/enabled: it is whenever the pistol is in the inventory
+        foreach (var it in pd.items)
+        {
+            data.items.Add(new ItemSaveEntry(it.itemName, it.quantity));
+            if (it.itemName != null && it.itemName.IndexOf("Pistol", StringComparison.OrdinalIgnoreCase) >= 0) data.weaponEnabled = true;
+        }
+        foreach (var n in pd.notes) data.notes.Add(new ItemSaveEntry(n.itemName, n.quantity));
+
+        if (save.worldData != null)
+        {
+            data.pickedUpItems = new List<string>(save.worldData.pickedUpItems);
+            data.deadEnemies = new List<string>(save.worldData.deadEnemies);
+            data.openedContainers = new List<string>(save.worldData.openedContainers);
+        }
+        if (save.progressData != null)
+        {
+            data.activatedSwitches = new List<string>(save.progressData.activatedSwitches);
+            data.stoppedSpawners = new List<string>(save.progressData.stoppedSpawners);
+            data.triggeredZones = new List<string>(save.progressData.triggeredDangerZones);
+            data.usedInteractables = new List<string>(save.progressData.usedInteractables);
+            data.currentMusicTrack = save.progressData.currentBackgroundMusic ?? "";
+        }
+
+        WriteToFile(data);
+    }
+
     /// <summary>Returns true if a checkpoint file exists.</summary>
     public bool HasCheckpoint()
     {
@@ -249,7 +297,9 @@ public class CheckpointManager : MonoBehaviour
             yield break;
         }
 
-        // ─ Apply ISaveable.Load() on all objects (removes dead enemies, picked items, etc.)
+        // Dead enemies, picked-up items, opened containers, triggers... are NOT restored by calling ISaveable.Load() here (Load takes
+        // a SaveData and the player's Load would move the player): each saveable restores itself in its own Start(), which runs after
+        // RestoreFromCheckpoint() has filled SaveManager's runtime sets (see OnSceneLoadedForCheckpoint).
         yield return new WaitForEndOfFrame();
 
         // ─ Position

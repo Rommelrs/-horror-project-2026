@@ -53,10 +53,16 @@ public class MapLocationReveal : MonoBehaviour
             TriggerReveal();
     }
 
-    // Can also be called manually from a UnityEvent
+    // Can also be called manually from a UnityEvent. A location is only ever revealed once: after that (or if its marker is already
+    // on the map, e.g. restored from a save) this does nothing, so opening the map and zooming in never plays a second time.
     public void TriggerReveal()
     {
-        if (isRunning) return;
+        if (isRunning || revealed) return;
+        if (markerCanvasGroup != null && markerCanvasGroup.gameObject.activeSelf)
+        {
+            revealed = true;
+            return;
+        }
         StartCoroutine(Co_RevealSequence());
     }
 

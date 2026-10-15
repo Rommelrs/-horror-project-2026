@@ -18,6 +18,12 @@ public class SaveableContainer : MonoBehaviour, ISaveable
         lootContainer = GetComponent<LootContainer>();
     }
     
+    private void Start()
+    {
+        // Same as SaveableEnemy: a checkpoint restore never calls Load(), and Load() only reaches active objects
+        ApplySavedState();
+    }
+
     /// <summary>
     /// Call this when the container is opened
     /// </summary>
@@ -37,8 +43,13 @@ public class SaveableContainer : MonoBehaviour, ISaveable
     
     public void Load(SaveData saveData)
     {
+        ApplySavedState();
+    }
+
+    void ApplySavedState()
+    {
         // Check with SaveManager if this container was opened
-        if (SaveManager.instance != null && SaveManager.instance.IsContainerOpened(uniqueID.ID))
+        if (SaveManager.instance != null && uniqueID != null && SaveManager.instance.IsContainerOpened(uniqueID.ID))
         {
             Debug.Log($"Container was already opened, restoring open state: {gameObject.name}");
             

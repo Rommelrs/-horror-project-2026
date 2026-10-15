@@ -23,6 +23,8 @@ public class StoreBlackoutSequence : MonoBehaviour
     [Header("Fuse box")]
     [Tooltip("The fuse must never go in before the power is cut. The moment the player stands at the fuse box with the fuse (when 'Press I to open inventory' would appear) the Runner scene is skipped, the door locks at once and the power is cut.")]
     [SerializeField] bool blackoutWhenPlayerReachesFusebox = true;
+    [Tooltip("How close (metres, measured along the floor) the player has to get to the fuse box, while carrying the fuse, to set the power cut off. The fuse box's own interaction trigger is tiny, so this is much more forgiving; reaching that trigger still counts too. 0 = only the trigger. Shown as a circle when the object is selected.")]
+    [SerializeField, Min(0f)] float fuseboxVicinity = 3.5f;
     [Tooltip("Delay before the power cut when it is triggered by reaching the fuse box.")]
     [SerializeField] float expediteDelay = 0.2f;
     [Tooltip("Safety net: if the player has had the fuse this long and the blackout has not even started, force it.")]
@@ -67,6 +69,8 @@ public class StoreBlackoutSequence : MonoBehaviour
     [Header("Silence")]
     [Tooltip("How long it is quiet between the power cut and the crash.")]
     [SerializeField] float silenceSeconds = 8f;
+    [Tooltip("Only if the player rushed to the fuse box with the fuse (before the blackout, or while it is already quiet): the crash comes after this long instead of the normal silence. Otherwise the normal silence is untouched. It never makes the wait longer than the normal one.")]
+    [SerializeField, Min(0f)] float rushedSilenceSeconds = 3f;
 
     [Header("Audio")]
     [SerializeField] AudioClip powerCutClip;
@@ -112,6 +116,7 @@ public class StoreBlackoutSequence : MonoBehaviour
     bool haveWrite;
     float delayLeft;
     bool expedited;
+    bool rushedToFusebox;      // the player actually walked up to the fuse box with the fuse (not just the 90 s failsafe)
     float fuseHeldSince = -1f;
 
     void Start()
@@ -135,15 +140,55 @@ public class StoreBlackoutSequence : MonoBehaviour
     {
         if (!blackoutWhenPlayerReachesFusebox || PowerIsOut || fusebox == null) return;
         var hunt = FuseHuntManager.instance;
-        bool hasFuse = (hunt != null && hunt.FusePickedUp) || (Player.instance != null && Player.instance.inventory != null && Player.instance.inventory.HasFuse());
+        bool hasFuse = PlayerHasFuse();
         if (!hasFuse) { fuseHeldSince = -1f; return; }
         if (fuseHeldSince < 0f) fuseHeldSince = Time.time;
         if (expedited) return;
 
-        // the same moment 'Press I to open inventory' would show up: the player is in the fuse box's range
-        bool atFusebox = Player.instance != null && Player.instance.fuseBoxInRange && Player.instance.currentFuseboxInRange == fusebox;
-        if (atFusebox) Expedite("the player reached the fuse box with the fuse");
+        // near the fuse box (a generous radius: the box itself is high on the wall and its interaction trigger is tiny), or in that
+        // trigger: the same moment 'Press I to open inventory' would show up
+        bool atFusebox = PlayerAtFusebox();
+        if (atFusebox) { rushedToFusebox = true; Expedite("the player reached the fuse box with the fuse"); }
         else if (Time.time - fuseHeldSince >= failsafeSecondsAfterFuse) Expedite("the player has had the fuse for " + failsafeSecondsAfterFuse + " s");
+    }
+
+    bool PlayerHasFuse()
+    {
+        var hunt = FuseHuntManager.instance;
+        return (hunt != null && hunt.FusePickedUp) || (Player.instance != null && Player.instance.inventory != null && Player.instance.inventory.HasFuse());
+    }
+
+    bool PlayerAtFusebox()
+    {
+        if (Player.instance == null || fusebox == null) return false;
+        return NearFusebox(Player.instance.transform.position)
+            || (Player.instance.fuseBoxInRange && Player.instance.currentFuseboxInRange == fusebox);
+    }
+
+    bool NearFusebox(Vector3 playerPos)
+    {
+        if (fuseboxVicinity <= 0f) return false;
+        Vector3 d = playerPos - fusebox.transform.position;
+        d.y = 0f;                                   // along the floor: the box is mounted high up the wall
+        return d.sqrMagnitude <= fuseboxVicinity * fuseboxVicinity;
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        if (fusebox == null || fuseboxVicinity <= 0f) return;
+        Gizmos.color = new Color(1f, 0.55f, 0.1f, 1f);
+        Vector3 c = fusebox.transform.position;
+        for (int ring = 0; ring < 2; ring++)        // two circles (at the box and 3 m below) so it reads as a cylinder
+        {
+            Vector3 prev = c + new Vector3(fuseboxVicinity, -3f * ring, 0f);
+            for (int i = 1; i <= 48; i++)
+            {
+                float a = i / 48f * Mathf.PI * 2f;
+                Vector3 next = c + new Vector3(Mathf.Cos(a) * fuseboxVicinity, -3f * ring, Mathf.Sin(a) * fuseboxVicinity);
+                Gizmos.DrawLine(prev, next);
+                prev = next;
+            }
+        }
     }
 
     /// <summary>Makes the blackout happen now-ish: skips whatever is left of the Runner scene, locks the door and cuts the power quickly.</summary>
@@ -209,16 +254,31 @@ public class StoreBlackoutSequence : MonoBehaviour
         yield return Co_LightsOut();
         ambientTarget = blackoutAmbientScale;
         PowerIsOut = true;
-        Debug.Log("[StoreBlackout] power is out - " + silenceSeconds + "s of silence");
+        Debug.Log("[StoreBlackout] power is out - " + silenceSeconds + "s of silence (t=" + Time.time.ToString("F2") + ")");
         onBlackout?.Invoke();
 
-        // --- silence ---
-        yield return new WaitForSeconds(silenceSeconds);
+        // --- silence --- (cut short if the player is rushing to the fuse box: they are waiting to put the fuse in)
+        float silenceLeft = silenceSeconds;
+        bool shortened = false;
+        while (silenceLeft > 0f)
+        {
+            if (!shortened && (rushedToFusebox || (PlayerHasFuse() && PlayerAtFusebox())))
+            {
+                shortened = true;
+                if (rushedSilenceSeconds < silenceLeft)
+                {
+                    Debug.Log("[StoreBlackout] the player is rushing to the fuse box - the crash comes in " + rushedSilenceSeconds + " s instead of " + silenceLeft.ToString("F1") + " s");
+                    silenceLeft = rushedSilenceSeconds;
+                }
+            }
+            silenceLeft -= Time.deltaTime;
+            yield return null;
+        }
 
         // --- crash ---
         Vector3 at = crashPoint != null ? crashPoint.position : transform.position;
         Play(crashClip, at, crashVolume, flatLayerVolume, crashMaxDistance);
-        Debug.Log("[StoreBlackout] CRASH");
+        Debug.Log("[StoreBlackout] CRASH (t=" + Time.time.ToString("F2") + ")");
         onCrash?.Invoke();
         if (collapseLead > 0f) yield return new WaitForSeconds(collapseLead);
         if (collapse != null) collapse.Collapse();

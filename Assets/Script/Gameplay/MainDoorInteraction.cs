@@ -39,6 +39,12 @@ public class MainDoorInteraction : MonoBehaviour
 
     public void OnDoorInteractionFailed()
     {
+        // A door with the unlock step says "It's locked." itself; a second subtitle on top of it would replace it (and one of the two
+        // freezes the game while the other does not).
+        DoorInteractable door = doorInteractable != null ? doorInteractable : GetComponent<DoorInteractable>();
+        if (door != null && door.unlockStepWithKey)
+            return;
+
         if (enemyDied)
             shootSubtitleTrigger.TriggerSubtitle();
     }

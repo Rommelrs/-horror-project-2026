@@ -43,6 +43,22 @@ public class RunnerPuppet : MonoBehaviour
         animator.speed = animatorSpeed;
     }
 
+    /// <summary>Pops him into place instantly, standing still, looking at a point. Works while the game is paused.</summary>
+    public void Appear(Vector3 position, Vector3 lookAt)
+    {
+        transform.position = position;
+        FaceInstant(lookAt - position);
+        gameObject.SetActive(true);
+        Idle();
+        if (animator != null) animator.Update(0f);   // pose him now even if time is frozen
+    }
+
+    /// <summary>Gone, instantly.</summary>
+    public void Vanish()
+    {
+        gameObject.SetActive(false);
+    }
+
     public void FaceDirection(Vector3 dir, float dt)
     {
         dir.y = 0f;

@@ -10,7 +10,7 @@ using Random = UnityEngine.Random;
 /// After the blackout the player searches the store's cabinets in any order. Each new search advances the dread:
 ///   1st search: a small physical disturbance out of sight (a can rolls out of another aisle / something falls off a shelf)
 ///   2nd search: the first clear whisper, from somewhere the player cannot see
-///   3rd search: boxes scrape across the floor in the storage room - and only then does the fuse show up
+///   3rd search: the fuse is in that cabinet at once, and a moment later boxes scrape across the floor in the storage room
 /// In between, quieter environmental events happen 15-30 seconds apart. Everything goes through one queue, so two events
 /// never overlap and there is always a gap after each one.
 /// </summary>
@@ -66,8 +66,6 @@ public class FuseHuntDirector : MonoBehaviour
     [Tooltip("A spilled box that slides across the floor while the scraping plays (optional).")]
     [SerializeField] Transform scrapeBox;
     [SerializeField] Vector3 scrapeSlide = new Vector3(0f, 0f, 0.9f);
-    [Tooltip("The fuse shows up this many seconds after the scraping starts.")]
-    [SerializeField] float fuseRevealOffset = 2.2f;
 
     [Header("Audio")]
     [SerializeField] AudioMixerGroup sfxGroup;
@@ -86,11 +84,6 @@ public class FuseHuntDirector : MonoBehaviour
     int searches;
     Camera cam;
     Transform playerT;
-
-    void Awake()
-    {
-        if (hunt != null) hunt.revealIsHandledByDirector = true;
-    }
 
     void Start()
     {
@@ -307,16 +300,14 @@ public class FuseHuntDirector : MonoBehaviour
 
     IEnumerator Co_StorageScrape()
     {
-        Debug.Log("[FuseHuntDirector] event: boxes scrape across the storage room floor - fuse follows");
+        Debug.Log("[FuseHuntDirector] event: boxes scrape across the storage room floor (the fuse is already in the last cabinet)");
         Vector3 at = storagePoint != null ? storagePoint.position : transform.position;
         if (scrapeBox != null) at = scrapeBox.position;
         float len = 4f;
         if (scrapeClip != null) { Play3D(scrapeClip, at, scrapeVolume, 5f, 60f); len = scrapeClip.length; }
 
         StartCoroutine(Co_SlideBox(len));
-        yield return new WaitForSeconds(Mathf.Min(fuseRevealOffset, len));
-        if (hunt != null) hunt.RevealPendingFuse();
-        yield return new WaitForSeconds(Mathf.Max(0f, len - fuseRevealOffset));
+        yield return new WaitForSeconds(len);
     }
 
     // jerky drag: short slides separated by pauses

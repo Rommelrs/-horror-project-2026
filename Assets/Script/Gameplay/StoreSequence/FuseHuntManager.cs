@@ -6,10 +6,10 @@ using UnityEngine.Localization;
 
 /// <summary>
 /// Runs the fuse hunt in the store.
-///  - Before the player has identified the problem (inspected the fuse box AND the cash register), searching a cabinet only
-///    gives "Nothing useful." and does not count.
+///  - Before the player has identified the problem (inspected the fuse box AND the cash register), the cabinets do not open:
+///    Khalid says "I don't have time for that" and nothing counts.
 ///  - After that, every cabinet the player searches for the first time counts as searched. The fuse is placed in the LAST
-///    cabinet they search, so it is always in the final place they look.
+///    cabinet they search, the moment it opens, so it is always in the final place they look.
 ///  - Opening a cabinet that has no fuse says one of the "no fuse here" lines.
 /// </summary>
 public class FuseHuntManager : MonoBehaviour
@@ -19,10 +19,6 @@ public class FuseHuntManager : MonoBehaviour
     [Header("Hunt")]
     [Tooltip("On: searches only count once BeginHunt() has been called. Off (normal): they count once the problem is identified (cash register + fuse box inspected, or the store sequence started). Before that every cabinet says 'Nothing useful'.")]
     [SerializeField] bool requireHuntBegin = false;
-    [Tooltip("When the director takes care of the reveal, the fuse stays hidden after the last search until RevealPendingFuse() is called (so the storage-room sound comes first).")]
-    public bool revealIsHandledByDirector;
-    [Tooltip("The fuse appears by itself this long after the last search if nobody revealed it.")]
-    [SerializeField] float revealFailsafeSeconds = 20f;
 
     [Header("Problem identified when (only used when 'Require Hunt Begin' is off)")]
     [Tooltip("All of these must have been interacted with (fuse box + cash register).")]
@@ -35,6 +31,11 @@ public class FuseHuntManager : MonoBehaviour
     public GameObject fuseObject;
 
     [Header("Lines (Subtitles table)")]
+    [Tooltip("Said when the player tries a cabinet before the problem is identified (the cabinet stays shut).")]
+    public LocalizedString[] noTimeLines;
+    [Tooltip("Minimum seconds between two of those remarks, so mashing E does not stack subtitles.")]
+    [SerializeField] float noTimeCooldown = 2.5f;
+    [Tooltip("Said when a cabinet is opened again after the fuse has been taken.")]
     public LocalizedString[] nothingUsefulLines;
     public LocalizedString[] noFuseHereLines;
     [Tooltip("Subtitles normally freeze the game; for these short remarks keep the game running.")]
@@ -61,7 +62,8 @@ public class FuseHuntManager : MonoBehaviour
     readonly HashSet<SearchableCabinet> searched = new HashSet<SearchableCabinet>();
     bool forcedIdentified;
     bool identifiedAnnounced;
-    int lastNothingIdx = -1, lastNoFuseIdx = -1;
+    int lastNothingIdx = -1, lastNoFuseIdx = -1, lastNoTimeIdx = -1;
+    float nextNoTimeAt;
 
     void Awake()
     {
@@ -131,17 +133,21 @@ public class FuseHuntManager : MonoBehaviour
         return Player.instance != null && Player.instance.inventory != null && Player.instance.inventory.HasFuse();
     }
 
-    /// <summary>Called by a SearchableCabinet every time the player opens it.</summary>
+    /// <summary>False until the player has worked out what is wrong: the cabinets stay shut.</summary>
+    public bool CanSearch { get { return ProblemIdentified; } }
+
+    /// <summary>Called by a SearchableCabinet when the player tries it before they know the problem.</summary>
+    public void NotifyBlocked(SearchableCabinet cabinet)
+    {
+        if (Time.time < nextNoTimeAt) return;
+        nextNoTimeAt = Time.time + noTimeCooldown;
+        Say(noTimeLines, ref lastNoTimeIdx);
+        Debug.Log("[FuseHunt] '" + cabinet.displayName + "' tried before the problem was identified -> stays shut");
+    }
+
+    /// <summary>Called by a SearchableCabinet every time the player opens it (only once the problem is identified).</summary>
     public void NotifyOpened(SearchableCabinet cabinet)
     {
-        if (!ProblemIdentified)
-        {
-            // player is poking around without knowing what they are looking for yet
-            Say(nothingUsefulLines, ref lastNothingIdx);
-            Debug.Log("[FuseHunt] '" + cabinet.displayName + "' opened before the problem was identified -> nothing useful (not counted)");
-            return;
-        }
-
         bool isNew = searched.Add(cabinet);
         if (isNew && !FuseRevealed) SearchCounted?.Invoke(searched.Count, CountActiveCabinets(), cabinet);
 
@@ -160,38 +166,14 @@ public class FuseHuntManager : MonoBehaviour
 
         if (allSearched)
         {
-            if (pendingCabinet != null) return;   // the fuse is already on its way
             FinalSearchDone = true;
-            if (revealIsHandledByDirector)
-            {
-                pendingCabinet = cabinet;
-                StartCoroutine(Co_RevealFailsafe());
-                Debug.Log("[FuseHunt] last cabinet '" + cabinet.displayName + "' opened - fuse reveal is waiting for the director");
-            }
-            else RevealFuse(cabinet);
+            RevealFuse(cabinet);   // straight away: the fuse is in the drawer as it slides open
         }
         else
         {
             Say(noFuseHereLines, ref lastNoFuseIdx);
             Debug.Log("[FuseHunt] '" + cabinet.displayName + "' searched (" + searched.Count + "/" + CountActiveCabinets() + ") - no fuse here");
         }
-    }
-
-    SearchableCabinet pendingCabinet;
-
-    IEnumerator Co_RevealFailsafe()
-    {
-        yield return new WaitForSeconds(revealFailsafeSeconds);
-        RevealPendingFuse();
-    }
-
-    /// <summary>Puts the fuse into the last cabinet that was searched (called by the director once the sound cue has played).</summary>
-    public void RevealPendingFuse()
-    {
-        if (pendingCabinet == null || FuseRevealed) return;
-        var c = pendingCabinet;
-        pendingCabinet = null;
-        RevealFuse(c);
     }
 
     int CountActiveCabinets()

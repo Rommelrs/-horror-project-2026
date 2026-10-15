@@ -27,7 +27,7 @@ RenderSettings:
   m_AmbientIntensity: 0
   m_AmbientMode: 3
   m_SubtractiveShadowColor: {r: 0.49461555, g: 0.5281793, b: 0.6132076, a: 1}
-  m_SkyboxMaterial: {fileID: 473616712}
+  m_SkyboxMaterial: {fileID: 682123998}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -14878,6 +14878,7 @@ MonoBehaviour:
   footsteps: {fileID: 1992936516}
   blackoutDelay: 1.5
   blackoutWhenPlayerReachesFusebox: 1
+  fuseboxVicinity: 3.5
   expediteDelay: 0.2
   failsafeSecondsAfterFuse: 90
   fuseUsableAfterCrash: 2
@@ -14914,6 +14915,7 @@ MonoBehaviour:
   - {x: 0.08, y: 0.25}
   - {x: 0.2, y: 0.12}
   silenceSeconds: 8
+  rushedSilenceSeconds: 3
   powerCutClip: {fileID: 8300000, guid: 8dbf644235edc384093a4cd74d26e8cf, type: 3}
   powerOnClip: {fileID: 8300000, guid: 91f58b2e2d0d8bd4ca56d475630f23fb, type: 3}
   powerOnVolume: 0.85
@@ -29498,6 +29500,11 @@ MonoBehaviour:
   waitBeforeEnding: 7
   endingMaxSteps: 5
   silenceBeforeObject: {x: 4, y: 6}
+  runnerCameo: 1
+  runner: {fileID: 1036890884}
+  cameoDistance: {x: 3, y: 9}
+  cameoDelayAfterMenu: 1.6
+  cameoVisibleSeconds: 0.07
   onStarted:
     m_PersistentCalls:
       m_Calls: []
@@ -32987,6 +32994,30 @@ MonoBehaviour:
   exitPoint: {fileID: 520151028}
   requiresKey: 1
   keyCodeRequired: 7856
+  unlockStepWithKey: 0
+  lockedLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  unlockedLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  unlockClip: {fileID: 0}
+  freezeGameOnSubtitle: 0
+  OnUnlocked:
+    m_PersistentCalls:
+      m_Calls: []
   hasDoorLock: 0
   doorLock: {fileID: 0}
   lockedSubtitleTrigger: {fileID: 0}
@@ -33051,6 +33082,9 @@ MonoBehaviour:
   OnInteractionFailed:
     m_PersistentCalls:
       m_Calls: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!4 &293305401
 Transform:
   m_ObjectHideFlags: 0
@@ -45342,34 +45376,6 @@ MeshRenderer:
     type: 3}
   m_PrefabInstance: {fileID: 745407017}
   m_PrefabAsset: {fileID: 0}
---- !u!21 &445430816
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Enviro/Lite/EnviroFogRendering
-  m_Shader: {fileID: 4800000, guid: 5b0160f40adf130428015ffb5bfdb8a5, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs: []
-    m_Ints: []
-    m_Floats: []
-    m_Colors: []
-  m_BuildTextureStacks: []
-  m_AllowLocking: 1
 --- !u!1 &445860563
 GameObject:
   m_ObjectHideFlags: 0
@@ -46980,6 +46986,30 @@ MonoBehaviour:
   exitPoint: {fileID: 545102527}
   requiresKey: 0
   keyCodeRequired: 0
+  unlockStepWithKey: 0
+  lockedLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  unlockedLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  unlockClip: {fileID: 0}
+  freezeGameOnSubtitle: 0
+  OnUnlocked:
+    m_PersistentCalls:
+      m_Calls: []
   hasDoorLock: 1
   doorLock: {fileID: 1904378645}
   lockedSubtitleTrigger: {fileID: 0}
@@ -47044,6 +47074,9 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  references:
+    version: 2
+    RefIds: []
 --- !u!4 &471114438
 Transform:
   m_ObjectHideFlags: 0
@@ -47150,7 +47183,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 64013dbb52de3634393480469ec1af30, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  gameSceneName: Game
+  gameSceneName: EndDemo
   spawnPointID: FromStore
 --- !u!1 &472730617
 GameObject:
@@ -47473,53 +47506,6 @@ SkinnedMeshRenderer:
     m_Center: {x: -0.27984542, y: 0.041862026, z: 1.3270243}
     m_Extent: {x: 0.12992899, y: 0.09340803, z: 0.115828276}
   m_DirtyAABB: 0
---- !u!21 &473616712
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Enviro/Lite/SkyboxSimple
-  m_Shader: {fileID: 4800000, guid: 846f1e8b410d51444866f03712815c1e, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _FlatCloudsBaseTexture:
-        m_Texture: {fileID: 2800000, guid: 9b9ac0c14a0678d498b26fb2486005f1, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _FlatCloudsDetailTexture:
-        m_Texture: {fileID: 2800000, guid: 3904de3fb7c0ff1419fd3064f8114c90, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _MoonTex:
-        m_Texture: {fileID: 2800000, guid: 66ad4c55c5a3a7045a25295e064fc7d2, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _Stars:
-        m_Texture: {fileID: 8900000, guid: 214e1a8de772f334886a8d3bee074dc9, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats: []
-    m_Colors:
-    - _HorizonColor: {r: 0.91947657, g: 0.91947657, b: 0.91947657, a: 1}
-    - _SkyColor: {r: 0.41187257, g: 0.57850236, b: 0.7254959, a: 0.792158}
-    - _SunColor: {r: 0.9450186, g: 0.83714426, b: 0.72533697, a: 1}
-  m_BuildTextureStacks: []
-  m_AllowLocking: 1
 --- !u!64 &473808692
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -65355,6 +65341,43 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!84 &604764345
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Enviro Reflection Final Cubemap
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 128
+  m_Height: 128
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 90
+  m_ColorFormat: 48
+  m_MipMap: 1
+  m_GenerateMips: 0
+  m_SRGB: 0
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 0
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 2
+    m_Aniso: 0
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 4
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &604921450
 GameObject:
   m_ObjectHideFlags: 0
@@ -71090,6 +71113,53 @@ MeshRenderer:
     type: 3}
   m_PrefabInstance: {fileID: 2101286271}
   m_PrefabAsset: {fileID: 0}
+--- !u!21 &682123998
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Enviro/Lite/SkyboxSimple
+  m_Shader: {fileID: 4800000, guid: 846f1e8b410d51444866f03712815c1e, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _FlatCloudsBaseTexture:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FlatCloudsDetailTexture:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MoonTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Stars:
+        m_Texture: {fileID: 8900000, guid: 214e1a8de772f334886a8d3bee074dc9, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats: []
+    m_Colors:
+    - _HorizonColor: {r: 0, g: 0, b: 0, a: 0}
+    - _SkyColor: {r: 0, g: 0, b: 0, a: 0}
+    - _SunColor: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!1001 &682796955
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -77275,8 +77345,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   audioClip: {fileID: 8300000, guid: f5c232cee19881a45b0887ca3bce756d, type: 3}
+  volume: 1
   destroyAfterCollision: 1
   delay: 0
+  playAtPosition: 0
+  soundOrigin: {fileID: 0}
+  randomPitch: 0
+  fullVolumeRadius: 1
+  maxDistance: 50
+  linkedTriggers: []
 --- !u!1001 &746816089
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -87843,13 +87920,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::FuseHuntManager
   requireHuntBegin: 0
-  revealIsHandledByDirector: 0
-  revealFailsafeSeconds: 20
   problemLocations:
   - {fileID: 2047453023}
   - {fileID: 20739122}
   identifyWhenSequenceStarts: 1
   fuseObject: {fileID: 1840561439}
+  noTimeLines:
+  - m_TableReference:
+      m_TableCollectionName: Subtitles
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: I don't have time for that.
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  noTimeCooldown: 2.5
   nothingUsefulLines:
   - m_TableReference:
       m_TableCollectionName: Subtitles
@@ -88939,6 +89024,34 @@ Transform:
   - {fileID: 618605594}
   m_Father: {fileID: 1057665724}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!21 &878492672
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Enviro/Lite/EnviroFogRendering
+  m_Shader: {fileID: 4800000, guid: 5b0160f40adf130428015ffb5bfdb8a5, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats: []
+    m_Colors: []
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!4 &878606192 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 14bab1c6d812e794ab1787f97ab6155d,
@@ -96507,8 +96620,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   audioClip: {fileID: 8300000, guid: 4ad2ea602d61da345abc0e97cf4309e9, type: 3}
+  volume: 1
   destroyAfterCollision: 1
   delay: 0
+  playAtPosition: 0
+  soundOrigin: {fileID: 0}
+  randomPitch: 0
+  fullVolumeRadius: 1
+  maxDistance: 50
+  linkedTriggers: []
 --- !u!114 &918290538
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -111775,7 +111895,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isAddionalCamera: 0
-  material: {fileID: 445430816}
+  material: {fileID: 878492672}
   simpleFog: 0
 --- !u!114 &1023865415
 MonoBehaviour:
@@ -132184,8 +132304,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   audioClip: {fileID: 8300000, guid: af7c3dc6f500637428c12b3a6b66efff, type: 3}
+  volume: 1
   destroyAfterCollision: 1
   delay: 0
+  playAtPosition: 0
+  soundOrigin: {fileID: 0}
+  randomPitch: 0
+  fullVolumeRadius: 1
+  maxDistance: 50
+  linkedTriggers: []
 --- !u!1 &1271683449
 GameObject:
   m_ObjectHideFlags: 0
@@ -132744,8 +132871,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   audioClip: {fileID: 8300000, guid: a437a7137aa3cbb4194eb3967c3e7fc0, type: 3}
+  volume: 1
   destroyAfterCollision: 1
   delay: 1
+  playAtPosition: 0
+  soundOrigin: {fileID: 0}
+  randomPitch: 0
+  fullVolumeRadius: 1
+  maxDistance: 50
+  linkedTriggers: []
 --- !u!4 &1277527997
 Transform:
   m_ObjectHideFlags: 0
@@ -137493,11 +137627,11 @@ MonoBehaviour:
   LST: 611.21497
   lastHourUpdate: 10
   hourTime: 0
-  cloudAnim: {x: 0, y: -0.6860629, z: -0.9551462}
-  cloudFlatBaseAnim: {x: 0, y: 0.5252731}
-  cloudFlatDetailAnim: {x: 0, y: -0.3810715}
-  cloudAnimNonScaled: {x: 0, y: -31.488081}
-  cirrusAnim: {x: 0, y: 0.4249457}
+  cloudAnim: {x: 0, y: 0.4936848, z: 0.8808594}
+  cloudFlatBaseAnim: {x: 0, y: 0.44319758}
+  cloudFlatDetailAnim: {x: 0, y: -0.43249583}
+  cloudAnimNonScaled: {x: 0, y: -31.569933}
+  cirrusAnim: {x: 0, y: 0.42083982}
   windIntensity: 0.25000003
   shadowIntensityMod: 0
   interiorMode: 0
@@ -137621,7 +137755,7 @@ MonoBehaviour:
   usePostEffectFog: 1
   showFogInEditor: 1
   EnviroSkyRender: {fileID: 1023865414}
-  skyMat: {fileID: 473616712}
+  skyMat: {fileID: 682123998}
   showSettings: 0
 --- !u!4 &1325783893
 Transform:
@@ -146093,8 +146227,39 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 5276239729837846912, guid: de83a0281a15a234bad73ab4f89ddc92,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1377973847}
   m_SourcePrefab: {fileID: 100100000, guid: de83a0281a15a234bad73ab4f89ddc92, type: 3}
+--- !u!1 &1377973846 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5276239729837846912, guid: de83a0281a15a234bad73ab4f89ddc92,
+    type: 3}
+  m_PrefabInstance: {fileID: 1377973845}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &1377973847
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1377973846}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1.02, y: 1.62, z: 0.46999997}
+  m_Center: {x: 2.273738e-15, y: 0.81, z: 0.0050000027}
 --- !u!1 &1378135978
 GameObject:
   m_ObjectHideFlags: 0
@@ -154563,6 +154728,30 @@ MonoBehaviour:
   exitPoint: {fileID: 56378569}
   requiresKey: 0
   keyCodeRequired: 0
+  unlockStepWithKey: 0
+  lockedLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  unlockedLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  unlockClip: {fileID: 0}
+  freezeGameOnSubtitle: 0
+  OnUnlocked:
+    m_PersistentCalls:
+      m_Calls: []
   hasDoorLock: 1
   doorLock: {fileID: 0}
   lockedSubtitleTrigger: {fileID: 0}
@@ -154603,6 +154792,9 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  references:
+    version: 2
+    RefIds: []
 --- !u!114 &1478076505
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -163495,8 +163687,39 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1727015404851698419, guid: 043e483688163a84fb07f7be85ac647d,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1514965218}
   m_SourcePrefab: {fileID: 100100000, guid: 043e483688163a84fb07f7be85ac647d, type: 3}
+--- !u!1 &1514965217 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1727015404851698419, guid: 043e483688163a84fb07f7be85ac647d,
+    type: 3}
+  m_PrefabInstance: {fileID: 1514965216}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &1514965218
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1514965217}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1.24, y: 1.02, z: 0.62}
+  m_Center: {x: 0, y: 0.51, z: 0.00999999}
 --- !u!23 &1515254200 stripped
 MeshRenderer:
   m_CorrespondingSourceObject: {fileID: 7636762561039538957, guid: e1a17d1436058bc4b9def09aa14f433d,
@@ -163934,6 +164157,30 @@ MonoBehaviour:
   exitPoint: {fileID: 534458521}
   requiresKey: 0
   keyCodeRequired: 0
+  unlockStepWithKey: 0
+  lockedLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  unlockedLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  unlockClip: {fileID: 0}
+  freezeGameOnSubtitle: 0
+  OnUnlocked:
+    m_PersistentCalls:
+      m_Calls: []
   hasDoorLock: 0
   doorLock: {fileID: 0}
   lockedSubtitleTrigger: {fileID: 0}
@@ -163974,6 +164221,9 @@ MonoBehaviour:
   OnInteractionFailed:
     m_PersistentCalls:
       m_Calls: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!4 &1520832921
 Transform:
   m_ObjectHideFlags: 0
@@ -184723,11 +184973,11 @@ MonoBehaviour:
   tankCameraPositionSmoothTime: 0.55
   showDebugOverlay: 0
   recenterKey: 101
-  standingTurnTimeToFront: 0.9
-  sprintTurnTimeToFront: 3.5
+  turnsToFront: 4
   frontBlendSmoothTime: 0.5
   sustainedTurnInputThreshold: 0.3
   frontSwingExtraDistance: 2.2
+  teleportSnapDistance: 4
   toggleFreeCameraKey: 17
   freeCameraSensitivity: 1
   freePitchMin: -20
@@ -198502,7 +198752,7 @@ ReflectionProbe:
   m_RenderDynamicObjects: 0
   m_UseOcclusionCulling: 1
   m_Importance: 1
-  m_CustomBakedTexture: {fileID: 1883816819}
+  m_CustomBakedTexture: {fileID: 604764345}
 --- !u!114 &1765891961
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -204334,8 +204584,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   audioClip: {fileID: 8300000, guid: ed768b1a0d3e31e4f8b681ae1e70b07e, type: 3}
+  volume: 1
   destroyAfterCollision: 1
   delay: 0
+  playAtPosition: 0
+  soundOrigin: {fileID: 0}
+  randomPitch: 0
+  fullVolumeRadius: 1
+  maxDistance: 50
+  linkedTriggers: []
 --- !u!4 &1780053385
 Transform:
   m_ObjectHideFlags: 0
@@ -220302,43 +220559,6 @@ SkinnedMeshRenderer:
     m_Center: {x: 0.13292402, y: 0.00072642416, z: 0.048799735}
     m_Extent: {x: 0.055973556, y: 0.13857442, z: 0.069195144}
   m_DirtyAABB: 0
---- !u!84 &1883816819
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Enviro Reflection Final Cubemap
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 128
-  m_Height: 128
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 90
-  m_ColorFormat: 48
-  m_MipMap: 1
-  m_GenerateMips: 0
-  m_SRGB: 0
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 0
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 2
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 4
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1 &1883938712
 GameObject:
   m_ObjectHideFlags: 0
@@ -229225,6 +229445,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalPosition.y
       value: 13.848201
+      objectReference: {fileID: 0}
+    - target: {fileID: 3522212505045367583, guid: ee2bef8f35b42a04db79e9d64d0d7e7a,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -485.26
       objectReference: {fileID: 0}
     - target: {fileID: 3530441608283152704, guid: ee2bef8f35b42a04db79e9d64d0d7e7a,
         type: 3}
@@ -239099,8 +239324,39 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4180000091796861244, guid: 5c97a65daf9356a409318f14ec474c5e,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1973199818}
   m_SourcePrefab: {fileID: 100100000, guid: 5c97a65daf9356a409318f14ec474c5e, type: 3}
+--- !u!1 &1973199817 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4180000091796861244, guid: 5c97a65daf9356a409318f14ec474c5e,
+    type: 3}
+  m_PrefabInstance: {fileID: 1973199816}
+  m_PrefabAsset: {fileID: 0}
+--- !u!65 &1973199818
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1973199817}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.5119999, y: 0.69499993, z: 0.24199998}
+  m_Center: {x: -0.005999997, y: 0.34749997, z: 0.010999999}
 --- !u!1001 &1974081221
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -249435,7 +249691,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4e830ce84020cd4fa77d0366c6ad114, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  id: 60484452-8f03-4020-8365-a636c27a6af1
+  id: bdd3cc33-bdfb-48ef-82cb-535c40464a39
 --- !u!1 &2084850941
 GameObject:
   m_ObjectHideFlags: 0
@@ -253778,7 +254034,6 @@ MonoBehaviour:
   scrapeVolume: 1
   scrapeBox: {fileID: 491387467}
   scrapeSlide: {x: 0, y: 0, z: 0.9}
-  fuseRevealOffset: 2.2
   sfxGroup: {fileID: 8412773623437164646, guid: 6ada63477c7e6d243afce2bee96afd8c,
     type: 2}
 --- !u!4 &2134183136

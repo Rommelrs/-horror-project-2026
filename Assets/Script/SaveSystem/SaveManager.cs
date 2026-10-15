@@ -100,6 +100,11 @@ public class SaveManager : MonoBehaviour
             File.WriteAllText(filePath, json);
             currentSaveData = saveData;
             OnGameSaved?.Invoke();
+
+            // "Continue" after dying loads the checkpoint file: a manual save must refresh it, otherwise Continue goes back to a
+            // checkpoint older than this save and everything done since (enemies killed, items taken) is undone
+            if (CheckpointManager.instance != null)
+                CheckpointManager.instance.TriggerCheckpoint("Saved game");
         }
         catch (Exception e)
         {
@@ -227,7 +232,11 @@ public class SaveManager : MonoBehaviour
             }
             
             currentSaveData = saveData;
-            
+
+            // ...and loading a save makes that save the point Continue returns to (not a newer checkpoint from before the load)
+            if (CheckpointManager.instance != null)
+                CheckpointManager.instance.WriteCheckpointFromSave(saveData, "Loaded game");
+
             // Load the saved scene
             SceneManager.sceneLoaded += OnSceneLoadedForLoad;
             SceneManager.LoadScene(saveData.sceneName);
