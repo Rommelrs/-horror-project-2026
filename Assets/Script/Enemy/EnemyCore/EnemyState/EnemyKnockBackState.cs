@@ -10,6 +10,11 @@ public class EnemyKnockBackState : EnemyState
 
     bool heavyKnockback = false;
     bool stateChangeTrigerred = false;
+    bool isActiveState = false;
+    Coroutine wakeUpCR;
+
+    /// <summary>True while a weakpoint (heavy) knockback is in progress: down on the ground and waking up. Further hits must not interrupt it.</summary>
+    public bool IsDownedHeavy => isActiveState && heavyKnockback;
     float savedAgentSpeed = 0f;
 
     // Colliders we've temporarily told to ignore each other so a knockback isn't stopped dead
@@ -32,6 +37,8 @@ public class EnemyKnockBackState : EnemyState
     {
         canLeave = false;
         stateChangeTrigerred = false;
+        isActiveState = true;
+        if (wakeUpCR != null) { enemy.StopCoroutine(wakeUpCR); wakeUpCR = null; }
         
         Debug.Log("KnockbackState.Enter: " + enemy.name + ", isDamageByWeakpointHit = " + enemy.health.isDamageByWeakpointHit);
         Debug.Log("KnockbackState.Enter: canHeavyKnockBack = " + enemy.stats.canHeavyKnockBack);
@@ -71,7 +78,10 @@ public class EnemyKnockBackState : EnemyState
     {
         base.Exit();
 
+        isActiveState = false;
         if (knockBackCR != null) enemy.StopCoroutine(knockBackCR);
+        // A pending wake-up must never fire after we have left this state (it would force a chase state change mid-something else)
+        if (wakeUpCR != null) { enemy.StopCoroutine(wakeUpCR); wakeUpCR = null; }
 
         enemy.rb.linearVelocity = Vector3.zero;
         enemy.rb.angularVelocity = Vector3.zero;
@@ -101,7 +111,7 @@ public class EnemyKnockBackState : EnemyState
                     stateChangeTrigerred = true;
                     // Fixed enemies go back to idle, others chase
                     EnemyState nextState = enemy.stats.enemyType == EnemyType.Fixed ? enemy.idleState : enemy.chaseState;
-                    enemy.StartCoroutine(Co_WakeUpThenChangeState(nextState));
+                    wakeUpCR = enemy.StartCoroutine(Co_WakeUpThenChangeState(nextState));
                 }
             }
             else
@@ -118,14 +128,34 @@ public class EnemyKnockBackState : EnemyState
         }
     }
 
+    static readonly int wakeupStateHash = Animator.StringToHash("Wakeup");
+
     IEnumerator Co_WakeUpThenChangeState(EnemyState enemyState)
     {
         enemy.anim.SetBool("HeavyKnockback", false);
 
-        // Wait for the wakeup animation to finish
-        yield return new WaitForSeconds(enemy.stats.wakeUpDuration);
+        if (enemy.anim.HasState(0, wakeupStateHash))
+        {
+            // Follow the real animation instead of a fixed timer: the down clip may still be finishing, then the wake-up clip plays
+            // (7 s for the Questioner). Leaving early cut it off and let the enemy walk around while still in the waking-up pose.
+            float giveUpTime = Time.time + 15f;
+            while (!IsInWakeup() && Time.time < giveUpTime) yield return null;
+            while (IsInWakeup() && enemy.anim.GetCurrentAnimatorStateInfo(0).normalizedTime < 0.96f && Time.time < giveUpTime) yield return null;
+        }
+        else
+        {
+            // Animators without a "Wakeup" state keep the old fixed delay
+            yield return new WaitForSeconds(enemy.stats.wakeUpDuration);
+        }
 
-        stateMachine.ChangeState(enemyState);
+        wakeUpCR = null;
+        if (stateMachine.CurrentState == this)
+            stateMachine.ChangeState(enemyState);
+    }
+
+    bool IsInWakeup()
+    {
+        return enemy.anim.GetCurrentAnimatorStateInfo(0).shortNameHash == wakeupStateHash;
     }
 
     protected void KnockBack(Vector3 direction, float forceMultiplier)

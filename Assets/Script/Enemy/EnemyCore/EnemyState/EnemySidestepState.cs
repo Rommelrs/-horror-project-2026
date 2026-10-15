@@ -10,6 +10,13 @@ public class EnemySidestepState : EnemyState
     float leaveTime;
     float earlyAttackCheckTime;
     Coroutine applySidestepCR;
+    float speedFactor = 1f;
+
+    // Sidewalk mode (Stats.sideStepAnimGroundSpeed > 0): smooth velocity + strafe animation speed matched to the ground speed
+    static readonly int strafeAnimSpeedHash = Animator.StringToHash("StrafeAnimSpeed");
+    bool sidewalkMode;
+    float sidewalkTargetSpeed;
+    float sidewalkSpeed;
 
     public float currentSidestepDuration = 0;
 
@@ -29,8 +36,21 @@ public class EnemySidestepState : EnemyState
         //Set Sidestep Duration
         currentSidestepDuration = UnityEngine.Random.Range(enemy.stats.sideStepDurationMin, enemy.stats.sideStepDurationMax);
 
+        // Slower or faster step each time
+        speedFactor = 1f + UnityEngine.Random.Range(-enemy.stats.sideStepSpeedVariation, enemy.stats.sideStepSpeedVariation);
+
+        sidewalkMode = enemy.stats.sideStepAnimGroundSpeed > 0f && !(enemy is RunnerEnemy);
+        sidewalkSpeed = 0f;
+        if (sidewalkMode)
+        {
+            float cap = enemy.stats.sideStepAnimGroundSpeed * enemy.stats.sideStepMaxAnimSpeed;
+            sidewalkTargetSpeed = Mathf.Clamp(enemy.stats.sideStepSpeed * speedFactor, 0.05f, cap);
+            enemy.anim.SetFloat(strafeAnimSpeedHash, enemy.stats.sideStepMinAnimSpeed);
+        }
+
         leaveTime = Time.time + currentSidestepDuration;
-        earlyAttackCheckTime = Time.time + 1f; // After 1 second, can exit early to attack if close
+        // After 1 second, can exit early to attack if close (aim-reaction sidesteps are short, so check sooner)
+        earlyAttackCheckTime = Time.time + (enemy.stats.sideStepOnlyWhenAimedAt ? Mathf.Min(1f, currentSidestepDuration * 0.5f) : 1f);
         canLeave = false;
 
         enemy.anim.SetBool("Strafing", true);
@@ -59,8 +79,11 @@ public class EnemySidestepState : EnemyState
         enemy.rb.useGravity = false;
         enemy.rb.isKinematic = true;
 
+        // Give the strafe state back its normal playback speed (the parameter is only meaningful while sidewalking)
+        enemy.anim.SetFloat(strafeAnimSpeedHash, 1f);
+
         enemy.agent.enabled = true;
-        
+
         // Immediately set destination to resume chase without pause
         if (enemy.agent.isOnNavMesh && Player.instance != null)
         {
@@ -85,9 +108,18 @@ public class EnemySidestepState : EnemyState
         canLeave = Time.time > leaveTime;
         
         // Early exit if player is within attack range
-        if (Time.time > earlyAttackCheckTime && enemy.PlayerInRange(enemy.stats.attackRange))
+        if (Time.time > earlyAttackCheckTime && enemy.PlayerInAttackRange())
         {
             canLeave = true;
+        }
+
+        // Sidewalk: the feet follow what the body actually does (also slows the legs when he is pushing against something)
+        if (sidewalkMode)
+        {
+            Vector3 v = enemy.rb.linearVelocity;
+            float actual = new Vector2(v.x, v.z).magnitude;
+            float animSpeed = Mathf.Clamp(actual / enemy.stats.sideStepAnimGroundSpeed, enemy.stats.sideStepMinAnimSpeed, enemy.stats.sideStepMaxAnimSpeed);
+            enemy.anim.SetFloat(strafeAnimSpeedHash, animSpeed);
         }
 
         //Look at player (flatten Y to prevent vertical tilt)
@@ -104,19 +136,32 @@ public class EnemySidestepState : EnemyState
         {
             yield return new WaitForFixedUpdate();
 
+            if (sidewalkMode)
+            {
+                // Smooth ramp to the chosen walking speed, straight sideways, gravity untouched
+                sidewalkSpeed = Mathf.MoveTowards(sidewalkSpeed, sidewalkTargetSpeed, enemy.stats.sideStepAccelaration * Time.fixedDeltaTime);
+                Vector3 side = enemy.transform.right * (isSidesteppingToRight ? 1f : -1f);
+                side.y = 0f;
+                side.Normalize();
+                enemy.rb.linearVelocity = side * sidewalkSpeed + Vector3.up * enemy.rb.linearVelocity.y;
+                continue;
+            }
+
+            float maxSpeed = enemy.stats.sideStepSpeed * speedFactor;
+
             if (isSidesteppingToRight)
             {
                 //Sidestepping to Right
-                if (enemy.rb.linearVelocity.magnitude < enemy.stats.sideStepSpeed)
+                if (enemy.rb.linearVelocity.magnitude < maxSpeed)
                     enemy.rb.AddForce(enemy.transform.right * enemy.stats.sideStepAccelaration * Time.fixedDeltaTime, ForceMode.Impulse);
-                enemy.rb.linearVelocity = Vector3.ClampMagnitude(enemy.rb.linearVelocity, enemy.stats.sideStepSpeed);
+                enemy.rb.linearVelocity = Vector3.ClampMagnitude(enemy.rb.linearVelocity, maxSpeed);
             }
             else
             {
                 //Sidestepping to Left
-                if (enemy.rb.linearVelocity.magnitude < enemy.stats.sideStepSpeed)
+                if (enemy.rb.linearVelocity.magnitude < maxSpeed)
                     enemy.rb.AddForce(-enemy.transform.right * enemy.stats.sideStepAccelaration * Time.fixedDeltaTime, ForceMode.Impulse);
-                enemy.rb.linearVelocity = Vector3.ClampMagnitude(enemy.rb.linearVelocity, enemy.stats.sideStepSpeed);
+                enemy.rb.linearVelocity = Vector3.ClampMagnitude(enemy.rb.linearVelocity, maxSpeed);
             }
         }
     }

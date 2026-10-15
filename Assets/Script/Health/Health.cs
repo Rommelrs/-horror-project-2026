@@ -80,6 +80,13 @@ public class Health : MonoBehaviour, IDamagable
     [Tooltip("When true, this entity completely ignores damage (no health loss, no hit reaction, no death). Used for scripted NPCs that shouldn't react to player bullets.")]
     [SerializeField] bool isInvincible = false;
 
+    /// <summary>Runtime access to the invincibility flag (used by debug tools such as QuestionerTestBench).</summary>
+    public bool Invincible
+    {
+        get => isInvincible;
+        set => isInvincible = value;
+    }
+
     //Damage Behaviour
     public void Damage(int damage)
     {

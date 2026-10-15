@@ -10,7 +10,7 @@ public class EnemyIdleState : EnemyState
 
     public override void Enter()
     {
-        idleTimer = Random.Range(1f, 3f);
+        idleTimer = Random.Range(enemy.stats.idleMinDuration, Mathf.Max(enemy.stats.idleMinDuration, enemy.stats.idleMaxDuration));
 
         if(enemy.agent.isActiveAndEnabled && enemy.agent.isOnNavMesh)
             enemy.agent.isStopped = true;

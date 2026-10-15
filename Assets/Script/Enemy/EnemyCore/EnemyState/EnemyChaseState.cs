@@ -5,7 +5,6 @@ using UnityEngine;
 public class EnemyChaseState : EnemyState
 {
     float playerOutOfVisionDuration = 0f;
-    float initializeLookDuration = 2f;
 
     float lookEndTime;
     Quaternion targetRotation;
@@ -43,7 +42,7 @@ public class EnemyChaseState : EnemyState
         //Set Agent speed
         enemy.agent.speed = enemy.stats.movementSpeed;
 
-        lookEndTime = Time.time + initializeLookDuration;
+        lookEndTime = Time.time + enemy.stats.chaseStartLookDuration;
         
         // Only use advanced pathfinding if enabled
         if (enemy.stats.useAdvancedPathfinding)
@@ -68,6 +67,9 @@ public class EnemyChaseState : EnemyState
             // Basic mode: no offset, chase directly
             destinationOffset = Vector3.zero;
         }
+
+        queueLeader = null;
+        nextQueueDecisionTime = 0f;
 
         // Force the first SetDestination call in Update to fire immediately
         lastSetDestinationTime = -999f;
@@ -102,8 +104,24 @@ public class EnemyChaseState : EnemyState
                 enemy.agent.isStopped = true;
 
             //Look at player
-            targetRotation = Quaternion.LookRotation(Player.instance.transform.position - enemy.transform.position);
-            enemy.transform.rotation = Quaternion.Lerp(enemy.transform.rotation, targetRotation, enemy.stats.rotationSmoothness * Time.deltaTime);
+            Vector3 toPlayer = Player.instance.transform.position - enemy.transform.position;
+            if (enemy.stats.chaseStartTurnSpeed > 0f)
+            {
+                // Fast turn: flat direction, constant angular speed, and the wait ends as soon as he is facing the player
+                toPlayer.y = 0f;
+                if (toPlayer.sqrMagnitude > 0.0001f)
+                {
+                    targetRotation = Quaternion.LookRotation(toPlayer);
+                    enemy.transform.rotation = Quaternion.RotateTowards(enemy.transform.rotation, targetRotation, enemy.stats.chaseStartTurnSpeed * Time.deltaTime);
+                    if (Quaternion.Angle(enemy.transform.rotation, targetRotation) < 15f)
+                        lookEndTime = Time.time;
+                }
+            }
+            else
+            {
+                targetRotation = Quaternion.LookRotation(toPlayer);
+                enemy.transform.rotation = Quaternion.Lerp(enemy.transform.rotation, targetRotation, enemy.stats.rotationSmoothness * Time.deltaTime);
+            }
         }
         else
         {
@@ -136,11 +154,25 @@ public class EnemyChaseState : EnemyState
                     }
                 }
                 
-                // Advanced pathfinding: recalculate offset periodically
-                if (enemy.stats.useAdvancedPathfinding)
+                // Direct approach: no offset point around the player, just go for him (optionally lined up behind a teammate)
+                if (enemy.stats.chaseDirectApproach)
                 {
+                    destinationOffset = Vector3.zero;
+                    UpdateQueueDecision();
+                }
+                // Advanced pathfinding: recalculate offset periodically
+                else if (enemy.stats.useAdvancedPathfinding)
+                {
+                    // Wall (or anything solid) between us and the player: an offset point around the player could be on the wrong
+                    // side of it and the enemy would pace along the wall forever. Head for the player's real position instead and
+                    // let the NavMesh path find the way around; re-roll the offset as soon as there is a clear line again.
+                    if (!enemy.HasLineOfSightToPlayer())
+                    {
+                        destinationOffset = Vector3.zero;
+                        offsetRecalculateTime = Time.time;
+                    }
                     // If already very close to player, ignore offset and go direct
-                    if (distanceToPlayer <= enemy.stats.attackRange * 1.2f)
+                    else if (distanceToPlayer <= enemy.stats.attackRange * 1.2f)
                     {
                         destinationOffset = Vector3.zero;
                     }
@@ -157,7 +189,11 @@ public class EnemyChaseState : EnemyState
                 }
                 
                 Vector3 targetPosition = Player.instance.transform.position + destinationOffset;
-                
+
+                // Lined up behind a teammate: aim for the spot just behind him instead of the player
+                if (enemy.stats.chaseDirectApproach && queueLeader != null)
+                    targetPosition = GetQueuePosition(queueLeader, targetPosition);
+
                 // Check if in containment zone
                 if (enemy.IsInContainmentZone())
                 {
@@ -227,6 +263,79 @@ public class EnemyChaseState : EnemyState
         }
     }
     
+    // ---- Queueing behind a teammate (Direct Approach only)
+    Enemy queueLeader;
+    float nextQueueDecisionTime;
+    static Enemy[] allEnemiesBuffer;
+
+    /// <summary>The teammate this enemy is currently lined up behind (null when taking its own route).</summary>
+    public Enemy QueueLeader => queueLeader;
+
+    void UpdateQueueDecision()
+    {
+        // Drop the leader once he is dead, gone or no longer ahead of us
+        if (queueLeader != null && !IsValidQueueLeader(queueLeader))
+            queueLeader = null;
+
+        if (Time.time < nextQueueDecisionTime) return;
+        nextQueueDecisionTime = Time.time + enemy.stats.queueDecisionInterval * Random.Range(0.7f, 1.3f);
+
+        queueLeader = null;
+        if (enemy.stats.queueBehindChance > 0 && Random.Range(0, 100) < enemy.stats.queueBehindChance)
+            queueLeader = FindQueueLeader();
+    }
+
+    bool IsValidQueueLeader(Enemy other)
+    {
+        if (other == null || other == enemy || !other.gameObject.activeInHierarchy) return false;
+
+        // Only line up behind the same kind of enemy: a melee rusher queueing behind a thrower that stands still at range would just wait for nothing
+        if (other.GetType() != enemy.GetType()) return false;
+        if (other.health != null && other.health.IsDead) return false;
+
+        EnemyState s = other.stateMachine.CurrentState;
+        if (!(s is EnemyChaseState || s is EnemyAttackState || s is EnemySidestepState)) return false;
+
+        Vector3 playerPos = Player.instance.transform.position;
+        float myDist = Vector3.Distance(enemy.transform.position, playerPos);
+        float theirDist = Vector3.Distance(other.transform.position, playerPos);
+
+        // Must be clearly ahead of us (also rules out two enemies lining up behind each other)
+        if (theirDist > myDist - 1f) return false;
+        return Vector3.Distance(enemy.transform.position, other.transform.position) <= enemy.stats.queueBehindRange * 1.5f;
+    }
+
+    Enemy FindQueueLeader()
+    {
+        allEnemiesBuffer = Object.FindObjectsByType<Enemy>(FindObjectsSortMode.None);
+        Enemy best = null;
+        float bestDist = enemy.stats.queueBehindRange;
+        foreach (Enemy other in allEnemiesBuffer)
+        {
+            if (!IsValidQueueLeader(other)) continue;
+            float d = Vector3.Distance(enemy.transform.position, other.transform.position);
+            if (d < bestDist) { bestDist = d; best = other; }
+        }
+        return best;
+    }
+
+    Vector3 GetQueuePosition(Enemy leader, Vector3 fallback)
+    {
+        // "Behind" = opposite to where the leader is heading (his path), or away from the player when he is standing
+        Vector3 heading = Vector3.zero;
+        if (leader.agent != null && leader.agent.enabled && leader.agent.velocity.sqrMagnitude > 0.1f)
+            heading = leader.agent.velocity;
+        else
+            heading = Player.instance.transform.position - leader.transform.position;
+        heading.y = 0f;
+        if (heading.sqrMagnitude < 0.0001f) return fallback;
+
+        Vector3 pos = leader.transform.position - heading.normalized * enemy.stats.queueBehindSpacing;
+        if (UnityEngine.AI.NavMesh.SamplePosition(pos, out UnityEngine.AI.NavMeshHit hit, 1.5f, UnityEngine.AI.NavMesh.AllAreas))
+            return hit.position;
+        return fallback;
+    }
+
     private void GenerateRandomOffset()
     {
         // Find valid NavMesh positions around the player in a smarter way
@@ -255,6 +364,11 @@ public class EnemyChaseState : EnemyState
             radiusStep = 1f;
         }
         
+        // NavMesh position of the player: candidates must be visible from here (no wall in between)
+        Vector3 playerNavPos = Player.instance.transform.position;
+        if (UnityEngine.AI.NavMesh.SamplePosition(playerNavPos, out UnityEngine.AI.NavMeshHit playerNavHit, 2f, UnityEngine.AI.NavMesh.AllAreas))
+            playerNavPos = playerNavHit.position;
+
         // Randomize starting direction to spread enemies better
         int startDirection = Random.Range(0, 8);
         
@@ -282,6 +396,10 @@ public class EnemyChaseState : EnemyState
                 // Check if position is valid on NavMesh
                 if (UnityEngine.AI.NavMesh.SamplePosition(targetPos, out hit, 3f, UnityEngine.AI.NavMesh.AllAreas))
                 {
+                    // Skip points hidden behind a wall from the player (the snap above can land on the other side of one)
+                    if (UnityEngine.AI.NavMesh.Raycast(playerNavPos, hit.position, out UnityEngine.AI.NavMeshHit blockHit, UnityEngine.AI.NavMesh.AllAreas))
+                        continue;
+
                     // Check path reachability (optimized or full based on settings)
                     bool needsPathCheck;
                     if (useOptimizations)

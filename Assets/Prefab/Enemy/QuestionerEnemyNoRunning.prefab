@@ -86,11 +86,20 @@ MonoBehaviour:
   disableEnemyAfterDeath: 1
   releaseTime: 4
   rotationSmoothness: 3
+  idleMinDuration: 0.2
+  idleMaxDuration: 0.6
+  chaseStartLookDuration: 1
+  chaseStartTurnSpeed: 240
   detectionMode: 0
   visionRadius: 12
   movementSpeed: 0.95
   useAdvancedPathfinding: 0
   useOptimizedPathfinding: 0
+  chaseDirectApproach: 1
+  queueBehindChance: 55
+  queueBehindRange: 6
+  queueBehindSpacing: 1.6
+  queueDecisionInterval: 3
   useDynamicChaseSpeed: 1
   sprintDistanceThreshold: 10
   sprintSpeedMultiplier: 3.2
@@ -145,12 +154,20 @@ MonoBehaviour:
   footstepVolume: 0.5
   animationSmoothness: 3
   sideStepLookRotation: 30
-  sideStepAccelaration: 6
-  sideStepSpeed: 1.8
-  sideStepDurationMin: 3
-  sideStepDurationMax: 7
-  sideStepCooldown: 3
-  sideStepChance: 100
+  sideStepAccelaration: 4
+  sideStepSpeed: 1.2
+  sideStepDurationMin: 0.8
+  sideStepDurationMax: 1.7
+  sideStepCooldown: 2.5
+  sideStepChance: 50
+  sideStepOnlyWhenAimedAt: 1
+  sideStepAimAngle: 12
+  sideStepReactionTime: 0.25
+  sideStepRerollInterval: 1.5
+  sideStepSpeedVariation: 0.5
+  sideStepAnimGroundSpeed: 0.6
+  sideStepMinAnimSpeed: 0.6
+  sideStepMaxAnimSpeed: 3
 --- !u!114 &4495772346616579468
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -187,6 +204,7 @@ MonoBehaviour:
   isDamageByWeakpointHit: 0
   iFrameDuration: 1
   enableIFrames: 0
+  isInvincible: 0
 --- !u!54 &932939506906041759
 Rigidbody:
   m_ObjectHideFlags: 0

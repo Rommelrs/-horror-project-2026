@@ -151,7 +151,7 @@ public class Enemy : MonoBehaviour, IPoolable
                 else if(stats.enemyType == EnemyType.Fixed)
                 {
                     // Detect player in vision range
-                    if (PlayerInRange(stats.attackRange))
+                    if (PlayerInAttackRange())
                     {
                         stateMachine.ChangeState(attackState);
                     }
@@ -165,7 +165,7 @@ public class Enemy : MonoBehaviour, IPoolable
             if (stats.enemyType == EnemyType.Wandering || stats.enemyType == EnemyType.Aggressive)
             {
                 //If within attack range
-                if (PlayerInRange(stats.attackRange))
+                if (PlayerInAttackRange())
                 {
                     stateMachine.ChangeState(attackState);
                 }
@@ -182,7 +182,7 @@ public class Enemy : MonoBehaviour, IPoolable
             if (currentState.canLeave)
             {
                 // If within attack range
-                if (PlayerInRange(stats.attackRange))
+                if (PlayerInAttackRange())
                 {
                     stateMachine.ChangeState(attackState);
                 }
@@ -194,7 +194,7 @@ public class Enemy : MonoBehaviour, IPoolable
         {
             if (stats.enemyType == EnemyType.Wandering || stats.enemyType == EnemyType.Aggressive)
             {
-                if (currentState.canLeave && !PlayerInRange(stats.attackRange))
+                if (currentState.canLeave && !PlayerInAttackRange())
                 {
                     stateMachine.ChangeState(chaseState);
                     return;
@@ -202,7 +202,7 @@ public class Enemy : MonoBehaviour, IPoolable
             }
             else if(stats.enemyType == EnemyType.Fixed)
             {
-                if (currentState.canLeave && !PlayerInRange(stats.attackRange))
+                if (currentState.canLeave && !PlayerInAttackRange())
                 {
                     stateMachine.ChangeState(idleState);
                     return;
@@ -233,6 +233,52 @@ public class Enemy : MonoBehaviour, IPoolable
         return Vector3.Distance(transform.position, Player.instance.transform.position) < range;
     }
 
+    /// <summary>
+    /// True when the player is within attack range AND nothing solid (wall, platform, prop) is between the enemy and the player.
+    /// Attack decisions and the damage check use this instead of the raw distance, so enemies no longer attack through walls
+    /// and keep pathing around them instead.
+    /// </summary>
+    public bool PlayerInAttackRange()
+    {
+        return PlayerInRange(stats.attackRange) && HasLineOfSightToPlayer();
+    }
+
+    static readonly RaycastHit[] lineOfSightBuffer = new RaycastHit[64];
+    int lineOfSightFrame = -1;
+    bool lineOfSightResult;
+
+    /// <summary>Chest-to-chest raycast from this enemy to the player. Other enemies, the player and trigger colliders never block. Cached per frame.</summary>
+    public bool HasLineOfSightToPlayer()
+    {
+        if (Player.instance == null) return false;
+        if (lineOfSightFrame == Time.frameCount) return lineOfSightResult;
+        lineOfSightFrame = Time.frameCount;
+
+        Vector3 from = transform.position + Vector3.up * 1.2f;
+        Vector3 to = Player.instance.controller != null
+            ? Player.instance.controller.bounds.center
+            : Player.instance.transform.position + Vector3.up * 1.0f;
+
+        Vector3 dir = to - from;
+        float dist = dir.magnitude;
+        lineOfSightResult = true;
+        if (dist < 0.01f) return true;
+
+        int count = Physics.RaycastNonAlloc(from, dir / dist, lineOfSightBuffer, dist, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < count; i++)
+        {
+            Collider c = lineOfSightBuffer[i].collider;
+            if (c == null) continue;
+            if (c.transform.IsChildOf(transform)) continue;                 // self
+            if (c.GetComponentInParent<Player>() != null) continue;         // the player
+            if (c.GetComponentInParent<Enemy>() != null) continue;          // other enemies
+            if (c.GetComponentInParent<Projectile>() != null) continue;     // flying bags / arrows
+            lineOfSightResult = false;
+            break;
+        }
+        return lineOfSightResult;
+    }
+
     //Check is player is inside the enemy Field of View
     public virtual void AlertToSound(Vector3 soundPosition)
     {
@@ -246,6 +292,12 @@ public class Enemy : MonoBehaviour, IPoolable
 
         // Don't alert if dead
         if (health != null && health.IsDead)
+            return;
+
+        // Being knocked down / waking up / dying is not interruptible by noise. Every shot the player fires (including the ones
+        // that hit this enemy) alerts everything in range; without this a downed enemy flipped to Investigate on the next shot
+        // and walked around while still playing the knocked-down animation.
+        if (stateMachine.CurrentState == enemyKnockbackState || stateMachine.CurrentState == deathState)
             return;
 
         investigateState.SetTargetPosition(soundPosition);
@@ -271,6 +323,14 @@ public class Enemy : MonoBehaviour, IPoolable
     {
         if (health.IsDead) return;
 
+        // Already down from a weakpoint hit (lying / waking up): further shots still hurt, but must not restart the knockback or
+        // play the small hurt reaction over the downed pose, which made him pop up early.
+        if (stateMachine.CurrentState == enemyKnockbackState && enemyKnockbackState.IsDownedHeavy)
+        {
+            PlaySoundEffect(stats.takeDamageSFX);
+            return;
+        }
+
         //Knockback State
         Vector3 playerPos = Player.instance.transform.position;
         playerPos.y = transform.position.y;
@@ -278,7 +338,7 @@ public class Enemy : MonoBehaviour, IPoolable
         this.damageDirection = damageDirection;
 
         if (health.isDamageByWeakpointHit)
-            this.damageForceMultiplier = Player.instance.playerWeaponSystem.weakpointHitEnemyKnockbackMultiplier;
+            this.damageForceMultiplier = Player.instance.playerWeaponSystem.weakpointHitEnemyKnockbackMultiplier * stats.weakpointKnockbackScale;
         else
             this.damageForceMultiplier = 1f;
 
@@ -295,7 +355,7 @@ public class Enemy : MonoBehaviour, IPoolable
 
         if (health.IsDead) return;
 
-        if (PlayerInRange(stats.attackRange) && PlayerInFOV())
+        if (PlayerInAttackRange() && PlayerInFOV())
         {
             //Successful hit
             Player.instance.health.Damage(stats.damage);

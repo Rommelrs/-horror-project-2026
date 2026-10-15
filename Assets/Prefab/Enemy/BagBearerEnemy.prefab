@@ -116,11 +116,20 @@ MonoBehaviour:
   disableEnemyAfterDeath: 1
   releaseTime: 4
   rotationSmoothness: 3
+  idleMinDuration: 0.3
+  idleMaxDuration: 0.8
+  chaseStartLookDuration: 1
+  chaseStartTurnSpeed: 180
   detectionMode: 0
   visionRadius: 13
   movementSpeed: 1.3
   useAdvancedPathfinding: 1
   useOptimizedPathfinding: 1
+  chaseDirectApproach: 0
+  queueBehindChance: 0
+  queueBehindRange: 6
+  queueBehindSpacing: 1.6
+  queueDecisionInterval: 3
   useDynamicChaseSpeed: 1
   sprintDistanceThreshold: 10
   sprintSpeedMultiplier: 1.5
@@ -129,6 +138,7 @@ MonoBehaviour:
   knockBackForce: 3
   stillThreshold: 0.2
   maxKnockbackTime: 3
+  weakpointKnockbackScale: 0.5
   canHeavyKnockBack: 1
   heavyKnockBackDuration: 4
   wakeUpDuration: 2
@@ -184,6 +194,14 @@ MonoBehaviour:
   sideStepDurationMax: 2
   sideStepCooldown: 3
   sideStepChance: 100
+  sideStepOnlyWhenAimedAt: 0
+  sideStepAimAngle: 12
+  sideStepReactionTime: 0.25
+  sideStepRerollInterval: 1.5
+  sideStepSpeedVariation: 0
+  sideStepAnimGroundSpeed: 0
+  sideStepMinAnimSpeed: 0.5
+  sideStepMaxAnimSpeed: 6
 --- !u!114 &234647249574438437
 MonoBehaviour:
   m_ObjectHideFlags: 0

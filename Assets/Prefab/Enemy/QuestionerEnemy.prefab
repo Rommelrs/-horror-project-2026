@@ -235,13 +235,73 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
         type: 3}
+      propertyPath: sideStepSpeed
+      value: 1.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
       propertyPath: footstepVolume
       value: 0.175
       objectReference: {fileID: 0}
     - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
         type: 3}
       propertyPath: sideStepChance
-      value: 21
+      value: 50
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
+      propertyPath: idleMaxDuration
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
+      propertyPath: idleMinDuration
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
+      propertyPath: sideStepCooldown
+      value: 2.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
+      propertyPath: queueBehindChance
+      value: 55
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
+      propertyPath: chaseDirectApproach
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
+      propertyPath: chaseStartTurnSpeed
+      value: 240
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
+      propertyPath: sideStepDurationMax
+      value: 1.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
+      propertyPath: sideStepDurationMin
+      value: 0.8
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
+      propertyPath: sideStepAccelaration
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
+      propertyPath: sideStepMaxAnimSpeed
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
+      propertyPath: sideStepMinAnimSpeed
+      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
         type: 3}
@@ -250,7 +310,27 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
         type: 3}
+      propertyPath: chaseStartLookDuration
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
+      propertyPath: sideStepSpeedVariation
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
       propertyPath: useAdvancedPathfinding
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
+      propertyPath: sideStepAnimGroundSpeed
+      value: 0.6
+      objectReference: {fileID: 0}
+    - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
+        type: 3}
+      propertyPath: sideStepOnlyWhenAimedAt
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,

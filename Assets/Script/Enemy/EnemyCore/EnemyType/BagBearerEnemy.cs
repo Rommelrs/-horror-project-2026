@@ -111,6 +111,26 @@ public class BagBearerEnemy : Enemy
         }
     }
     
+    // A deactivated BagBearer (culled, hidden by a cutscene / checkpoint reload, ...) must not keep the shared attack slot forever,
+    // otherwise every other BagBearer is told "slot taken" and never attacks again.
+    void OnDisable()
+    {
+        ReleaseAttackSlot();
+    }
+
+    void ReleaseAttackSlot()
+    {
+        if (currentAttacker == this) currentAttacker = null;
+        if (EnemyAttackCoordinator.Instance != null) EnemyAttackCoordinator.Instance.ReleaseToken(this);
+    }
+
+    /// <summary>True only for a live, active BagBearer that is really in its Attack state (a stale reference does not count).</summary>
+    static bool IsActiveAttacker(BagBearerEnemy other)
+    {
+        return other != null && other.isActiveAndEnabled && other.health != null && !other.health.IsDead
+            && other.stateMachine != null && other.stateMachine.CurrentState == other.attackState;
+    }
+
     public override void OnDestroy()
     {
         base.OnDestroy();
@@ -291,6 +311,8 @@ public class BagBearerEnemy : Enemy
                     if (cachedHasLoS && cachedSpawnPointsClear)
                     {
                         // Only enter attack if no other BagBearer is currently attacking
+                        if (currentAttacker != null && currentAttacker != this && !IsActiveAttacker(currentAttacker))
+                            currentAttacker = null; // stale holder (disabled / dead / no longer attacking)
                         bool slotFree = currentAttacker == null || currentAttacker == this;
                         if (slotFree && Time.time >= lastThrowTime + throwStaggerDelay)
                         {
@@ -383,6 +405,13 @@ public class BagBearerEnemy : Enemy
     {
         if (health.IsDead) return;
 
+        // Already down from a weakpoint hit (lying / waking up): further shots still hurt but must not restart the knockdown
+        if (stateMachine.CurrentState == enemyKnockbackState && enemyKnockbackState.IsDownedHeavy)
+        {
+            PlaySoundEffect(stats.takeDamageSFX);
+            return;
+        }
+
         if ((stateMachine.CurrentState != enemyReloadState && stateMachine.CurrentState != attackState) || health.isDamageByWeakpointHit)
         {
             // Release token and attack slot if being knocked back from attack state
@@ -402,7 +431,7 @@ public class BagBearerEnemy : Enemy
             this.damageDirection = damageDirection;
 
             if (health.isDamageByWeakpointHit)
-                this.damageForceMultiplier = Player.instance.playerWeaponSystem.weakpointHitEnemyKnockbackMultiplier;
+                this.damageForceMultiplier = Player.instance.playerWeaponSystem.weakpointHitEnemyKnockbackMultiplier * stats.weakpointKnockbackScale;
             else
                 this.damageForceMultiplier = 1f;
 
@@ -461,10 +490,12 @@ public class BagBearerEnemy : Enemy
         Vector3 directionToPlayer = playerCenter - rayStart;
         RaycastHit hit;
         
-        // Exclude Hitbox and Enemy layers so other enemies don't block LoS
-        int layerMask = ~LayerMask.GetMask("Hitbox", "Enemy");
-        
-        if (Physics.Raycast(rayStart, directionToPlayer.normalized, out hit, stats.attackRange, layerMask))
+        // Exclude Hitbox, Enemy and Projectile layers so other enemies and flying bags don't block LoS, and ignore trigger
+        // colliders: the mud damage effect left by his own previous bag (a trigger on the Default layer) used to hide the player
+        // from him, which made him drop out of Attack and creep forward after every throw.
+        int layerMask = ~LayerMask.GetMask("Hitbox", "Enemy", "Projectile");
+
+        if (Physics.Raycast(rayStart, directionToPlayer.normalized, out hit, stats.attackRange, layerMask, QueryTriggerInteraction.Ignore))
         {
             // Hit something - only LoS if it's the player
             return hit.collider.GetComponentInParent<Player>() != null;
@@ -483,14 +514,15 @@ public class BagBearerEnemy : Enemy
             {
                 Vector3 spawnPoint = reloadGroup.projectileSpawnPoint.position;
                 
-                // Check in the direction of the player for obstacles very close to spawn point
-                Vector3 directionToPlayer = (Player.instance.transform.position - spawnPoint).normalized;
+                // Check in the direction of the player's chest for obstacles very close to the spawn point
+                // (aiming at the player's feet made the ray point into the floor at close range = "blocked" on open ground)
+                Vector3 directionToPlayer = (Player.instance.transform.position + Vector3.up * 1f - spawnPoint).normalized;
                 
                 // Check for walls/obstacles within 1.5m of the spawn point in player direction
                 RaycastHit hit;
-                int layerMask = ~LayerMask.GetMask("Hitbox", "Enemy");
-                
-                if (Physics.Raycast(spawnPoint, directionToPlayer, out hit, 1.5f, layerMask))
+                int layerMask = ~LayerMask.GetMask("Hitbox", "Enemy", "Projectile");
+
+                if (Physics.Raycast(spawnPoint, directionToPlayer, out hit, 1.5f, layerMask, QueryTriggerInteraction.Ignore))
                 {
                     // If we hit something that's not the player, spawn point is blocked
                     if (hit.collider.GetComponentInParent<Player>() == null)
