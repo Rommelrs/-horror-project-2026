@@ -55,7 +55,7 @@ public class LampGlowOcclusion : MonoBehaviour
         if (cam == null) cam = Camera.main;
         if (cam == null) return;
 
-        float target = Sample();
+        float target = SampleVisibilityFrom(cam.transform.position);
         visibility = !initialised || fadeTime <= 0f ? target : Mathf.MoveTowards(visibility, target, Time.deltaTime / fadeTime);
         initialised = true;
 
@@ -64,10 +64,23 @@ public class LampGlowOcclusion : MonoBehaviour
         glowRenderer.SetPropertyBlock(block);
     }
 
-    // fraction (0..1) of the sight lines from the camera to the lamp that are clear
-    float Sample()
+    static readonly RaycastHit[] hitBuffer = new RaycastHit[16];
+
+    // a sight line is blocked by the first solid collider on it, except colliders marked LampGlowSeeThrough (barred gates, fences...)
+    bool IsBlocked(Vector3 from, Vector3 to)
     {
-        Vector3 camPos = cam.transform.position;
+        Vector3 d = to - from;
+        float len = d.magnitude;
+        if (len < 1e-4f) return false;
+        int n = Physics.RaycastNonAlloc(from, d / len, hitBuffer, len, blockers, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < n; i++)
+            if (!LampGlowSeeThrough.IsSeeThrough(hitBuffer[i].collider)) return true;
+        return false;
+    }
+
+    // fraction (0..1) of the sight lines from camPos to the lamp that are clear
+    public float SampleVisibilityFrom(Vector3 camPos)
+    {
         Vector3 lamp = transform.position;
         Vector3 toLamp = lamp - camPos;
         float dist = toLamp.magnitude;
@@ -76,14 +89,14 @@ public class LampGlowOcclusion : MonoBehaviour
 
         Vector3 dir = toLamp / dist;
         Vector3 side = Vector3.Cross(Vector3.up, dir);
-        if (side.sqrMagnitude < 1e-4f) side = cam.transform.right;
+        if (side.sqrMagnitude < 1e-4f) side = cam != null ? cam.transform.right : Vector3.right;
         side.Normalize();
 
         int clear = 0;
         for (int i = -1; i <= 1; i++)
         {
             Vector3 end = lamp + side * (spread * i) - dir * endMargin;
-            if (!Physics.Linecast(camPos, end, blockers, QueryTriggerInteraction.Ignore)) clear++;
+            if (!IsBlocked(camPos, end)) clear++;
         }
         return clear / 3f;
     }

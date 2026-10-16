@@ -12,6 +12,19 @@ public class Projectile : MonoBehaviour, IPoolable
     public float maxLaunchAngle = 75f;  // Maximum launch angle for very high shots
     public float gravity = -30f;
 
+    public enum OrientationMode
+    {
+        FaceVelocity,   // forward axis follows the flight direction (arrows, anything that should point where it goes)
+        KnotUpSideView  // bag: hangs knot-up, leaning a little to the side, so the player always sees the side of it and never the black base
+    }
+
+    [Header("Orientation")]
+    public OrientationMode orientationMode = OrientationMode.FaceVelocity;
+    [Tooltip("KnotUpSideView: how far the bag leans over to the side, in degrees from upright. 0 = hanging straight.")]
+    public float sideLean = 20f;
+    [Tooltip("KnotUpSideView: spin around the bag's own long axis (degrees) to choose which side of the bag faces the player.")]
+    public float rollOffset = 0f;
+
     [Space(10)]
     public GameObject hitDamagePrefab; // Ground effect
     public GameObject hitWallPrefab;    // Wall effect (optional - uses ground effect if null)
@@ -65,11 +78,41 @@ public class Projectile : MonoBehaviour, IPoolable
 
     private void LateUpdate()
     {
+        if (orientationMode == OrientationMode.KnotUpSideView)
+        {
+            ApplySideViewOrientation();
+            return;
+        }
+
         // Rotate arrow to face velocity
         if (rb.linearVelocity.sqrMagnitude > 0.1f)
         {
             transform.forward = rb.linearVelocity.normalized;
         }
+    }
+
+    // Horizontal direction the projectile is travelling in (set when it is shot), used by the side-view orientation
+    Vector3 flightFlat = Vector3.forward;
+
+    // Bag model: the tied knot is at the projectile's -Z end and the open (black) base at +Z, so the knot end is kept pointing up,
+    // leaning towards the player's left, and the model is never turned to face the flight direction.
+    // Public so the pose can be previewed in the editor: SetFlightDirection(dir); (orientation is applied immediately)
+    public void SetFlightDirection(Vector3 direction)
+    {
+        Vector3 flat = new Vector3(direction.x, 0f, direction.z);
+        if (flat.sqrMagnitude > 1e-4f) flightFlat = flat.normalized;
+        if (orientationMode == OrientationMode.KnotUpSideView) ApplySideViewOrientation();
+    }
+
+    void ApplySideViewOrientation()
+    {
+        // the player looks back along -flightFlat, so Cross(up, flightFlat) is the player's left
+        Vector3 left = Vector3.Cross(Vector3.up, flightFlat);
+        float lean = sideLean * Mathf.Deg2Rad;
+        Vector3 knotDir = (Vector3.up * Mathf.Cos(lean) + left * Mathf.Sin(lean)).normalized;
+        // local -Z (knot) points along knotDir; local up is turned towards the player, then rolled by rollOffset around the bag's axis
+        Quaternion q = Quaternion.LookRotation(-knotDir, -flightFlat);
+        transform.rotation = q * Quaternion.AngleAxis(rollOffset, Vector3.forward);
     }
 
     public void ShootProjectile(Vector3 targetPosition, Enemy owner)
@@ -83,6 +126,7 @@ public class Projectile : MonoBehaviour, IPoolable
         }
 
         rb.linearVelocity = velocity;
+        SetFlightDirection(velocity);
         onProjectileLaunched?.Invoke();
     }
 
@@ -97,6 +141,7 @@ public class Projectile : MonoBehaviour, IPoolable
         }
 
         rb.linearVelocity = velocity;
+        SetFlightDirection(velocity);
         onProjectileLaunched?.Invoke();
     }
 
@@ -112,6 +157,7 @@ public class Projectile : MonoBehaviour, IPoolable
         }
 
         rb.linearVelocity = velocity;
+        SetFlightDirection(velocity);
         onProjectileLaunched?.Invoke();
     }
 
