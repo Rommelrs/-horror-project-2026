@@ -329,10 +329,60 @@ public class MapHandler : MonoBehaviour
         FadeScreenUI.instance.FadeIn();
     }
 
+    // ---- the player's marker during a map reveal (MapLocationReveal) ----
+    // Page 0's marker is a RawImage showing the map camera. It is NOT inside the zoomed map group, so while the map zooms onto a new
+    // location it has to be moved by hand to keep its place on the map. The arrows driven by MapMarkerPositioner are children of their
+    // map group, so they already follow the zoom and only need the fade.
+    IEnumerable<GameObject> PlayerMarkerObjects()
+    {
+        if (mapCharacter != null) yield return mapCharacter;
+        if (additionalMaps != null)
+            foreach (var p in additionalMaps)
+                if (p.mapCharacter != null) yield return p.mapCharacter;
+        foreach (var m in FindObjectsByType<MapMarkerPositioner>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            yield return m.gameObject;
+    }
+
+    public void SetPlayerMarkerAlpha(float alpha)
+    {
+        foreach (var go in PlayerMarkerObjects())
+        {
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg == null)
+            {
+                if (alpha >= 0.999f) continue;      // nothing to restore
+                cg = go.AddComponent<CanvasGroup>();
+            }
+            cg.alpha = alpha;
+        }
+    }
+
+    // Same scale / position as the zoomed map group (all of them are centre-anchored and centre-pivoted, so the marker stays on its spot)
+    public void SetPlayerMarkerView(float scale, Vector2 anchoredPosition)
+    {
+        ApplyMarkerView(mapCharacter, scale, anchoredPosition);
+        if (additionalMaps != null)
+            foreach (var p in additionalMaps)
+                ApplyMarkerView(p.mapCharacter, scale, anchoredPosition);
+    }
+
+    static void ApplyMarkerView(GameObject marker, float scale, Vector2 anchoredPosition)
+    {
+        if (marker == null) return;
+        var rt = marker.transform as RectTransform;
+        if (rt == null) return;
+        rt.localScale = new Vector3(scale, scale, 1f);
+        rt.anchoredPosition = anchoredPosition;
+    }
+
     public void DisableMapMenu()
     {
         // Remember which page was open
         lastOpenedPage = currentPage;
+
+        // A reveal that was still fading/zooming the player marker must not leave it faded or shifted for the next time the map opens
+        SetPlayerMarkerAlpha(1f);
+        SetPlayerMarkerView(1f, Vector2.zero);
 
         // Reset any active map zoom
         MapLocationReveal reveal = FindObjectOfType<MapLocationReveal>();

@@ -20,6 +20,11 @@ public class MapLocationReveal : MonoBehaviour
     [SerializeField] float markerFadeDuration = 0.8f;
     [SerializeField] float zoomOutDuration = 1.2f;
 
+    [Header("Player Marker")]
+    [Tooltip("The player's own marker (the green arrow) fades out when the map starts zooming onto the new location, and fades back in once the map has zoomed out again. While it is visible it stays on its spot on the map.")]
+    [SerializeField] float playerMarkerFadeOutDuration = 0.35f;
+    [SerializeField] float playerMarkerFadeInDuration = 0.5f;
+
     [Header("Audio")]
     [SerializeField] AudioClip revealSound;
     [SerializeField] AudioSource audioSource;
@@ -30,6 +35,12 @@ public class MapLocationReveal : MonoBehaviour
 
     bool revealed = false;
     bool isRunning = false;
+
+    // player marker handling during the zoom
+    bool markerFollowsMap = false;
+    float markerAlpha = 1f;
+    Tween markerFadeTween;
+    Coroutine returnMarkerCR;
 
     // Static flag checked by MapHandler and PauseHandler to block input during sequence
     public static bool IsSequenceActive = false;
@@ -92,6 +103,11 @@ public class MapLocationReveal : MonoBehaviour
         // Zoom into marker position
         if (markerCanvasGroup != null)
         {
+            // the player's marker keeps its place on the map while the map zooms, and fades away
+            if (returnMarkerCR != null) { StopCoroutine(returnMarkerCR); returnMarkerCR = null; }
+            markerFollowsMap = true;
+            FadePlayerMarker(0f, playerMarkerFadeOutDuration);
+
             RectTransform markerRect = markerCanvasGroup.GetComponent<RectTransform>();
             Vector2 zoomTarget = Vector2.zero;
 
@@ -123,6 +139,7 @@ public class MapLocationReveal : MonoBehaviour
 
         // Zoom back out to full map
         ResetZoom();
+        if (markerFollowsMap) returnMarkerCR = StartCoroutine(Co_ReturnPlayerMarker());
         yield return new WaitForSecondsRealtime(0.4f);
 
         isRunning = false;
@@ -140,6 +157,45 @@ public class MapLocationReveal : MonoBehaviour
         mapToZoom.DOAnchorPos(Vector2.zero, zoomOutDuration).SetUpdate(true);
     }
 
+    // The page-0 player marker is not inside the zoomed group, so copy the map's scale / position onto it every frame (it keeps its spot on the map)
+    private void LateUpdate()
+    {
+        if (!markerFollowsMap || mapToZoom == null || MapHandler.instance == null) return;
+        MapHandler.instance.SetPlayerMarkerView(mapToZoom.localScale.x, mapToZoom.anchoredPosition);
+    }
+
+    void FadePlayerMarker(float target, float duration)
+    {
+        if (markerFadeTween != null && markerFadeTween.IsActive()) markerFadeTween.Kill();
+        markerFadeTween = DOTween.To(() => markerAlpha, a =>
+        {
+            markerAlpha = a;
+            if (MapHandler.instance != null) MapHandler.instance.SetPlayerMarkerAlpha(a);
+        }, target, duration).SetUpdate(true);
+    }
+
+    // After the map has zoomed back out: put the marker's view back to normal and fade it in again
+    IEnumerator Co_ReturnPlayerMarker()
+    {
+        yield return new WaitForSecondsRealtime(zoomOutDuration);
+        if (MapHandler.instance != null) MapHandler.instance.SetPlayerMarkerView(1f, Vector2.zero);
+        markerFollowsMap = false;
+        FadePlayerMarker(1f, playerMarkerFadeInDuration);
+        returnMarkerCR = null;
+    }
+
+    void RestorePlayerMarker()
+    {
+        if (markerFadeTween != null && markerFadeTween.IsActive()) markerFadeTween.Kill();
+        markerFollowsMap = false;
+        markerAlpha = 1f;
+        if (MapHandler.instance != null)
+        {
+            MapHandler.instance.SetPlayerMarkerAlpha(1f);
+            MapHandler.instance.SetPlayerMarkerView(1f, Vector2.zero);
+        }
+    }
+
     private void OnDisable()
     {
         // Reset zoom when map is closed
@@ -148,5 +204,6 @@ public class MapLocationReveal : MonoBehaviour
             mapToZoom.localScale = Vector3.one;
             mapToZoom.anchoredPosition = Vector2.zero;
         }
+        RestorePlayerMarker();
     }
 }

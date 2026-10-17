@@ -17,6 +17,8 @@ Shader "Custom/LampGlow"
         _Pull ("Pull toward camera (m)", Float) = 0.12
         _Visibility ("Line-of-sight visibility (set by LampGlowOcclusion)", Range(0,1)) = 1
         _Directional ("Only seen from the front (0 = all around, 1 = front only; front = the object's +Z)", Range(0,1)) = 0
+        _Natural ("Natural bloom (0 = the old round disc, 1 = smooth soft bloom with no visible edge, squashed above the bulb like a lamp under a hood)", Range(0,1)) = 0
+        _HoodSquash ("Natural bloom only: how much the glow above the bulb is squashed (0 = round all the way round, for a bare globe; 1.8 = lamp under a hood)", Range(0,4)) = 1.8
     }
     SubShader
     {
@@ -33,7 +35,7 @@ Shader "Custom/LampGlow"
             #include "UnityCG.cginc"
 
             fixed4 _Color;
-            float _Size, _DistGrow, _Core, _Halo, _MaxDist, _Curve, _Pull, _Visibility, _Directional;
+            float _Size, _DistGrow, _Core, _Halo, _MaxDist, _Curve, _Pull, _Visibility, _Directional, _Natural, _HoodSquash;
 
             struct appdata { float4 vertex : POSITION; float2 uv : TEXCOORD0; };
             struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; float fade : TEXCOORD1; };
@@ -66,9 +68,20 @@ Shader "Custom/LampGlow"
 
             fixed4 frag (v2f i) : SV_Target
             {
-                float r = length(i.uv - 0.5) * 2.0;
+                float2 p = (i.uv - 0.5) * 2.0;
+                float r = length(p);
                 float core = exp(-r * r * 26.0) * _Core;
                 float halo = pow(saturate(1.0 - r), 2.5) * _Halo;
+                if (_Natural > 0.0)
+                {
+                    // gaussian bloom: no hard rim, wide faint tail; the part above the bulb is squashed (a hood hides it), so the glow spills downward
+                    float sy = p.y > 0.0 ? 1.0 + _HoodSquash * _Natural : 1.0;
+                    float rq = length(float2(p.x, p.y * sy));
+                    float coreN = exp(-rq * rq * 30.0) * _Core;
+                    float haloN = (exp(-rq * rq * 7.0) + 0.35 * exp(-rq * rq * 2.2)) * (1.0 - smoothstep(0.55, 1.0, rq)) * _Halo;
+                    core = lerp(core, coreN, _Natural);
+                    halo = lerp(halo, haloN, _Natural);
+                }
                 return fixed4(_Color.rgb * (core + halo) * i.fade, 1);
             }
             ENDCG

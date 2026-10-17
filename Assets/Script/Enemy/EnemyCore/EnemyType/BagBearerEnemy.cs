@@ -21,6 +21,12 @@ public class BagBearerEnemy : Enemy
     [SerializeField] float positionOffset = 0.8f;
     public BagBearerReloadGroup []bagBearerReloadGroup;
     
+    [Header("Hidden Tutorial: Start Without Bags")]
+    [Tooltip("He spawns with no bags and does not reload straight away. The first time he sees the player (line of sight, within 'First Reload Distance') he stops and reloads in front of them, showing his weak point. After that he behaves normally.")]
+    [SerializeField] bool startWithoutBags = false;
+    [SerializeField] float firstReloadDistance = 11f;
+    bool firstReloadPending = false;
+
     [Header("Spacing Settings")]
     [SerializeField] float separationDistance = 2f;
     [SerializeField] float separationForce = 1f;
@@ -72,6 +78,14 @@ public class BagBearerEnemy : Enemy
             agent.isStopped = true;
         }
 
+        // Hidden tutorial: empty hands until he first sees the player, then he reloads in front of them
+        if (startWithoutBags)
+        {
+            for (int i = 0; i < bagBearerReloadGroup.Length; i++)
+                bagBearerReloadGroup[i].isReloaded = false;
+            firstReloadPending = true;
+        }
+
         // Ensure reload objects match their isReloaded state on spawn
         for (int i = 0; i < bagBearerReloadGroup.Length; i++)
         {
@@ -81,7 +95,7 @@ public class BagBearerEnemy : Enemy
             }
         }
 
-        if (CheckIfEnemyNeedReload() && stateMachine.CurrentState != enemyReloadState)
+        if (!firstReloadPending && CheckIfEnemyNeedReload() && stateMachine.CurrentState != enemyReloadState)
         {
             stateMachine.ChangeState(enemyReloadState);
         }
@@ -223,6 +237,16 @@ public class BagBearerEnemy : Enemy
 
     public override void CheckLeaveCondition(EnemyState currentState)
     {
+        // Hidden tutorial: the first time the empty-handed bag bearer has the player in sight and close enough, he reloads
+        if (firstReloadPending && (currentState == idleState || currentState == enemyWanderState || currentState == chaseState)
+            && Player.instance != null && PlayerInRange(firstReloadDistance) && HasLineOfSightToPlayer())
+        {
+            firstReloadPending = false;
+            holdingPosition = false;
+            stateMachine.ChangeState(enemyReloadState);
+            return;
+        }
+
         //Currently in Idle State
         if (currentState == idleState)
         {
@@ -455,6 +479,8 @@ public class BagBearerEnemy : Enemy
 
     public void EnemyChaseStateStarted()
     {
+        if (firstReloadPending) return;   // keep closing in; he reloads once the player is in sight and near (see CheckLeaveCondition)
+
         if (CheckIfEnemyNeedReload() && stateMachine.CurrentState != enemyReloadState)
         {
             stateMachine.ChangeState(enemyReloadState);
@@ -463,6 +489,8 @@ public class BagBearerEnemy : Enemy
 
     public void EnemyAttackStateStarted()
     {
+        firstReloadPending = false;
+
         if (CheckIfEnemyNeedReload() && stateMachine.CurrentState != enemyReloadState)
         {
             stateMachine.ChangeState(enemyReloadState);

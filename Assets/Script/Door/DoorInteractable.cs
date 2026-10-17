@@ -11,6 +11,10 @@ public class DoorInteractable : MonoBehaviour
     public Transform enterPoint;
     public Transform exitPoint;
 
+    [Header("Auto Interact")]
+    [Tooltip("On: the door is used the moment the player walks into one of its DoorInteractableTriggers, no E press needed (keys / locks still apply).")]
+    public bool autoInteractOnEnter = false;
+
     public bool requiresKey = false;
     public int keyCodeRequired;
 

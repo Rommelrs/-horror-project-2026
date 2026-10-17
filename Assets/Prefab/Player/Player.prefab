@@ -22630,6 +22630,9 @@ MonoBehaviour:
   doorOpenClip: {fileID: 8300000, guid: 2d4900170162cd647931ced63e5ef5bb, type: 3}
   doorCloseClip: {fileID: 8300000, guid: 58f44696eb0dc854facf8928060a1e9a, type: 3}
   doorLockedClip: {fileID: 8300000, guid: 425683d10f5d4e543b238154e0281ddf, type: 3}
+  doorUnlockClip: {fileID: 0}
+  doorRemarkWindow: 4
+  doorRemarkIgnoreSeconds: 0.35
 --- !u!114 &167244129486922085
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22721,6 +22724,7 @@ MonoBehaviour:
   - {fileID: 8300000, guid: d77018eea8b67e1469762dc902643494, type: 3}
   - {fileID: 8300000, guid: 82bca9d4bb6c45d4a83bb7d765bcfa1d, type: 3}
   weakPointBonusSounds: []
+  weakPointBonusVolume: 2.5
   weakPointMinPitch: 0.5
   weakPointMaxPitch: 1.5
   cameraShaker: {fileID: 3776228162622333091}
@@ -33535,7 +33539,7 @@ AudioSource:
   m_audioClip: {fileID: 0}
   m_Resource: {fileID: 0}
   m_PlayOnAwake: 0
-  m_Volume: 1
+  m_Volume: 0.6
   m_Pitch: 1
   Loop: 0
   Mute: 0

@@ -81,6 +81,20 @@ public class DoorInteractionHandler : MonoBehaviour
 
         //On Interact Button pressed
         if (callbackContext.performed)
+            InteractWithCurrentDoor();
+    }
+
+    /// <summary>True when a door with 'Auto Interact On Enter' may be used right now (nothing else is going on).</summary>
+    public bool CanAutoInteract()
+    {
+        if (busy || GameManager.IsPaused) return false;
+        if (ItemInspectionHandler.instance && ItemInspectionHandler.instance.InspectionMenuIsActive()) return false;
+        return true;
+    }
+
+    /// <summary>Uses the door the player is standing at, exactly as pressing E would (called by E, and by doors with 'Auto Interact On Enter').</summary>
+    public void InteractWithCurrentDoor()
+    {
         {
             // Clear stale reference if the door GameObject was disabled (e.g. during a cutscene)
             // Unity does not reliably call OnTriggerExit when a GameObject is disabled

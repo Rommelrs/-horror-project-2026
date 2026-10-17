@@ -1,0 +1,230 @@
+// Ruby Salon storefront builder - run through the Unity MCP RunCommand (kept here as .txt so Unity doesn't compile it).
+// Every front face is mapped into RubySalon_Facade.png (made by make_ruby_textures.py) with the reference photo's
+// pixel coordinates, so the 3D pieces line up with the photo exactly.  Change S (metres per photo pixel) to scale it.
+using UnityEngine;
+using UnityEditor;
+using System.Collections.Generic;
+
+internal class CommandScript : IRunCommand
+{
+    const float S = 0.0135f;          // metres per photo pixel (door = 86 px -> 1.16 m wide, 182 px -> 2.46 m tall)
+    const float CX = 130f;            // photo x of the storefront centre line
+    const float GY = 377f;            // photo y of the ground
+    const float AX0 = 36f, AY0 = 16f, AW = 188f, AH = 364f;   // atlas rect in photo px (ATLAS_RECT in the python)
+    const string DIR = "Assets/Models/RubySalon/";
+
+    List<Vector3> V = new List<Vector3>(); List<Vector2> U = new List<Vector2>(); List<Vector3> N = new List<Vector3>();
+    List<int> T = new List<int>();
+
+    static float LX(float px) { return -(px - CX) * S; }   // viewer's right = local -X (the root faces local +Z)
+    static float LY(float py) { return (GY - py) * S; }
+    static Vector2 UV(float px, float py) { return new Vector2((px - AX0) / AW, 1f - (py - AY0) / AH); }
+
+    void Quad(Vector3 a, Vector3 b, Vector3 c, Vector3 d, Vector2 ua, Vector2 ub, Vector2 uc, Vector2 ud, Vector3 n)
+    {
+        int i = V.Count;
+        V.Add(a); V.Add(b); V.Add(c); V.Add(d); U.Add(ua); U.Add(ub); U.Add(uc); U.Add(ud);
+        for (int k = 0; k < 4; k++) N.Add(n);
+        // Unity front faces: cross(b-a, c-a) points towards the viewer
+        if (Vector3.Dot(Vector3.Cross(b - a, c - a), n) >= 0) { T.Add(i); T.Add(i + 1); T.Add(i + 2); T.Add(i); T.Add(i + 2); T.Add(i + 3); }
+        else { T.Add(i); T.Add(i + 2); T.Add(i + 1); T.Add(i); T.Add(i + 3); T.Add(i + 2); }
+    }
+
+    // front face mapped to the photo rect (pxL..pxR, pyT..pyB) at depth z
+    void Front(float pxL, float pxR, float pyT, float pyB, float z)
+    {
+        Quad(new Vector3(LX(pxL), LY(pyB), z), new Vector3(LX(pxR), LY(pyB), z), new Vector3(LX(pxR), LY(pyT), z), new Vector3(LX(pxL), LY(pyT), z),
+             UV(pxL, pyB), UV(pxR, pyB), UV(pxR, pyT), UV(pxL, pyT), Vector3.forward);
+    }
+
+    // box against the wall (z0..z1): photo-mapped front + solid-colour sides sampled from the photo at (sx, sy)
+    void Box(float pxL, float pxR, float pyT, float pyB, float z0, float z1, float sx, float sy, bool top = true, bool bottom = true)
+    {
+        Front(pxL, pxR, pyT, pyB, z1);
+        Vector2 s = UV(sx, sy);
+        float xl = LX(pxL), xr = LX(pxR), yt = LY(pyT), yb = LY(pyB);
+        Quad(new Vector3(xl, yb, z0), new Vector3(xl, yb, z1), new Vector3(xl, yt, z1), new Vector3(xl, yt, z0), s, s, s, s, Vector3.right);
+        Quad(new Vector3(xr, yb, z0), new Vector3(xr, yb, z1), new Vector3(xr, yt, z1), new Vector3(xr, yt, z0), s, s, s, s, Vector3.left);
+        if (top) Quad(new Vector3(xl, yt, z0), new Vector3(xr, yt, z0), new Vector3(xr, yt, z1), new Vector3(xl, yt, z1), s, s, s, s, Vector3.up);
+        if (bottom) Quad(new Vector3(xl, yb, z0), new Vector3(xr, yb, z0), new Vector3(xr, yb, z1), new Vector3(xl, yb, z1), s, s, s, s, Vector3.down);
+    }
+
+    UnityEngine.Mesh Flush(string name)
+    {
+        var m = new UnityEngine.Mesh(); m.name = name;
+        m.SetVertices(V); m.SetUVs(0, U); m.SetNormals(N); m.SetTriangles(T, 0);
+        m.RecalculateBounds(); m.RecalculateTangents();
+        V.Clear(); U.Clear(); N.Clear(); T.Clear();
+        return m;
+    }
+
+    static UnityEngine.Mesh SaveMesh(UnityEngine.Mesh m)
+    {
+        string p = DIR + m.name + ".asset";
+        var existing = AssetDatabase.LoadAssetAtPath<UnityEngine.Mesh>(p);
+        if (existing == null) { AssetDatabase.CreateAsset(m, p); return m; }
+        EditorUtility.CopySerialized(m, existing); existing.name = m.name; EditorUtility.SetDirty(existing);
+        return existing;
+    }
+
+    static Material Mat(string name, string shader, System.Action<Material> setup)
+    {
+        string p = DIR + name + ".mat";
+        var m = AssetDatabase.LoadAssetAtPath<Material>(p);
+        if (m == null) { m = new Material(Shader.Find(shader)); AssetDatabase.CreateAsset(m, p); }
+        m.shader = Shader.Find(shader);
+        setup(m);
+        EditorUtility.SetDirty(m);
+        return m;
+    }
+
+    static GameObject Child(Transform parent, string name, UnityEngine.Mesh mesh, Material[] mats, Vector3 lp, Vector3 le)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = lp; go.transform.localEulerAngles = le;
+        if (mesh != null) { go.AddComponent<MeshFilter>().sharedMesh = mesh; go.AddComponent<MeshRenderer>().sharedMaterials = mats; }
+        return go;
+    }
+
+    static GameObject NewCylinder()
+    {
+        var go = new GameObject("Cylinder");
+        go.AddComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<UnityEngine.Mesh>("Cylinder.fbx");
+        go.AddComponent<MeshRenderer>();
+        return go;
+    }
+
+    static Light AddLight(Transform parent, string name, LightType type, Color col, float intensity, float range, float angle, Vector3 lp, Vector3 le)
+    {
+        var go = new GameObject(name); go.transform.SetParent(parent, false);
+        go.transform.localPosition = lp; go.transform.localEulerAngles = le;
+        var l = go.AddComponent<Light>();
+        l.type = type; l.color = col; l.intensity = intensity; l.range = range; l.spotAngle = angle;
+        l.shadows = LightShadows.None; l.lightmapBakeType = LightmapBakeType.Realtime;
+        return l;
+    }
+
+    public void Execute(ExecutionResult result)
+    {
+        AssetDatabase.Refresh();
+        // ---- textures
+        var ti = (TextureImporter)AssetImporter.GetAtPath(DIR + "RubySalon_Facade.png");
+        ti.sRGBTexture = true; ti.mipmapEnabled = true; ti.filterMode = FilterMode.Bilinear; ti.wrapMode = TextureWrapMode.Clamp;
+        ti.maxTextureSize = 2048; ti.textureCompression = TextureImporterCompression.Uncompressed; ti.npotScale = TextureImporterNPOTScale.None;
+        ti.SaveAndReimport();
+        var tt = (TextureImporter)AssetImporter.GetAtPath(DIR + "RubySalon_Turf.png");
+        tt.wrapMode = TextureWrapMode.Repeat; tt.SaveAndReimport();
+        var facadeTex = AssetDatabase.LoadAssetAtPath<Texture2D>(DIR + "RubySalon_Facade.png");
+        var turfTex = AssetDatabase.LoadAssetAtPath<Texture2D>(DIR + "RubySalon_Turf.png");
+
+        // ---- materials
+        var mFacade = Mat("M_RubySalon_Facade", "Unlit/Texture", m => m.mainTexture = facadeTex);
+        var mLens = Mat("M_RubySalon_Lens", "Unlit/Color", m => { m.color = new Color(1f, 0.98f, 0.94f); m.renderQueue = 3000; });
+        var mBody = Mat("M_RubySalon_Body", "Standard", m => { m.color = new Color(0.12f, 0.11f, 0.11f); m.SetFloat("_Glossiness", 0.3f); });
+        var mMetal = Mat("M_RubySalon_Metal", "Standard", m => { m.color = new Color(0.72f, 0.72f, 0.74f); m.SetFloat("_Metallic", 0.8f); m.SetFloat("_Glossiness", 0.55f); });
+        var mTurf = Mat("M_RubySalon_Turf", "Standard", m => { m.mainTexture = turfTex; m.mainTextureScale = new Vector2(4f, 2f); m.SetFloat("_Glossiness", 0.05f); });
+        string glowPath = DIR + "RubySalon_GlobeGlow.mat";
+        if (AssetDatabase.LoadAssetAtPath<Material>(glowPath) == null) AssetDatabase.CopyAsset("Assets/Materials/GlobeLamp_LampGlow.mat", glowPath);
+        var mGlow = AssetDatabase.LoadAssetAtPath<Material>(glowPath);
+        if (mGlow.HasProperty("_Size")) mGlow.SetFloat("_Size", 0.85f);
+
+        // ---- facade mesh (all photo-mapped)
+        float zDoor = 0.03f, zClad = 0.10f, zSign = 0.22f, zLedge = 0.30f, zHead = 0.06f;
+        Box(36, 224, 16, 40, 0, zHead, 130, 26, true, false);                 // dark header band
+        Box(38, 221, 40, 167, 0, zSign, 60, 62, true, false);                 // sign box
+        Box(38, 222, 167, 176, 0, zLedge, 120, 172, true, true);              // lit red ledge
+        // red cladding around the door (front split around the door hole)
+        Front(47, 96, 176, GY, zClad); Front(182, 219, 176, GY, zClad); Front(96, 182, 176, 195, zClad);
+        Vector2 red = UV(70, 250);
+        float xl = LX(47), xr = LX(219), yt = LY(176), yb = LY(GY);
+        Quad(new Vector3(xl, yb, 0), new Vector3(xl, yb, zClad), new Vector3(xl, yt, zClad), new Vector3(xl, yt, 0), red, red, red, red, Vector3.right);
+        Quad(new Vector3(xr, yb, 0), new Vector3(xr, yb, zClad), new Vector3(xr, yt, zClad), new Vector3(xr, yt, 0), red, red, red, red, Vector3.left);
+        // door reveal (aluminium frame colour) + recessed door
+        Vector2 alu = UV(98, 300);
+        float dl = LX(96), dr = LX(182), dt = LY(195);
+        Quad(new Vector3(dl, yb, zDoor), new Vector3(dl, yb, zClad), new Vector3(dl, dt, zClad), new Vector3(dl, dt, zDoor), alu, alu, alu, alu, Vector3.left);
+        Quad(new Vector3(dr, yb, zDoor), new Vector3(dr, yb, zClad), new Vector3(dr, dt, zClad), new Vector3(dr, dt, zDoor), alu, alu, alu, alu, Vector3.right);
+        Quad(new Vector3(dl, dt, zDoor), new Vector3(dr, dt, zDoor), new Vector3(dr, dt, zClad), new Vector3(dl, dt, zClad), alu, alu, alu, alu, Vector3.down);
+        Front(96, 182, 195, GY, zDoor);
+        var facadeMesh = SaveMesh(Flush("RubySalon_Facade"));
+
+        // ---- globe lamp: disc on the sign face (photo centre 127,70  r 25 px)
+        int seg = 24; float gr = 25 * S, gd = 0.12f;
+        var gv = new List<Vector3>(); var gn = new List<Vector3>(); var gu = new List<Vector2>(); var tBody = new List<int>(); var tLens = new List<int>();
+        for (int i = 0; i < seg; i++)
+        {
+            float a0 = 2 * Mathf.PI * i / seg, a1 = 2 * Mathf.PI * (i + 1) / seg;
+            Vector3 p0 = new Vector3(Mathf.Cos(a0) * gr, Mathf.Sin(a0) * gr, 0), p1 = new Vector3(Mathf.Cos(a1) * gr, Mathf.Sin(a1) * gr, 0);
+            int b = gv.Count; Vector3 rn = (p0 + p1).normalized;
+            gv.Add(p0); gv.Add(p1); gv.Add(p1 + Vector3.forward * gd); gv.Add(p0 + Vector3.forward * gd);
+            for (int k = 0; k < 4; k++) { gn.Add(rn); gu.Add(Vector2.zero); }
+            if (Vector3.Dot(Vector3.Cross(gv[b + 1] - gv[b], gv[b + 2] - gv[b]), rn) >= 0) tBody.AddRange(new[] { b, b + 1, b + 2, b, b + 2, b + 3 });
+            else tBody.AddRange(new[] { b, b + 2, b + 1, b, b + 3, b + 2 });
+            int c = gv.Count;   // domed lens triangle
+            gv.Add(p0 + Vector3.forward * gd); gv.Add(p1 + Vector3.forward * gd); gv.Add(new Vector3(0, 0, gd + gr * 0.2f));
+            for (int k = 0; k < 3; k++) { gn.Add(Vector3.forward); gu.Add(new Vector2(0.5f, 0.5f)); }
+            if (Vector3.Dot(Vector3.Cross(gv[c + 1] - gv[c], gv[c + 2] - gv[c]), Vector3.forward) >= 0) tLens.AddRange(new[] { c, c + 1, c + 2 });
+            else tLens.AddRange(new[] { c, c + 2, c + 1 });
+        }
+        var globeMesh = new UnityEngine.Mesh(); globeMesh.name = "RubySalon_Globe";
+        globeMesh.SetVertices(gv); globeMesh.SetNormals(gn); globeMesh.SetUVs(0, gu); globeMesh.subMeshCount = 2;
+        globeMesh.SetTriangles(tBody, 0); globeMesh.SetTriangles(tLens, 1); globeMesh.RecalculateBounds();
+        SaveMesh(globeMesh);
+
+        // ---- turf mat quad
+        float tw = 1.7f, td = 1.5f;
+        Quad(new Vector3(tw, 0.012f, 0.02f), new Vector3(-tw, 0.012f, 0.02f), new Vector3(-tw, 0.012f, td), new Vector3(tw, 0.012f, td),
+             new Vector2(0, 0), new Vector2(1, 0), new Vector2(1, 1), new Vector2(0, 1), Vector3.up);
+        var turfMesh = SaveMesh(Flush("RubySalon_Turf"));
+
+        // ---- hierarchy
+        var root = new GameObject("Ruby Salon Storefront");
+        Child(root.transform, "Facade", facadeMesh, new[] { mFacade }, Vector3.zero, Vector3.zero);
+        Vector3 gc = new Vector3(LX(127), LY(70), zSign);
+        Child(root.transform, "Globe", globeMesh, new[] { mBody, mLens }, gc, Vector3.zero);
+        var glow = Child(root.transform, "GlobeGlow", AssetDatabase.LoadAssetAtPath<UnityEngine.Mesh>("Assets/Models/ParkToilet/LampGlowQuad.asset"), new[] { mGlow }, gc + new Vector3(0, 0, gd + 0.15f), Vector3.zero);
+        var occ = glow.AddComponent<LampGlowOcclusion>();
+        Child(root.transform, "Turf", turfMesh, new[] { mTurf }, Vector3.zero, Vector3.zero);
+        // two downlight pucks under the ledge (photo x 93 / 165)
+        foreach (float px in new[] { 93f, 165f })
+        {
+            var puck = NewCylinder();
+            puck.name = "Downlight"; puck.transform.SetParent(root.transform, false);
+            puck.transform.localPosition = new Vector3(LX(px), LY(176) - 0.025f, 0.2f);
+            puck.transform.localScale = new Vector3(0.13f, 0.025f, 0.13f);
+            puck.GetComponent<MeshRenderer>().sharedMaterial = mLens;
+        }
+        // door handle (photo x 172, y 262..310)
+        var handle = NewCylinder();
+        handle.name = "DoorHandle"; handle.transform.SetParent(root.transform, false);
+        handle.transform.localPosition = new Vector3(LX(172), LY(286), zDoor + 0.05f);
+        handle.transform.localScale = new Vector3(0.025f, 48 * S * 0.5f, 0.025f);
+        handle.GetComponent<MeshRenderer>().sharedMaterial = mMetal;
+
+        // lights
+        var lights = new GameObject("Lights").transform; lights.SetParent(root.transform, false);
+        AddLight(lights, "Sign Spill", LightType.Point, new Color(1f, 0.62f, 0.32f), 1.3f, 4.5f, 30, new Vector3(0, LY(125), 0.9f), Vector3.zero);
+        AddLight(lights, "Globe Light", LightType.Point, new Color(1f, 0.96f, 0.9f), 0.9f, 5f, 30, gc + new Vector3(0, 0, 0.45f), Vector3.zero);
+        AddLight(lights, "Downlight", LightType.Spot, new Color(1f, 0.92f, 0.8f), 1.6f, 5f, 110, new Vector3(0, LY(176) - 0.05f, 0.35f), new Vector3(80, 0, 0));
+
+        // colliders (sign box + cladding; the ledge is above head height)
+        var bc = root.AddComponent<BoxCollider>();
+        bc.center = new Vector3((LX(47) + LX(219)) * 0.5f, (LY(176) + LY(GY)) * 0.5f, zClad * 0.5f);
+        bc.size = new Vector3(Mathf.Abs(LX(47) - LX(219)), LY(176) - LY(GY), zClad);
+        var bc2 = root.AddComponent<BoxCollider>();
+        bc2.center = new Vector3((LX(38) + LX(222)) * 0.5f, (LY(16) + LY(176)) * 0.5f, zLedge * 0.5f);
+        bc2.size = new Vector3(Mathf.Abs(LX(38) - LX(222)), LY(16) - LY(176), zLedge);
+
+        string prefabPath = "Assets/Prefab/Ruby Salon Storefront.prefab";
+        var parent = GameObject.Find("------------Environment----------/Shop signs");
+        root.transform.SetParent(parent.transform, false);
+        root.transform.position = new Vector3(136.553f, 1.717f, -85.6f);
+        root.transform.rotation = Quaternion.Euler(0, 90, 0);
+        root.transform.localScale = Vector3.one;
+        var inst = PrefabUtility.SaveAsPrefabAssetAndConnect(root, prefabPath, InteractionMode.AutomatedAction);
+        result.RegisterObjectCreation(inst);
+        AssetDatabase.SaveAssets();
+        result.Log("placed {0} occ={1} parentScale={2}", inst, occ != null, parent.transform.lossyScale);
+    }
+}

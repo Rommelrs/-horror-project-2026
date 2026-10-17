@@ -71,9 +71,13 @@ public class Projectile : MonoBehaviour, IPoolable
         rb.useGravity = false; // We'll apply gravity manually
     }
 
+    // velocity going into the physics step, so a collision we ignore (enemy / other projectile) can be undone
+    Vector3 preStepVelocity;
+
     private void FixedUpdate()
     {
         rb.linearVelocity += Vector3.up * gravity * Time.fixedDeltaTime;
+        preStepVelocity = rb.linearVelocity;
     }
 
     private void LateUpdate()
@@ -268,9 +272,19 @@ public class Projectile : MonoBehaviour, IPoolable
         if (!canCollide)
             return;
 
+        // Projectiles never hit other projectiles, and fly straight through enemies like a ghost:
+        // stop colliding with that object for good and keep the velocity we had before the bump
+        if (collision.collider.GetComponentInParent<Projectile>() != null || collision.collider.GetComponentInParent<Enemy>() != null)
+        {
+            foreach (Collider mine in GetComponentsInChildren<Collider>())
+                Physics.IgnoreCollision(mine, collision.collider, true);
+            rb.linearVelocity = preStepVelocity;
+            return;
+        }
+
         canCollide = false;
-        
-        
+
+
         // Check if we hit a lock
         Lock lockObject = collision.collider.GetComponentInParent<Lock>();
         if (lockObject != null)

@@ -15,6 +15,13 @@ Shader "HorrorProject/Damaged Brick Wall"
         _Roughness ("Roughness", Range(0,1)) = 0.82
         _ReliefStrength ("Brick Relief", Range(0,4)) = 1.1
         _ToneVariation ("Tone Variation", Range(0,0.3)) = 0.08
+
+        [Header(Painted Blood)]
+        _BloodTex ("Blood (RGBA, painted onto the wall, world projected along Z)", 2D) = "white" {}
+        _BloodRect ("Blood Rect (world minX, minY, maxX, maxY) - zero size = off", Vector) = (0,0,0,0)
+        _BloodPlane ("Blood Depth (front face Z, back face Z, tolerance) - the hole's inner rim fades from front to back", Vector) = (0,0,0.03,0)
+        _BloodStrength ("Blood Strength", Range(0,1)) = 1
+        _BloodPower ("Blood Darkness (tint power)", Range(0.25,8)) = 1
     }
 
     SubShader
@@ -41,6 +48,11 @@ Shader "HorrorProject/Damaged Brick Wall"
         half _Roughness;
         half _ReliefStrength;
         half _ToneVariation;
+        sampler2D _BloodTex;
+        float4 _BloodRect;
+        float4 _BloodPlane;
+        half _BloodStrength;
+        half _BloodPower;
 
         struct Input
         {
@@ -87,9 +99,26 @@ Shader "HorrorProject/Damaged Brick Wall"
             fixed3 baseColor = brick.rgb * _Color.rgb * (1.0 - _ToneVariation * 0.5 + variation);
             fixed3 damagedColor = damage.rgb * _DamageColor.rgb;
 
-            o.Albedo = lerp(baseColor, damagedColor, mask);
+            // blood painted straight into the wall surface (viewed from +Z: world +X runs to the left, so u is mirrored)
+            float2 bloodUV = float2(
+                (_BloodRect.z - IN.worldPos.x) / max(_BloodRect.z - _BloodRect.x, 1e-4),
+                (IN.worldPos.y - _BloodRect.y) / max(_BloodRect.w - _BloodRect.y, 1e-4));
+            // front face = full, then fading along the hole's inner rim towards the back face (back face itself stays clean)
+            float depthT = saturate((IN.worldPos.z - _BloodPlane.y) / max(abs(_BloodPlane.x - _BloodPlane.y), 1e-4) * sign(_BloodPlane.x - _BloodPlane.y + 1e-6));
+            half inDepth = step(min(_BloodPlane.x, _BloodPlane.y) - _BloodPlane.z, IN.worldPos.z) * step(IN.worldPos.z, max(_BloodPlane.x, _BloodPlane.y) + _BloodPlane.z);
+            half onWall = inDepth * smoothstep(0.0, 0.3, depthT);
+            half inRect = step(0.0, bloodUV.x) * step(bloodUV.x, 1.0) * step(0.0, bloodUV.y) * step(bloodUV.y, 1.0)
+                        * step(1e-3, _BloodRect.z - _BloodRect.x);
+            fixed4 blood = tex2D(_BloodTex, bloodUV);
+            half bloodMask = blood.a * onWall * inRect * _BloodStrength;
+
+            // the blood texture stores a tint (rgb * 2 = multiplier on the wall colour, 0.5 grey = no change), so the brick
+            // detail always shows through the stain. _BloodPower deepens the tint.
+            fixed3 wallColor = lerp(baseColor, damagedColor, mask);
+            fixed3 tint = pow(saturate(blood.rgb * 2.0), _BloodPower);
+            o.Albedo = wallColor * lerp(fixed3(1, 1, 1), tint, bloodMask);
             o.Metallic = 0.0;
-            o.Smoothness = saturate(1.0 - _Roughness - mask * 0.08);
+            o.Smoothness = lerp(saturate(1.0 - _Roughness - mask * 0.08), 0.3, bloodMask * 0.6);
             o.Occlusion = lerp(1.0, 0.72, mask);
 
             float2 texel = _MainTex_TexelSize.xy;
@@ -97,7 +126,8 @@ Shader "HorrorProject/Damaged Brick Wall"
             half hR = Luma(tex2D(_MainTex, brickUV + float2(texel.x, 0)).rgb);
             half hD = Luma(tex2D(_MainTex, brickUV - float2(0, texel.y)).rgb);
             half hU = Luma(tex2D(_MainTex, brickUV + float2(0, texel.y)).rgb);
-            o.Normal = normalize(half3((hL - hR) * _ReliefStrength, (hD - hU) * _ReliefStrength, 1.0));
+            half relief = _ReliefStrength * (1.0 - bloodMask * 0.35);   // blood soaks into the brick, relief mostly kept
+            o.Normal = normalize(half3((hL - hR) * relief, (hD - hU) * relief, 1.0));
             o.Alpha = 1.0;
         }
         ENDCG

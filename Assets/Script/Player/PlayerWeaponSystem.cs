@@ -62,6 +62,8 @@ public class PlayerWeaponSystem : MonoBehaviour
     [SerializeField] AudioSource weakPointAudioSource;
     [SerializeField] AudioClip []weakPointHitSoundEffects;
     [SerializeField] AudioClip[] weakPointBonusSounds; // Random sound always plays alongside weakpoint hits
+    [Tooltip("Volume of the bonus sound that plays on every weak point hit (it was a fixed 5). Lower = quieter. The main hit sound's own volume is on the WeakpointAudioSource.")]
+    [SerializeField] float weakPointBonusVolume = 2.5f;
     [SerializeField] float weakPointMinPitch = 0.5f;
     [SerializeField] float weakPointMaxPitch = 1f;
 
@@ -1026,14 +1028,14 @@ public class PlayerWeaponSystem : MonoBehaviour
                         AudioClip randomClip = weakPointBonusSounds[Random.Range(0, weakPointBonusSounds.Length)];
                         if (SoundEffectManager.instance != null)
                         {
-                            SoundEffectManager.instance.PlaySFX(randomClip, 5f);
+                            SoundEffectManager.instance.PlaySFX(randomClip, weakPointBonusVolume);
                         }
                         else
                         {
                             GameObject tempAudio = new GameObject("TempWeakpointBonusAudio");
                             AudioSource bonusSource = tempAudio.AddComponent<AudioSource>();
                             bonusSource.clip = randomClip;
-                            bonusSource.volume = 5f;
+                            bonusSource.volume = weakPointBonusVolume;
                             bonusSource.spatialBlend = 0f;
                             bonusSource.ignoreListenerPause = true;
                             bonusSource.Play();
