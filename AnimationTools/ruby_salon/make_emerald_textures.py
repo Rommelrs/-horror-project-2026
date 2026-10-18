@@ -36,6 +36,23 @@ for y in range(322, 380):
         img[y, x] = ref[y, 209 - (x - 209) - 2]
 img[176:380, 220:224] = ref[176:300, 220:224].mean(axis=(0, 1))
 
+# ---- remove the downlight pools baked into the photo on the cladding under the ledge (the 3D downlights + LampGlow do
+# that job now): every cladding column takes its plain colour from just below the pools, above the door from the sides
+POOL_Y0, POOL_Y1 = 176, 240
+ref_rows = slice(POOL_Y1, POOL_Y1 + 18)
+side = np.median(np.concatenate([img[ref_rows, 50:92], img[ref_rows, 186:216]], axis=1).reshape(-1, 3), axis=0)
+for x in range(47, 220):
+    in_door = 96 <= x < 183
+    col = side if in_door else np.median(img[ref_rows, x], axis=0)
+    y_end = 195 if in_door else POOL_Y1
+    t = np.linspace(0, 1, y_end - POOL_Y0)[:, None]
+    # tiny darkening towards the ledge (it shades the top of the wall), blended into the untouched rows below
+    img[POOL_Y0:y_end, x] = col * (0.9 + 0.1 * t)
+for y in range(POOL_Y1, POOL_Y1 + 6):                      # soften the seam
+    a = (y - POOL_Y1 + 1) / 7
+    for x in list(range(47, 96)) + list(range(183, 220)):
+        img[y, x] = img[POOL_Y1 - 1, x] * (1 - a) + img[y, x] * a
+
 # ---- erase the old letters + strap line from the sign panel (diffusion fill from the surrounding panel)
 hole = np.zeros(img.shape[:2], bool)
 hole[90:167, 39:221] = True
@@ -57,8 +74,8 @@ r, g, b = img[..., 0], img[..., 1], img[..., 2]
 d = np.maximum(mx - mn, 1e-6)
 hue = np.where(mx == r, ((g - b) / d) % 6, np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4)) / 6
 hdist = np.minimum(np.abs(hue - 0), 1 - np.abs(hue - 0))                 # distance from red
-w = np.clip((0.21 - hdist) / 0.06, 0, 1) * np.clip((sat - 0.03) / 0.10, 0, 1)   # reds, pinks, magentas
-w[195:380, 96:183] = 0                                                   # door
+w = np.clip((0.27 - hdist) / 0.05, 0, 1) * np.clip((sat - 0.03) / 0.10, 0, 1)   # reds, pinks, magentas
+w[199:380, 101:178] = 0                                                   # door
 def hsv2rgb(h, s, v):
     i = np.floor(h * 6) % 6; f = h * 6 - np.floor(h * 6)
     p, q, t = v * (1 - s), v * (1 - f * s), v * (1 - (1 - f) * s)
