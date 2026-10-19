@@ -14,6 +14,8 @@ public class DrippingPipe : MonoBehaviour
     [Tooltip("Plays the landing sound. It is moved to where the drop lands, so the sound comes from the puddle.")]
     [SerializeField] AudioSource landSound;
     [SerializeField] AudioClip clip;
+    [Tooltip("Optional. If filled, each drop plays a random clip from this list (never the same one twice in a row) instead of the single clip above - a repeating identical sample is what makes a drip annoying.")]
+    [SerializeField] AudioClip[] clipVariations;
     [SerializeField] AudioMixerGroup mixerGroup;
     [Tooltip("A few tiny droplets thrown up when the drop lands. Its own emission should stay off.")]
     [SerializeField] ParticleSystem splash;
@@ -50,6 +52,7 @@ public class DrippingPipe : MonoBehaviour
     float groundY;
     bool nextIsQuick;
     Vector3 landPoint;
+    int lastVariation = -1;
 
     void Awake()
     {
@@ -152,10 +155,11 @@ public class DrippingPipe : MonoBehaviour
     {
         if (drop != null) drop.gameObject.SetActive(false);
 
-        if (landSound != null && clip != null)
+        AudioClip toPlay = PickClip();
+        if (landSound != null && toPlay != null)
         {
             landSound.pitch = Random.Range(pitch.x, pitch.y);
-            landSound.PlayOneShot(clip, Random.Range(volume.x, volume.y));
+            landSound.PlayOneShot(toPlay, Random.Range(volume.x, volume.y));
         }
         if (splash != null)
         {
@@ -166,6 +170,16 @@ public class DrippingPipe : MonoBehaviour
         nextIsQuick = Random.value < doubleDropChance && !nextIsQuick;
         phase = Phase.Waiting;
         timer = nextIsQuick ? Random.Range(0.35f, 0.7f) : Random.Range(secondsBetweenDrops.x, secondsBetweenDrops.y);
+    }
+
+    AudioClip PickClip()
+    {
+        if (clipVariations == null || clipVariations.Length == 0) return clip;
+        if (clipVariations.Length == 1) return clipVariations[0];
+        int i = Random.Range(0, clipVariations.Length);
+        if (i == lastVariation) i = (i + 1 + Random.Range(0, clipVariations.Length - 1)) % clipVariations.Length;
+        lastVariation = i;
+        return clipVariations[i];
     }
 
     void OnDrawGizmosSelected()

@@ -76,6 +76,8 @@ public class Stats : MonoBehaviour
     [Header("Sound Investigation")]
     public bool canHearGunshots = true;
     public float investigateDuration = 5f;
+    [Tooltip("Fixed enemies only: a gunshot he hears (needs Can Hear Gunshots) turns him from a stationary sentry into an Aggressive enemy that chases the player from then on. Stays Fixed until then.")]
+    public bool becomesAggressiveWhenAlerted = false;
 
     [Header("Atack")]
     public int damage = 20;

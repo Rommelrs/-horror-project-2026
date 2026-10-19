@@ -11,6 +11,7 @@ public class PlayerEventHandler : MonoBehaviour
     public Action OnStartSlash;
     public Action OnEndSlash;
     public Action OnFootstep;
+    public Action OnBackFootstep;
     public Action OnShoot;
     public UnityEvent OnReloadComplete; public Action OnReloadAnimationEnd;
 
@@ -38,6 +39,12 @@ public class PlayerEventHandler : MonoBehaviour
     public void Footstep()
     {
         OnFootstep?.Invoke();
+    }
+
+    // Fired by the backwards-walk clips - a softer, slower step than the normal footstep
+    public void FootstepBack()
+    {
+        OnBackFootstep?.Invoke();
     }
 
     public void Shoot()

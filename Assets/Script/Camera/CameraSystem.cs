@@ -132,9 +132,9 @@ public class CameraSystem : MonoBehaviour
     [Tooltip("Hide the player's body (it still casts a shadow) when the camera is squeezed so close that it would be inside the model.")]
     [SerializeField] bool hidePlayerWhenCameraClose = true;
     [Tooltip("The body is hidden once the camera is closer than this (metres) to the player's head.")]
-    [SerializeField] float hidePlayerDistance = 1.3f;
+    [SerializeField] float hidePlayerDistance = 0.68f;
     [Tooltip("The body reappears once the camera is farther than this. Keep it a bit larger than the hide distance so it doesn't flicker.")]
-    [SerializeField] float showPlayerDistance = 1.55f;
+    [SerializeField] float showPlayerDistance = 0.85f;
 
     float wallYaw;           // sideways swing currently applied to the camera (degrees)
     float wallYawVelocity;

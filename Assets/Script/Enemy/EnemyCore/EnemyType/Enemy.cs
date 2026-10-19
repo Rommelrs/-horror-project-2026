@@ -286,6 +286,17 @@ public class Enemy : MonoBehaviour, IPoolable
         if (!stats.canHearGunshots)
             return;
 
+        // A sentry that wakes up for good: the first shot he hears turns him from Fixed into Aggressive (this enemy only - Stats is per instance),
+        // so he keeps hunting the player instead of going back to standing still after an attack or an investigation
+        if (stats.becomesAggressiveWhenAlerted && stats.enemyType == EnemyType.Fixed && (health == null || !health.IsDead))
+        {
+            stats.enemyType = EnemyType.Aggressive;
+            playerDetected = true;
+            if (stateMachine.CurrentState == idleState || stateMachine.CurrentState == investigateState || stateMachine.CurrentState == enemyWanderState)
+                stateMachine.ChangeState(chaseState);
+            return;
+        }
+
         // Don't alert if already chasing or attacking player
         if (playerDetected || stateMachine.CurrentState == chaseState || stateMachine.CurrentState == attackState)
             return;

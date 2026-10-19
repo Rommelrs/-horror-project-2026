@@ -56,8 +56,14 @@ public class PlayerMovement : MonoBehaviour
     float currentSpeed;
     Vector3 moveDirection;
 
+    // Used to measure how fast the player is really moving (see GetMeasuredHorizontalSpeed)
+    Vector3 lastAnimPosition;
+    bool hasLastAnimPosition;
+
     private void OnEnable()
     {
+        hasLastAnimPosition = false;
+
         //Enable the input actions
         movementAction.action.Enable();
         sprintAction.action.Enable();
@@ -269,9 +275,36 @@ public class PlayerMovement : MonoBehaviour
         return (value - min) / (max - min);
     }
 
+    // Horizontal speed measured from the player's real displacement this frame.
+    // CharacterController.velocity only refreshes when Move() is called, so after a teleport or a
+    // cutscene it can stay stuck at an old large value while the player stands still. The animator
+    // then kept the run blend for a second or two as soon as the player started walking.
+    private float GetMeasuredHorizontalSpeed()
+    {
+        Vector3 position = transform.position;
+        float dt = Time.deltaTime;
+        float speed = 0f;
+
+        if (hasLastAnimPosition && dt > 0.0001f)
+        {
+            Vector3 delta = position - lastAnimPosition;
+            delta.y = 0f;
+
+            // A big jump in a single frame is a teleport (spawn point, cutscene), not walking
+            if (delta.magnitude < 1f)
+                speed = delta.magnitude / dt;
+        }
+
+        lastAnimPosition = position;
+        hasLastAnimPosition = true;
+        return speed;
+    }
+
     //Handle Player Animations Behaviour
     private void HandleAnimation()
     {
+        float measuredSpeed = GetMeasuredHorizontalSpeed();
+
         float currentX = player.animator.GetFloat("x");
         float currentY = player.animator.GetFloat("y");
         float currentVelocity = player.animator.GetFloat("Velocity");
@@ -281,7 +314,7 @@ public class PlayerMovement : MonoBehaviour
         //Apply Animation
         if (player.IsDead() == false)
         {
-            player.animator.SetFloat("Velocity", Mathf.MoveTowards(currentVelocity, _characterController.velocity.magnitude, speed * Time.deltaTime));
+            player.animator.SetFloat("Velocity", Mathf.MoveTowards(currentVelocity, measuredSpeed, speed * Time.deltaTime));
         }
         else
         {

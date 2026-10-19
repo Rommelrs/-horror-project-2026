@@ -1789,6 +1789,96 @@ PrefabInstance:
       propertyPath: m_Name
       value: DrippingPipe
       objectReference: {fileID: 0}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: pitch.x
+      value: 0.95
+      objectReference: {fileID: 0}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: pitch.y
+      value: 1.05
+      objectReference: {fileID: 0}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: volume.x
+      value: 0.65
+      objectReference: {fileID: 0}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: volume.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: maxDistance
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: minDistance
+      value: 1.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: doubleDropChance
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: secondsBetweenDrops.x
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: secondsBetweenDrops.y
+      value: 11
+      objectReference: {fileID: 0}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: clipVariations.Array.size
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: 'clipVariations.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: e06777864085f484aa6f28451d596fe7, type: 3}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: 'clipVariations.Array.data[1]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 8fef50e605d33624aa34ee0c18fb219b, type: 3}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: 'clipVariations.Array.data[2]'
+      value: 
+      objectReference: {fileID: 8300000, guid: e0db78f24ae2474468ee5b8ac6a430be, type: 3}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: 'clipVariations.Array.data[3]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 8488939b6bae7b349aba9daafdacefe9, type: 3}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: distanceFalloff.m_Curve.Array.data[1].time
+      value: 0.2
+      objectReference: {fileID: 0}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: distanceFalloff.m_Curve.Array.data[2].time
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: distanceFalloff.m_Curve.Array.data[1].value
+      value: 0.75
+      objectReference: {fileID: 0}
+    - target: {fileID: 5802565755052616207, guid: 93086216f1da3c0419a07d9b4981ff42,
+        type: 3}
+      propertyPath: distanceFalloff.m_Curve.Array.data[2].value
+      value: 0.3
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
