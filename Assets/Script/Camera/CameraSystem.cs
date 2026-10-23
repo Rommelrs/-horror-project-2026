@@ -148,6 +148,10 @@ public class CameraSystem : MonoBehaviour
     readonly List<CachedRenderer> playerRenderers = new List<CachedRenderer>();
     bool playerHidden;
 
+    // Set by cutscenes that film the real player with their own cameras: this rig keeps following and can get
+    // squeezed against walls, which must not hide the body the cutscene is showing.
+    public bool ForceShowPlayer { get; set; }
+
     Vector3 targetFollowPosition;
     Vector2 moveInput;
     bool wantsRecenter;
@@ -844,7 +848,7 @@ public class CameraSystem : MonoBehaviour
     // camera never shows the inside of the model. Uses a distance gap between hide and show so it doesn't flicker.
     void UpdatePlayerVisibility(Vector3 head)
     {
-        if (!hidePlayerWhenCameraClose)
+        if (!hidePlayerWhenCameraClose || ForceShowPlayer)
         {
             SetPlayerHidden(false);
             return;
