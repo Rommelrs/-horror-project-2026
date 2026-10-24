@@ -112,6 +112,13 @@ namespace PSXShaderKit
         void OnDisable()
         {
             _IsFirstFrame = true;
+            // the kept previous frame is a temporary RT; hand it back or it's stranded every time the camera turns off
+            // (or Play mode ends)
+            if (_PreviousFrame)
+            {
+                RenderTexture.ReleaseTemporary(_PreviousFrame);
+                _PreviousFrame = null;
+            }
         }
 
         void ApplyPixelationEffect(RenderTexture source, RenderTexture destination)

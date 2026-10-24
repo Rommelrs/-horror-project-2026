@@ -64,6 +64,16 @@ public class MapHandler : MonoBehaviour
     private void Start()
     {
         mapInput.action.performed += OnMapButtonPressed;
+
+        // Map cameras only need to render while the map is open (ApplyCurrentPage turns the right one on)
+        if (mapMenu == null || !mapMenu.activeSelf)
+        {
+            mapCamera.gameObject.SetActive(false);
+            if (additionalMaps != null)
+                foreach (var page in additionalMaps)
+                    if (page.mapCamera != null) page.mapCamera.gameObject.SetActive(false);
+        }
+
         hasMap1 = PlayerPrefs.GetInt("HasMap1", 0) == 1;
         hasMap2 = PlayerPrefs.GetInt("HasMap2", 0) == 1;
         // Only sync Player.hasMap for Map1 (not Map2)

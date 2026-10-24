@@ -3,7 +3,12 @@ guid: e0680e8dd5c6f594f8e62d714bb934b9
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_TheRunner
+    second: {fileID: 2100000, guid: 3cdf92c088bb4a148b527f73b169ebc5, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -17,7 +22,245 @@ ModelImporter:
     removeConstantScaleCurves: 0
     motionNodeName: 
     animationImportErrors: 
-    animationImportWarnings: 
+    animationImportWarnings: "\nClip 'Idle' has import animation warnings that might
+      lower retargeting quality:\nNote: Activate translation DOF on avatar to improve
+      retargeting quality.\n\t'Spine1' has translation animation that will be discarded.\n\t'Spine2'
+      has translation animation that will be discarded.\n\t'LeftShoulder' has translation
+      animation that will be discarded.\n\t'LeftUpLeg' has translation animation
+      that will be discarded.\n\t'LeftLeg' has translation animation that will be
+      discarded.\n\t'RightUpLeg' has translation animation that will be discarded.\n\t'RightLeg'
+      has translation animation that will be discarded.\n\nClip 'Right_Side_walk'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Spine1'
+      has translation animation that will be discarded.\n\t'Spine2' has translation
+      animation that will be discarded.\n\t'Head' has translation animation that
+      will be discarded.\n\t'LeftShoulder' has translation animation that will be
+      discarded.\n\t'LeftArm' has translation animation that will be discarded.\n\t'LeftForeArm'
+      has translation animation that will be discarded.\n\t'LeftHand' has translation
+      animation that will be discarded.\n\t'LeftHandIndex1' has translation animation
+      that will be discarded.\n\t'LeftHandIndex2' has translation animation that
+      will be discarded.\n\t'LeftHandIndex3' has translation animation that will
+      be discarded.\n\t'RightArm' has translation animation that will be discarded.\n\t'RightForeArm'
+      has translation animation that will be discarded.\n\t'RightHand' has translation
+      animation that will be discarded.\n\t'LeftUpLeg' has translation animation
+      that will be discarded.\n\t'LeftLeg' has translation animation that will be
+      discarded.\n\t'LeftFoot' has translation animation that will be discarded.\n\t'RightUpLeg'
+      has translation animation that will be discarded.\n\t'RightLeg' has translation
+      animation that will be discarded.\n\t'RightFoot' has translation animation
+      that will be discarded.\n\t'RightToeBase' has translation animation that will
+      be discarded.\n\nClip 'Left_Side_walk' has import animation warnings that might
+      lower retargeting quality:\nNote: Activate translation DOF on avatar to improve
+      retargeting quality.\n\t'Spine1' has translation animation that will be discarded.\n\t'Spine2'
+      has translation animation that will be discarded.\n\t'Neck' has translation
+      animation that will be discarded.\n\t'LeftShoulder' has translation animation
+      that will be discarded.\n\t'LeftArm' has translation animation that will be
+      discarded.\n\t'LeftForeArm' has translation animation that will be discarded.\n\t'LeftHand'
+      has translation animation that will be discarded.\n\t'RightShoulder' has translation
+      animation that will be discarded.\n\t'RightArm' has translation animation that
+      will be discarded.\n\t'RightForeArm' has translation animation that will be
+      discarded.\n\t'RightHand' has translation animation that will be discarded.\n\t'LeftUpLeg'
+      has translation animation that will be discarded.\n\t'LeftLeg' has translation
+      animation that will be discarded.\n\t'LeftFoot' has translation animation that
+      will be discarded.\n\t'RightUpLeg' has translation animation that will be discarded.\n\t'RightLeg'
+      has translation animation that will be discarded.\n\t'RightFoot' has translation
+      animation that will be discarded.\n\t'RightToeBase' has translation animation
+      that will be discarded.\n\nClip 'Run' has import animation warnings that might
+      lower retargeting quality:\nNote: Activate translation DOF on avatar to improve
+      retargeting quality.\n\t'Spine1' has translation animation that will be discarded.\n\t'Spine2'
+      has translation animation that will be discarded.\n\t'Neck' has translation
+      animation that will be discarded.\n\t'Head' has translation animation that
+      will be discarded.\n\t'LeftShoulder' has translation animation that will be
+      discarded.\n\t'LeftArm' has translation animation that will be discarded.\n\t'LeftForeArm'
+      has translation animation that will be discarded.\n\t'LeftHand' has translation
+      animation that will be discarded.\n\t'RightShoulder' has translation animation
+      that will be discarded.\n\t'RightArm' has translation animation that will be
+      discarded.\n\t'RightForeArm' has translation animation that will be discarded.\n\t'RightHand'
+      has translation animation that will be discarded.\n\t'LeftUpLeg' has translation
+      animation that will be discarded.\n\t'LeftLeg' has translation animation that
+      will be discarded.\n\t'LeftFoot' has translation animation that will be discarded.\n\t'LeftToeBase'
+      has translation animation that will be discarded.\n\t'RightUpLeg' has translation
+      animation that will be discarded.\n\t'RightLeg' has translation animation that
+      will be discarded.\n\t'RightFoot' has translation animation that will be discarded.\n\t'RightToeBase'
+      has translation animation that will be discarded.\n\nClip 'Attack' has import
+      animation warnings that might lower retargeting quality:\nNote: Activate translation
+      DOF on avatar to improve retargeting quality.\n\t'Spine1' has translation animation
+      that will be discarded.\n\t'Spine2' has translation animation that will be
+      discarded.\n\t'Neck' has translation animation that will be discarded.\n\t'LeftShoulder'
+      has translation animation that will be discarded.\n\t'LeftArm' has translation
+      animation that will be discarded.\n\t'LeftForeArm' has translation animation
+      that will be discarded.\n\t'LeftHand' has translation animation that will be
+      discarded.\n\t'LeftHandIndex1' has translation animation that will be discarded.\n\t'RightShoulder'
+      has translation animation that will be discarded.\n\t'RightArm' has translation
+      animation that will be discarded.\n\t'RightForeArm' has translation animation
+      that will be discarded.\n\t'RightHand' has translation animation that will
+      be discarded.\n\t'LeftUpLeg' has translation animation that will be discarded.\n\t'LeftLeg'
+      has translation animation that will be discarded.\n\t'LeftFoot' has translation
+      animation that will be discarded.\n\t'RightUpLeg' has translation animation
+      that will be discarded.\n\t'RightLeg' has translation animation that will be
+      discarded.\n\t'RightFoot' has translation animation that will be discarded.\n\nClip
+      'Charging_Attack' has import animation warnings that might lower retargeting
+      quality:\nNote: Activate translation DOF on avatar to improve retargeting quality.\n\t'Spine1'
+      has translation animation that will be discarded.\n\t'Spine2' has translation
+      animation that will be discarded.\n\t'LeftShoulder' has translation animation
+      that will be discarded.\n\t'LeftArm' has translation animation that will be
+      discarded.\n\t'LeftForeArm' has translation animation that will be discarded.\n\t'LeftHand'
+      has translation animation that will be discarded.\n\t'RightShoulder' has translation
+      animation that will be discarded.\n\t'RightArm' has translation animation that
+      will be discarded.\n\t'RightForeArm' has translation animation that will be
+      discarded.\n\t'RightHand' has translation animation that will be discarded.\n\t'LeftUpLeg'
+      has translation animation that will be discarded.\n\t'LeftLeg' has translation
+      animation that will be discarded.\n\t'RightUpLeg' has translation animation
+      that will be discarded.\n\t'RightLeg' has translation animation that will be
+      discarded.\n\nClip 'Charging_Windup' has import animation warnings that might
+      lower retargeting quality:\nNote: Activate translation DOF on avatar to improve
+      retargeting quality.\n\t'Spine1' has translation animation that will be discarded.\n\t'Spine2'
+      has translation animation that will be discarded.\n\t'Head' has translation
+      animation that will be discarded.\n\t'LeftShoulder' has translation animation
+      that will be discarded.\n\t'LeftArm' has translation animation that will be
+      discarded.\n\t'LeftForeArm' has translation animation that will be discarded.\n\t'LeftHand'
+      has translation animation that will be discarded.\n\t'LeftHandIndex1' has translation
+      animation that will be discarded.\n\t'RightArm' has translation animation that
+      will be discarded.\n\t'RightForeArm' has translation animation that will be
+      discarded.\n\t'RightHand' has translation animation that will be discarded.\n\t'LeftUpLeg'
+      has translation animation that will be discarded.\n\t'LeftLeg' has translation
+      animation that will be discarded.\n\t'LeftFoot' has translation animation that
+      will be discarded.\n\t'LeftToeBase' has translation animation that will be
+      discarded.\n\t'RightUpLeg' has translation animation that will be discarded.\n\t'RightLeg'
+      has translation animation that will be discarded.\n\t'RightFoot' has translation
+      animation that will be discarded.\n\nClip 'Charging' has import animation warnings
+      that might lower retargeting quality:\nNote: Activate translation DOF on avatar
+      to improve retargeting quality.\n\t'Spine1' has translation animation that
+      will be discarded.\n\t'Spine2' has translation animation that will be discarded.\n\t'Neck'
+      has translation animation that will be discarded.\n\t'LeftShoulder' has translation
+      animation that will be discarded.\n\t'LeftArm' has translation animation that
+      will be discarded.\n\t'LeftForeArm' has translation animation that will be
+      discarded.\n\t'LeftHand' has translation animation that will be discarded.\n\t'RightShoulder'
+      has translation animation that will be discarded.\n\t'RightArm' has translation
+      animation that will be discarded.\n\t'RightForeArm' has translation animation
+      that will be discarded.\n\t'RightHand' has translation animation that will
+      be discarded.\n\t'LeftUpLeg' has translation animation that will be discarded.\n\t'LeftLeg'
+      has translation animation that will be discarded.\n\t'LeftFoot' has translation
+      animation that will be discarded.\n\t'RightUpLeg' has translation animation
+      that will be discarded.\n\t'RightLeg' has translation animation that will be
+      discarded.\n\nClip 'Die' has import animation warnings that might lower retargeting
+      quality:\nNote: Activate translation DOF on avatar to improve retargeting quality.\n\t'Spine1'
+      has translation animation that will be discarded.\n\t'Spine2' has translation
+      animation that will be discarded.\n\t'Neck' has translation animation that
+      will be discarded.\n\t'LeftShoulder' has translation animation that will be
+      discarded.\n\t'LeftArm' has translation animation that will be discarded.\n\t'LeftForeArm'
+      has translation animation that will be discarded.\n\t'LeftHand' has translation
+      animation that will be discarded.\n\t'LeftHandIndex1' has translation animation
+      that will be discarded.\n\t'LeftHandIndex2' has translation animation that
+      will be discarded.\n\t'RightShoulder' has translation animation that will be
+      discarded.\n\t'RightArm' has translation animation that will be discarded.\n\t'RightForeArm'
+      has translation animation that will be discarded.\n\t'RightHand' has translation
+      animation that will be discarded.\n\t'LeftUpLeg' has translation animation
+      that will be discarded.\n\t'LeftLeg' has translation animation that will be
+      discarded.\n\t'LeftFoot' has translation animation that will be discarded.\n\t'LeftToeBase'
+      has translation animation that will be discarded.\n\t'RightUpLeg' has translation
+      animation that will be discarded.\n\t'RightLeg' has translation animation that
+      will be discarded.\n\t'RightFoot' has translation animation that will be discarded.\n\t'RightToeBase'
+      has translation animation that will be discarded.\n\nClip 'Hurt' has import
+      animation warnings that might lower retargeting quality:\nNote: Activate translation
+      DOF on avatar to improve retargeting quality.\n\t'Spine1' has translation animation
+      that will be discarded.\n\t'Spine2' has translation animation that will be
+      discarded.\n\t'Neck' has translation animation that will be discarded.\n\t'LeftShoulder'
+      has translation animation that will be discarded.\n\t'LeftArm' has translation
+      animation that will be discarded.\n\t'LeftForeArm' has translation animation
+      that will be discarded.\n\t'LeftHand' has translation animation that will be
+      discarded.\n\t'LeftHandIndex2' has translation animation that will be discarded.\n\t'RightShoulder'
+      has translation animation that will be discarded.\n\t'RightArm' has translation
+      animation that will be discarded.\n\t'RightForeArm' has translation animation
+      that will be discarded.\n\t'RightHand' has translation animation that will
+      be discarded.\n\t'LeftUpLeg' has translation animation that will be discarded.\n\t'LeftLeg'
+      has translation animation that will be discarded.\n\t'LeftFoot' has translation
+      animation that will be discarded.\n\t'LeftToeBase' has translation animation
+      that will be discarded.\n\t'RightUpLeg' has translation animation that will
+      be discarded.\n\t'RightLeg' has translation animation that will be discarded.\n\t'RightFoot'
+      has translation animation that will be discarded.\n\t'RightToeBase' has translation
+      animation that will be discarded.\n\nClip 'Looking_left_and_right' has import
+      animation warnings that might lower retargeting quality:\nNote: Activate translation
+      DOF on avatar to improve retargeting quality.\n\t'Spine1' has translation animation
+      that will be discarded.\n\t'Spine2' has translation animation that will be
+      discarded.\n\t'Head' has translation animation that will be discarded.\n\t'LeftArm'
+      has translation animation that will be discarded.\n\t'LeftForeArm' has translation
+      animation that will be discarded.\n\t'LeftHand' has translation animation that
+      will be discarded.\n\t'RightArm' has translation animation that will be discarded.\n\t'RightForeArm'
+      has translation animation that will be discarded.\n\t'RightHand' has translation
+      animation that will be discarded.\n\t'LeftUpLeg' has translation animation
+      that will be discarded.\n\t'LeftLeg' has translation animation that will be
+      discarded.\n\t'RightUpLeg' has translation animation that will be discarded.\n\t'RightLeg'
+      has translation animation that will be discarded.\n\nClip 'Wakeup_from_weakpoint_hurt_falling_down'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Spine1'
+      has translation animation that will be discarded.\n\t'Spine2' has translation
+      animation that will be discarded.\n\t'Neck' has translation animation that
+      will be discarded.\n\t'LeftShoulder' has translation animation that will be
+      discarded.\n\t'LeftArm' has translation animation that will be discarded.\n\t'LeftForeArm'
+      has translation animation that will be discarded.\n\t'LeftHand' has translation
+      animation that will be discarded.\n\t'LeftHandIndex1' has translation animation
+      that will be discarded.\n\t'RightShoulder' has translation animation that will
+      be discarded.\n\t'RightArm' has translation animation that will be discarded.\n\t'RightForeArm'
+      has translation animation that will be discarded.\n\t'RightHand' has translation
+      animation that will be discarded.\n\t'LeftUpLeg' has translation animation
+      that will be discarded.\n\t'LeftLeg' has translation animation that will be
+      discarded.\n\t'LeftFoot' has translation animation that will be discarded.\n\t'LeftToeBase'
+      has translation animation that will be discarded.\n\t'RightUpLeg' has translation
+      animation that will be discarded.\n\t'RightLeg' has translation animation that
+      will be discarded.\n\t'RightFoot' has translation animation that will be discarded.\n\t'RightToeBase'
+      has translation animation that will be discarded.\n\nClip 'Wakeup_from_weakpoint_hurt'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Spine1'
+      has translation animation that will be discarded.\n\t'Spine2' has translation
+      animation that will be discarded.\n\t'Head' has translation animation that
+      will be discarded.\n\t'LeftShoulder' has translation animation that will be
+      discarded.\n\t'LeftArm' has translation animation that will be discarded.\n\t'LeftForeArm'
+      has translation animation that will be discarded.\n\t'LeftHand' has translation
+      animation that will be discarded.\n\t'LeftHandIndex1' has translation animation
+      that will be discarded.\n\t'RightArm' has translation animation that will be
+      discarded.\n\t'RightForeArm' has translation animation that will be discarded.\n\t'RightHand'
+      has translation animation that will be discarded.\n\t'LeftUpLeg' has translation
+      animation that will be discarded.\n\t'LeftLeg' has translation animation that
+      will be discarded.\n\t'LeftFoot' has translation animation that will be discarded.\n\t'LeftToeBase'
+      has translation animation that will be discarded.\n\t'RightUpLeg' has translation
+      animation that will be discarded.\n\t'RightLeg' has translation animation that
+      will be discarded.\n\t'RightFoot' has translation animation that will be discarded.\n\t'RightToeBase'
+      has translation animation that will be discarded.\n\nClip 'Weakpoint_hurt_falling_down'
+      has import animation warnings that might lower retargeting quality:\nNote:
+      Activate translation DOF on avatar to improve retargeting quality.\n\t'Spine1'
+      has translation animation that will be discarded.\n\t'Spine2' has translation
+      animation that will be discarded.\n\t'Neck' has translation animation that
+      will be discarded.\n\t'LeftShoulder' has translation animation that will be
+      discarded.\n\t'LeftArm' has translation animation that will be discarded.\n\t'LeftForeArm'
+      has translation animation that will be discarded.\n\t'LeftHand' has translation
+      animation that will be discarded.\n\t'LeftHandIndex1' has translation animation
+      that will be discarded.\n\t'LeftHandIndex3' has translation animation that
+      will be discarded.\n\t'RightShoulder' has translation animation that will be
+      discarded.\n\t'RightArm' has translation animation that will be discarded.\n\t'RightForeArm'
+      has translation animation that will be discarded.\n\t'RightHand' has translation
+      animation that will be discarded.\n\t'LeftUpLeg' has translation animation
+      that will be discarded.\n\t'LeftLeg' has translation animation that will be
+      discarded.\n\t'LeftFoot' has translation animation that will be discarded.\n\t'RightUpLeg'
+      has translation animation that will be discarded.\n\t'RightLeg' has translation
+      animation that will be discarded.\n\t'RightFoot' has translation animation
+      that will be discarded.\n\nClip 'Weakpoint_hurt' has import animation warnings
+      that might lower retargeting quality:\nNote: Activate translation DOF on avatar
+      to improve retargeting quality.\n\t'Spine1' has translation animation that
+      will be discarded.\n\t'Spine2' has translation animation that will be discarded.\n\t'Neck'
+      has translation animation that will be discarded.\n\t'Head' has translation
+      animation that will be discarded.\n\t'LeftShoulder' has translation animation
+      that will be discarded.\n\t'LeftArm' has translation animation that will be
+      discarded.\n\t'LeftForeArm' has translation animation that will be discarded.\n\t'LeftHand'
+      has translation animation that will be discarded.\n\t'LeftHandIndex1' has translation
+      animation that will be discarded.\n\t'RightShoulder' has translation animation
+      that will be discarded.\n\t'RightArm' has translation animation that will be
+      discarded.\n\t'RightForeArm' has translation animation that will be discarded.\n\t'RightHand'
+      has translation animation that will be discarded.\n\t'LeftUpLeg' has translation
+      animation that will be discarded.\n\t'LeftLeg' has translation animation that
+      will be discarded.\n\t'LeftFoot' has translation animation that will be discarded.\n\t'LeftToeBase'
+      has translation animation that will be discarded.\n\t'RightUpLeg' has translation
+      animation that will be discarded.\n\t'RightLeg' has translation animation that
+      will be discarded.\n\t'RightFoot' has translation animation that will be discarded.\n"
     animationRetargetingWarnings: 
     animationDoRetargetingWarnings: 0
     importAnimatedCustomProperties: 0
@@ -82,8 +325,430 @@ ModelImporter:
   importAnimation: 1
   humanDescription:
     serializedVersion: 3
-    human: []
-    skeleton: []
+    human:
+    - boneName: Hips
+      humanName: Hips
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftUpLeg
+      humanName: LeftUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightUpLeg
+      humanName: RightUpperLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftLeg
+      humanName: LeftLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightLeg
+      humanName: RightLowerLeg
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftFoot
+      humanName: LeftFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightFoot
+      humanName: RightFoot
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Spine
+      humanName: Spine
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Spine1
+      humanName: Chest
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Neck
+      humanName: Neck
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Head
+      humanName: Head
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftShoulder
+      humanName: LeftShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightShoulder
+      humanName: RightShoulder
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftArm
+      humanName: LeftUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightArm
+      humanName: RightUpperArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftForeArm
+      humanName: LeftLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightForeArm
+      humanName: RightLowerArm
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftHand
+      humanName: LeftHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightHand
+      humanName: RightHand
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftToeBase
+      humanName: LeftToes
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightToeBase
+      humanName: RightToes
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftHandIndex1
+      humanName: Left Index Proximal
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftHandIndex2
+      humanName: Left Index Intermediate
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: LeftHandIndex3
+      humanName: Left Index Distal
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightHandIndex1
+      humanName: Right Index Proximal
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightHandIndex2
+      humanName: Right Index Intermediate
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: RightHandIndex3
+      humanName: Right Index Distal
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    - boneName: Spine2
+      humanName: UpperChest
+      limit:
+        min: {x: 0, y: 0, z: 0}
+        max: {x: 0, y: 0, z: 0}
+        value: {x: 0, y: 0, z: 0}
+        length: 0
+        modified: 0
+    skeleton:
+    - name: CowardModel(Clone)
+      parentName: 
+      position: {x: 0, y: 0, z: 0}
+      rotation: {x: 0, y: 0, z: 0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: SM_MainCharacter
+      parentName: CowardModel(Clone)
+      position: {x: 0.00021481514, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 100, y: 100, z: 100}
+    - name: SM_MainCharacter.001
+      parentName: CowardModel(Clone)
+      position: {x: 0.00021481514, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 100, y: 100, z: 100}
+    - name: SM_MainCharacter.002
+      parentName: CowardModel(Clone)
+      position: {x: 0.00021481514, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 100, y: 100, z: 100}
+    - name: SM_MainCharacter.003
+      parentName: CowardModel(Clone)
+      position: {x: 0.00021481514, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 100, y: 100, z: 100}
+    - name: SM_MainCharacter.004
+      parentName: CowardModel(Clone)
+      position: {x: 0.00021481514, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 100, y: 100, z: 100}
+    - name: Hips
+      parentName: CowardModel(Clone)
+      position: {x: -0.00041959248, y: 0.9900344, z: -0.110349335}
+      rotation: {x: 0.000000037252885, y: 5.8286725e-16, z: 0.0000000037252916, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: LeftUpLeg
+      parentName: Hips
+      position: {x: -0.08842541, y: -0.05983771, z: 0.002717826}
+      rotation: {x: 0.00032251852, y: -0.009901863, z: 0.9994209, w: 0.03255409}
+      scale: {x: 1.0000005, y: 1.0000005, z: 1}
+    - name: LeftLeg
+      parentName: LeftUpLeg
+      position: {x: -0.0011962447, y: 0.41626924, z: -0.003114447}
+      rotation: {x: -0.032880325, y: -0.00044952717, z: 0.013662231, w: 0.9993658}
+      scale: {x: 1.0000001, y: 0.99999994, z: 1.0000002}
+    - name: LeftFoot
+      parentName: LeftLeg
+      position: {x: 0.00017429485, y: 0.41977897, z: 0.000020077163}
+      rotation: {x: 0.5597298, y: 0.00543511, z: -0.0036712468, w: 0.8286493}
+      scale: {x: 1.000001, y: 1.0000008, z: 1.0000005}
+    - name: LeftToeBase
+      parentName: LeftFoot
+      position: {x: 0.000036026686, y: 0.15822189, z: 0.0006467701}
+      rotation: {x: 0.26129267, y: -0.001327954, z: 0.00035944767, w: 0.96525866}
+      scale: {x: 0.99999994, y: 1, z: 0.99999994}
+    - name: LeftToe_End
+      parentName: LeftToeBase
+      position: {x: -1.7763568e-17, y: 0.069168895, z: -2.220446e-18}
+      rotation: {x: 0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Spine
+      parentName: Hips
+      position: {x: -8.881784e-18, y: 0.10325096, z: 0.0009855294}
+      rotation: {x: 0.0047723255, y: -1.7779027e-11, z: -0.0000000037252492, w: 0.9999886}
+      scale: {x: 1, y: 1, z: 1.0000001}
+    - name: Spine1
+      parentName: Spine
+      position: {x: -0.00073981343, y: 0.12606512, z: 0.014860924}
+      rotation: {x: 0.0000000027939677, y: 0.000000044674792, z: -0.0000000032205245,
+        w: 1}
+      scale: {x: 1, y: 1, z: 0.9999999}
+    - name: Spine2
+      parentName: Spine1
+      position: {x: -0.00036486943, y: 0.12808652, z: 0.02569541}
+      rotation: {x: 0.000000011175872, y: -0.000000015087165, z: -0.000000019414658,
+        w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Neck
+      parentName: Spine2
+      position: {x: -5.9160504e-10, y: 0.15487228, z: -0.000066376924}
+      rotation: {x: -0.0047723767, y: -0.000000044560746, z: 0.000000030015332, w: 0.9999886}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Head
+      parentName: Neck
+      position: {x: -0.0017117222, y: 0.07026224, z: 0.02231806}
+      rotation: {x: 0.000000014901161, y: 0.000000014901159, z: -0.0000000069849224,
+        w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: HeadTop_End
+      parentName: Head
+      position: {x: -0, y: 0.25651228, z: 0.06468069}
+      rotation: {x: 0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: LeftShoulder
+      parentName: Spine2
+      position: {x: -0.0556135, y: 0.13627474, z: -0.00008516607}
+      rotation: {x: 0.5623675, y: -0.42824584, z: 0.5644899, w: 0.42626226}
+      scale: {x: 0.99999994, y: 0.9999998, z: 0.9999999}
+    - name: LeftArm
+      parentName: LeftShoulder
+      position: {x: 0.0020024658, y: 0.11626459, z: 0.0065399245}
+      rotation: {x: -0.11439705, y: -0.039527938, z: 0.010052055, w: 0.9925975}
+      scale: {x: 1.0000002, y: 1.0000002, z: 1.0000002}
+    - name: LeftForeArm
+      parentName: LeftArm
+      position: {x: 0.0007281985, y: 0.26001608, z: 0.00037615123}
+      rotation: {x: -0.011299543, y: 0.0007569045, z: -0.037527822, w: 0.99923146}
+      scale: {x: 1, y: 1.0000004, z: 1.0000001}
+    - name: LeftHand
+      parentName: LeftForeArm
+      position: {x: -0.000009590711, y: 0.25894472, z: -0.00014641632}
+      rotation: {x: 0.07024697, y: 0.004494897, z: 0.04060015, w: 0.99669296}
+      scale: {x: 1.0000004, y: 1, z: 1.0000001}
+    - name: LeftHandIndex1
+      parentName: LeftHand
+      position: {x: 0.0013961218, y: 0.09502605, z: 0.0027465802}
+      rotation: {x: -0.04015385, y: -0.0050964067, z: 0.0536044, w: 0.99774164}
+      scale: {x: 0.99999994, y: 1.0000004, z: 1.0000002}
+    - name: LeftHandIndex2
+      parentName: LeftHandIndex1
+      position: {x: 0.0000032336704, y: 0.023889048, z: 0.000036721474}
+      rotation: {x: -0.21570171, y: -0.000121344274, z: 0.09824826, w: 0.971504}
+      scale: {x: 1.0000001, y: 1.0000002, z: 1.0000005}
+    - name: LeftHandIndex3
+      parentName: LeftHandIndex2
+      position: {x: 0.008336788, y: 0.033623725, z: 0.018344723}
+      rotation: {x: 0.03437739, y: -0.08863828, z: 0.14684111, w: 0.98458076}
+      scale: {x: 1, y: 1, z: 1.0000001}
+    - name: LeftHandIndex4
+      parentName: LeftHandIndex3
+      position: {x: 0.0132722445, y: 0.017056454, z: 0.0071885055}
+      rotation: {x: 0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: RightShoulder
+      parentName: Spine2
+      position: {x: 0.055613488, y: 0.13627848, z: 0.00030744015}
+      rotation: {x: 0.56477743, y: 0.4248468, z: -0.56636876, w: 0.423979}
+      scale: {x: 1.0000006, y: 1.0000002, z: 1.0000006}
+    - name: RightArm
+      parentName: RightShoulder
+      position: {x: -0.009243113, y: 0.11359362, z: 0.0045992825}
+      rotation: {x: -0.11782813, y: 0.047668703, z: 0.0018080769, w: 0.99188757}
+      scale: {x: 1.0000002, y: 1.0000006, z: 1.0000002}
+    - name: RightForeArm
+      parentName: RightArm
+      position: {x: 0.0015165621, y: 0.25688913, z: -0.000695139}
+      rotation: {x: -0.014169192, y: -0.0011523179, z: 0.034065776, w: 0.99931854}
+      scale: {x: 1.0000002, y: 0.9999996, z: 1}
+    - name: RightHand
+      parentName: RightForeArm
+      position: {x: 0.00023877263, y: 0.25886458, z: 0.0000296468}
+      rotation: {x: 0.07545702, y: 0.0009858683, z: 0.013033621, w: 0.99706346}
+      scale: {x: 1, y: 1.0000002, z: 1.0000001}
+    - name: RightHandIndex1
+      parentName: RightHand
+      position: {x: -0.000000005434034, y: 0.089389645, z: 0.000000041606206}
+      rotation: {x: 0.05372759, y: 0.6516396, z: -0.046360184, w: 0.75520194}
+      scale: {x: 0.99999994, y: 1.0000001, z: 1.0000002}
+    - name: RightHandIndex2
+      parentName: RightHandIndex1
+      position: {x: -0.0000000018959447, y: 0.029914843, z: 0.000000014733052}
+      rotation: {x: 0.24601334, y: 0.00000023841847, z: -0.2279383, w: 0.9420836}
+      scale: {x: 1, y: 1, z: 0.9999996}
+    - name: RightHandIndex3
+      parentName: RightHandIndex2
+      position: {x: -0.017974805, y: 0.029283354, z: -0.019400038}
+      rotation: {x: 0.097184576, y: 0.14092007, z: 0.122667, w: 0.9775733}
+      scale: {x: 1.0000002, y: 1.0000002, z: 1.0000001}
+    - name: RightHandIndex4
+      parentName: RightHandIndex3
+      position: {x: -0.0012085959, y: 0.017545598, z: -0.019198895}
+      rotation: {x: 0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: RightUpLeg
+      parentName: Hips
+      position: {x: 0.089264594, y: -0.058480423, z: 0.0018069403}
+      rotation: {x: -0.00029662694, y: -0.009106146, z: 0.99942845, w: -0.03255535}
+      scale: {x: 1.0000001, y: 1.0000001, z: 1}
+    - name: RightLeg
+      parentName: RightUpLeg
+      position: {x: 0.0009484744, y: 0.41592592, z: -0.0025532187}
+      rotation: {x: -0.03368159, y: 0.00046042792, z: -0.013660913, w: 0.99933916}
+      scale: {x: 1.0000001, y: 1.0000002, z: 1.0000001}
+    - name: RightFoot
+      parentName: RightLeg
+      position: {x: -0.0001651484, y: 0.4194567, z: 0.00012413914}
+      rotation: {x: 0.55747885, y: -0.0054865973, z: 0.0036844246, w: 0.8301649}
+      scale: {x: 1.0000007, y: 1.0000006, z: 1.0000002}
+    - name: RightToeBase
+      parentName: RightFoot
+      position: {x: -0.000027704273, y: 0.15666474, z: 0.00045096214}
+      rotation: {x: 0.26428536, y: 0.0013319661, z: -0.0003649258, w: 0.9644436}
+      scale: {x: 1.0000002, y: 1.0000001, z: 1.0000001}
+    - name: RightToe_End
+      parentName: RightToeBase
+      position: {x: -1.7763568e-17, y: 0.06830572, z: 0}
+      rotation: {x: 0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
     armTwist: 0.5
     foreArmTwist: 0.5
     upperLegTwist: 0.5

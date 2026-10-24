@@ -19,7 +19,8 @@ public class CutsceneSubtitleReceiver : MonoBehaviour, INotificationReceiver
     {
         if (SubtitleManager.instance == null) return;
         if (SubtitleManager.instance.IsSubtitleBusy()) SubtitleManager.instance.ForceClose();
-        SubtitleManager.ShowSubtitle(marker.line, false);        shown++;
+        SubtitleManager.ShowSubtitle(marker.line, false, null, marker.duration);   // whole at once, paced by the voice
+        shown++;
         if (closeCR != null) StopCoroutine(closeCR);
         closeCR = StartCoroutine(Co_Close(shown, marker.duration));
     }

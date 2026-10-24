@@ -55623,8 +55623,44 @@ MonoBehaviour:
   interactPoint: {fileID: 310947971}
   enterPoint: {fileID: 891980357}
   exitPoint: {fileID: 599884076}
+  autoInteractOnEnter: 0
   requiresKey: 0
   keyCodeRequired: 0
+  unlockStepWithKey: 0
+  lockedLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  unlockedLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  unlockClip: {fileID: 0}
+  freezeGameOnSubtitle: 0
+  OnUnlocked:
+    m_PersistentCalls:
+      m_Calls: []
+  oneWayUntilOpened: 0
+  blockedSide: 1
+  wrongSideLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
   hasDoorLock: 0
   doorLock: {fileID: 0}
   lockedSubtitleTrigger: {fileID: 0}
@@ -55653,6 +55689,9 @@ MonoBehaviour:
   OnInteractionFailed:
     m_PersistentCalls:
       m_Calls: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!4 &326633925
 Transform:
   m_ObjectHideFlags: 0
@@ -119170,6 +119209,34 @@ MonoBehaviour:
   m_SelectedFaces: 
   m_SelectedEdges: []
   m_SelectedVertices: 
+--- !u!21 &657476839
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Enviro/Lite/EnviroFogRendering
+  m_Shader: {fileID: 4800000, guid: 5b0160f40adf130428015ffb5bfdb8a5, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats: []
+    m_Colors: []
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!4 &658112022 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1899060915978651185, guid: f0b365b98fcc72e45a70ffdda2cdddb5,
@@ -161787,11 +161854,6 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalRotation.z
       value: -0.51609427
-      objectReference: {fileID: 0}
-    - target: {fileID: 4345100935865180575, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
-        type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0.10099995
       objectReference: {fileID: 0}
     - target: {fileID: 4345100935865180575, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
         type: 3}
@@ -297382,7 +297444,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isAddionalCamera: 0
-  material: {fileID: 1617859414}
+  material: {fileID: 657476839}
   simpleFog: 0
 --- !u!114 &1258470605
 MonoBehaviour:
@@ -315654,8 +315716,8 @@ Camera:
   m_TargetTexture: {fileID: 8400000, guid: d74a26e1dacb6f648a86a68a0a201356, type: 2}
   m_TargetDisplay: 0
   m_TargetEye: 3
-  m_HDR: 1
-  m_AllowMSAA: 1
+  m_HDR: 0
+  m_AllowMSAA: 0
   m_AllowDynamicResolution: 0
   m_ForceIntoRT: 0
   m_OcclusionCulling: 0
@@ -352084,11 +352146,11 @@ MonoBehaviour:
   tankCameraPositionSmoothTime: 0.55
   showDebugOverlay: 0
   recenterKey: 101
-  standingTurnTimeToFront: 0.9
-  sprintTurnTimeToFront: 3.5
+  turnsToFront: 4
   frontBlendSmoothTime: 0.5
   sustainedTurnInputThreshold: 0.3
   frontSwingExtraDistance: 2.2
+  teleportSnapDistance: 4
   toggleFreeCameraKey: 17
   freeCameraSensitivity: 1
   freePitchMin: -20
@@ -357771,34 +357833,6 @@ Mesh:
       - serializedVersion: 1
         m_IndexStart: 0
         m_IndexCount: 0
---- !u!21 &1617859414
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Enviro/Lite/EnviroFogRendering
-  m_Shader: {fileID: 4800000, guid: 5b0160f40adf130428015ffb5bfdb8a5, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs: []
-    m_Ints: []
-    m_Floats: []
-    m_Colors: []
-  m_BuildTextureStacks: []
-  m_AllowLocking: 1
 --- !u!1 &1620880901
 GameObject:
   m_ObjectHideFlags: 0

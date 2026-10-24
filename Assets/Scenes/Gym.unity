@@ -15227,8 +15227,8 @@ Camera:
   m_TargetTexture: {fileID: 8400000, guid: d74a26e1dacb6f648a86a68a0a201356, type: 2}
   m_TargetDisplay: 0
   m_TargetEye: 3
-  m_HDR: 1
-  m_AllowMSAA: 1
+  m_HDR: 0
+  m_AllowMSAA: 0
   m_AllowDynamicResolution: 0
   m_ForceIntoRT: 0
   m_OcclusionCulling: 0
@@ -19763,11 +19763,6 @@ PrefabInstance:
         type: 3}
       propertyPath: m_LocalRotation.z
       value: -0.51609427
-      objectReference: {fileID: 0}
-    - target: {fileID: 4345100935865180575, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
-        type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0.10099995
       objectReference: {fileID: 0}
     - target: {fileID: 4345100935865180575, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
         type: 3}
@@ -45020,7 +45015,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: -1742986183467876825, guid: 5a05739f273945a4c8182dde8a6783ed, type: 3}
+  - {fileID: 2100000, guid: 3cdf92c088bb4a148b527f73b169ebc5, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

@@ -26,37 +26,30 @@ public static class CowardMeetingBuilder
     // ── scene marks: the crossroads of the main alley (papers on the ground), just outside the burned rope gate ──
     // Khalid steps out of the gate and walks into the crossroads (K1). The coward comes walking down the main alley
     // from the north, past the west end of the blue barrel, not looking; Khalid spots him, turns and aims, and the
-    // coward freezes in front of him (C1).
+    // coward freezes in front of him (C1). At the end Khalid walks off east into the side alley across the crossroads
+    // (toward the school) and the coward bolts back north, the way he came.
     static readonly Vector3 K0 = new Vector3(-180.1f, Floor, -32.3f);    // the trigger, just out of the rope gate
     static readonly Vector3 K1 = new Vector3(-176.3f, Floor, -29.8f);
     const float KhalidWalkYaw = 56.7f;                                    // gate -> K1
     static readonly Vector3 C1 = new Vector3(-177.6f, Floor, -28.0f);    // 2.2 m from Khalid
-    // Coward_Walk.anim = WalkForward baked into a straight walk at 1.32 m/s (5.6 s long). He reaches C1 at CowardArrive,
-    // coming from just south of the hand truck (the line clears the barrel's west end by ~0.3 m).
-    const float CowardWalkSpeed = 1.32f, CowardArrive = 5.5f;
+    // He comes down the alley on Mixamo's "Male Careful Walk" (hunched, arms in, wary steps - a coward, not a stroll),
+    // baked into a straight multi-cycle walk (BakeLoopedWalk -> Coward_CarefulWalk.anim, 0.825 m/s). He reaches C1 at
+    // CowardArrive, coming from just south of the hand truck (the line clears the barrel's west end).
+    const string CarefulWalk = Dir + "/Coward_CarefulWalk.anim";
+    const float CowardWalkSpeed = 0.825f, CowardArrive = 5.5f, CarefulStep = 1.733f / 2f;
     static readonly Vector3 WalkFrom = new Vector3(-178.6f, Floor, -21.0f);
     static readonly float WalkYaw = YawTo(WalkFrom, C1);
     static readonly Vector3 WalkStart = C1 + (WalkFrom - C1).normalized * CowardWalkSpeed * CowardArrive;
-    // the baked walk heads 2.5 deg right of where its body faces (measured in Play): turned back so he ends on C1
-    const float WalkHeadingFix = -2.5f;
+    // the careful walk travels 3.4 deg left of where its body faces: turned so he ends on C1
+    const float WalkHeadingFix = 3.4f;
     static readonly float K1Yaw = YawTo(K1, C1);              // facing the coward at C1
     static readonly float CowardYaw = YawTo(C1, K1);          // facing Khalid
-    // the side-step that blocks his way north: Left_Strafe_Walk, 0.5 s of it = 0.94 m to the coward's left
-    static readonly Vector3 C2 = C1 + Quaternion.Euler(0f, CowardYaw - 90f, 0f) * Vector3.forward * 0.94f;
-    static readonly Vector3 BlockDir = (C2 - K1).normalized;
-    static readonly float K1YawBlock = YawTo(K1, C2);
-    static readonly float BlockYaw = YawTo(C2, K1);
-    // Khalid takes a step north to go past him (KB) and the coward side-steps into his way
-    static readonly Vector3 KB = K1 + BlockDir * 0.45f;
-    // He steps up to Khalid and grabs him by both shoulders (CutsceneArmIK puts his hands there): 0.46 m apart, square
-    // on. Khalid's shoulders are ~0.35 m higher than his and his arms only 0.52 m long: further away and his arms
-    // locked out straight like a zombie's.
-    static readonly Vector3 G = KB + BlockDir * 0.46f;
-    // Walk_Backwards_Fear backs 1.68 m away over 3.87 s; he stops after 1.0 of them, short of the barrel
-    const float BackOff = 1.0f;
-    // when the glass breaks he lets go and recoils a step (backing straight off from G, his arms went through Khalid)
-    static readonly Vector3 GRecoil = G + BlockDir * 0.18f;
-    static readonly Vector3 BackedOff = GRecoil + BlockDir * BackOff;
+    // his way out, down the middle of the east side alley (walls at z -30.45 and -33.7, from x -170 on). He turns away
+    // off camera and we cut to him already walking in it. Walk_SH covers 0.95 m/s (a planted foot slides back at that
+    // speed), so he is moved at exactly that and his feet stay put.
+    static readonly Vector3 EastIn = new Vector3(-169.0f, Floor, -32.08f);
+    static readonly Vector3 EastFar = new Vector3(-148.0f, Floor, -32.08f);
+    const float WalkSpeed = 0.95f;
 
     static float YawTo(Vector3 from, Vector3 to) => Mathf.Atan2(to.x - from.x, to.z - from.z) * Mathf.Rad2Deg;
 
@@ -73,12 +66,9 @@ public static class CowardMeetingBuilder
     static Vector3 DF => (C1 - K1).normalized;
     static Vector3 DR => Quaternion.Euler(0f, 90f, 0f) * DF;
     static Vector3 Ax(float f, float r, float h) => At(K1 + DF * f + DR * r, h);
-    // block / grab line: Khalid at KB -> coward at G
-    static Vector3 GF => BlockDir;
-    static Vector3 GR => Quaternion.Euler(0f, 90f, 0f) * GF;
     static Vector3 At(Vector3 p, float height) => new Vector3(p.x, Floor + height, p.z);
 
-    class Line { public string id, spk, en, ar; public float dur; }
+    class Line { public string id, spk, en, ar, audio; public float offset, speechEnd; public Vector2[] pauses = new Vector2[0]; }
     static Dictionary<string, Line> lines;
     static StringTableCollectionRef subtitles;
     struct StringTableCollectionRef { public UnityEditor.Localization.StringTableCollection col; }
@@ -87,6 +77,7 @@ public static class CowardMeetingBuilder
     public static void Build()
     {
         LoadLines();
+        BakeLoopedWalk("Careful_Walk_Male", CarefulWalk, CowardArrive + 1.5f);
         var alley1 = GameObject.Find("Alley 1 Gameplay");
         if (alley1 == null) { Debug.LogError("[CowardMeeting] Alley 1 Gameplay not found - open the Game scene."); return; }
 
@@ -102,10 +93,15 @@ public static class CowardMeetingBuilder
         var mK1 = Mark(marks, "K1", K1, K1Yaw);
         Mark(marks, "CowardWalkStart", WalkStart, WalkYaw);
         Mark(marks, "C1", C1, CowardYaw);
-        Mark(marks, "C2", C2, CowardYaw);
-        Mark(marks, "KB", KB, K1YawBlock);
-        Mark(marks, "G", G, BlockYaw);
-        var mSkip = Mark(marks, "KhalidAfterSkip", KB, K1YawBlock);
+        Mark(marks, "EastIn", EastIn, 90f);
+        PlanWalks();
+        // "I'm not leaving.": he looks away from the coward, off to his right and a little down
+        var mLookAway = Mark(marks, "KhalidLookAway", K1 + Quaternion.Euler(0f, K1Yaw + 70f, 0f) * Vector3.forward * 3f + Vector3.up * 0.8f, 0f);
+        // the glass breaks in a window up in the alley's north wall, on his left a few metres ahead of where he stops
+        Vector3 stopAt = WalkPos(WalkS(endWalk, EndStop));
+        var mGlass = Mark(marks, "GlassWindow", new Vector3(stopAt.x + 3f, Floor + 4.3f, -30.5f), 0f);
+        // a skip puts him where the walk leaves him
+        var mSkip = Mark(marks, "KhalidAfterSkip", WalkPos(endWalk.s[endWalk.s.Count - 1]), 90f);
         Mark(marks, "EXIT_FogLine", ExitEnd, 0f);
 
         RestoreKnifeAlleyWall();
@@ -142,13 +138,20 @@ public static class CowardMeetingBuilder
         var ambGroup = Group("Ambience", "Ambient", "SFX", "Master");
         var voKhalid = Source(audioRoot, "VO_Khalid", Vector3.zero, false, 1f, voGroup);
         var voCoward = Source(audioRoot, "VO_Coward", Vector3.zero, false, 1f, voGroup);
+        // the voices come from the speakers' heads, heard from wherever the shot is, with a little of the alley on them
+        // (2D they sounded like someone talking into a mic). Khalid's is carried to his head by the controller.
+        Voice(voKhalid); Voice(voCoward);
+        voCoward.transform.SetParent(cowardHead, false);
+        voCoward.transform.localPosition = Vector3.zero;
         var sfxAlcove = Source(audioRoot, "SFX_Coward", (WalkStart + C1) * 0.5f + Vector3.up * 0.3f, true, 1f, sfxGroup);
         var sfx2D = Source(audioRoot, "SFX_2D", Vector3.zero, false, 0.9f, sfxGroup);
         var wind = Source(audioRoot, "Wind", Vector3.zero, false, 0.32f, ambGroup);
         var windGust = Source(audioRoot, "WindGust", Vector3.zero, false, 0.55f, ambGroup);
         var drone = Source(audioRoot, "Drone", Vector3.zero, false, 0.5f, ambGroup);
-        var glass = Source(audioRoot, "GlassFar", new Vector3(-170f, 4f, 15f), true, 1f, sfxGroup);
-        glass.maxDistance = 250f; glass.rolloffMode = AudioRolloffMode.Linear; glass.minDistance = 5f;
+        var music = Source(audioRoot, "Music", Vector3.zero, false, MusicVolume, Group("Music", "Ambience", "Ambient", "Master"));
+        // in that window, close by: loud and placed (it was 20 m off up the alley)
+        var glass = Source(audioRoot, "Glass", mGlass.position, true, 1f, sfxGroup);
+        glass.minDistance = 3f; glass.maxDistance = 45f; glass.rolloffMode = AudioRolloffMode.Logarithmic;
         var reverb = glass.gameObject.AddComponent<AudioReverbFilter>(); reverb.reverbPreset = AudioReverbPreset.Cave;
 
         // ── cameras ──
@@ -173,8 +176,6 @@ public static class CowardMeetingBuilder
         var cOtsC = Vcam(cams, "CM_OTS_Coward", Ax(3.07f, 0.75f, 1.95f), kHead, 30f, khalidHead, 0.4f, noiseMild, 0.35f, 0.35f, 0.42f);
         // Khalid's single, off his eyeline to the coward (closer to it, he looked into the lens)
         var cKCU = Vcam(cams, "CM_Khalid_CU", Ax(1.3f, 0.7f, 1.68f), kHead, 34f, khalidHead, 0.42f, null, 0f, 0.35f, 0.5f);
-        // "Look, no knife": from beside Khalid's gun at chest height, the coward head to knees with his open hands
-        var cHands = Vcam(cams, "CM_Hands_Insert", Ax(0.3f, 0.65f, 1.4f), At(C1, 1.2f), 46f, cowardChest, 0.6f, null, 0f, 0.35f, 0.55f);
         // the two of them in profile, Khalid left, the coward right, the west wall behind
         var cSide = Vcam(cams, "CM_Side_Two", Ax(1.11f, 3.6f, 1.55f), Ax(1.11f, 0f, 1.15f), 45f);
         // the coward's singles: from between them on Khalid's side, he looks off frame-left at Khalid, pallets behind.
@@ -182,26 +183,12 @@ public static class CowardMeetingBuilder
         var cCowardCU = Vcam(cams, "CM_Coward_CU", Ax(0.95f, 0.55f, 1.6f), c1Head, 35f, cowardChest, 0.6f, null, 0f, 0.6f, 0.68f);
         var cCowardCUPush = Vcam(cams, "CM_Coward_CU_Hold", Ax(0.95f, 0.55f, 1.6f), c1Head, 35f, cowardChest, 0.6f, null, 0f, 0.6f, 0.68f);
         Drift(cCowardCUPush, new Vector3(0, 0, 0.1f), -1.2f, 7f);
-        // one of the "coward" papers on the ground by his feet, seen from almost straight above
-        var paper = NearestPaper(C1, 2.5f);
-        var cPaper = Vcam(cams, "CM_Paper_Insert", paper + new Vector3(-0.18f, 0.93f, -0.18f), paper, 40f);
         var cCowardMCU = Vcam(cams, "CM_Coward_MCU", Ax(0.8f, 0.6f, 1.55f), c1Head, 36f, cowardChest, 0.55f, null, 0f, 0.6f, 0.62f);
-        // block / grab / ending: all from Khalid's right-hand (east) side of the grab line too
-        Vector3 blockMid = (KB + C2) * 0.5f, grabMid = (KB + G) * 0.5f;
-        // (close in and wide: further out, the barrel sits in the right-hand foreground)
-        var cBlock = Vcam(cams, "CM_Block_Wide", At(blockMid + GR * 2.6f, 1.6f), At(blockMid, 1.1f), 48f);
-        var cGrab = Vcam(cams, "CM_Grab_Close", At(grabMid + GR * 2.4f, 1.6f), At(grabMid, 1.38f), 42f, null, 0.5f, noiseStrong, 1.0f);
-        // "For what?!": a tight profile two-shot, both faces and the held arm, punched in on the grab's side angle (from
-        // behind Khalid his back and sleeve hid the coward, and the barrel filled the rest)
-        var cCowardCUGrab = Vcam(cams, "CM_Grab_Tight", At(grabMid + GR * 1.85f, 1.65f), At(grabMid, 1.55f), 40f);
-        var cSideEnd = Vcam(cams, "CM_Side_Two_End", At(grabMid + GR * 2.6f + GF * 0.5f, 1.55f), At(grabMid + GF * 0.5f, 1.15f), 48f);
-        // he backs off toward the barrel (it is where he runs): from far enough round Khalid's right that he isn't behind Khalid
-        var cOtsKEnd = Vcam(cams, "CM_OTS_Khalid_End", At(KB - GF * 1.8f + GR * 1.8f, 1.85f), At(BackedOff, 1.45f), 32f, cowardHead, 0.62f, noiseMild, 0.5f, 0.5f, 0.42f);
-        // from the crossroads' south-east corner: Khalid in the foreground, the coward running off north past the car.
-        // Placed already looking at where the run starts, so the composer doesn't whip round on the first frame.
-        var cExit = Vcam(cams, "CM_Exit_Track", new Vector3(-172.9f, 3.1f, -31.5f), At(BackedOff, 1.0f), 45f, cowardHips, 0.5f, null, 0f, 0.9f);
-        // behind Khalid, looking up the alley where the coward went; blends back into the gameplay camera
-        var cReturn = Vcam(cams, "CM_Return", At(KB - GF * 2.3f + GR * 0.3f, 1.8f), At(KB + GF * 4f, 1.35f), 45f);
+        // following Khalid from behind as he walks off: the player sees his stride falter, never his face
+        var cWalk = FollowCam(cams, "CM_Walk_Behind", player.transform, khalidHead);
+        // from the crossroads' south-east corner (Khalid is past it, in the east alley by then): the coward running off
+        // north past the car. Placed already looking at where the run starts, so the composer doesn't whip round.
+        var cExit = Vcam(cams, "CM_Exit_Track", new Vector3(-172.9f, 3.1f, -31.5f), At(C1, 1.0f), 45f, cowardHips, 0.5f, null, 0f, 0.9f);
 
         var skipUI = BuildSkipUI(root.transform, out var skipFill);
 
@@ -218,12 +205,14 @@ public static class CowardMeetingBuilder
         {
             brain = brain, khalid = khalidAnim, coward = coward, cowardAnim = cowardAnim,
             voK = voKhalid, voC = voCoward, sfxAlcove = sfxAlcove, sfx2D = sfx2D, wind = wind, windGust = windGust, drone = drone, glass = glass,
+            music = music,
         };
+        FindMusic();
 
-        BuildOpen(dOpen, ctx, new[] { cAlleyWide, cSpot, cKMCU, cOtsK, cOtsC, cOtsKPush, cKCU, cHands, cSide, cCowardCU, cPaper, cCowardMCU });
-        BuildA(dA, ctx, new[] { cOtsK, cCowardMCU, cBlock, cGrab, cCowardCUGrab, cKCU });
-        BuildB(dB, ctx, new[] { cOtsK, cCowardCU, cCowardCUPush, cBlock, cGrab, cCowardCUGrab });
-        BuildEnd(dEnd, ctx, new[] { cSideEnd, cOtsKEnd, cExit, cReturn });
+        BuildOpen(dOpen, ctx, new[] { cAlleyWide, cSpot, cKMCU, cOtsK, cOtsC, cOtsKPush, cKCU, cSide, cCowardCU, cCowardCUPush, cCowardMCU });
+        BuildA(dA, ctx, new[] { cCowardCU, cOtsK, cCowardMCU, cWalk });
+        BuildB(dB, ctx);
+        BuildEnd(dEnd, ctx, new[] { cCowardMCU, cWalk, cCowardCU, cExit });
 
         // ── controller ──
         // across the rope gate's opening (z -33.7..-30.9), a step out into the crossroads
@@ -233,6 +222,8 @@ public static class CowardMeetingBuilder
         cs.open = dOpen; cs.versionA = dA; cs.versionB = dB; cs.end = dEnd;
         cs.knifeHandle = AssetDatabase.LoadAssetAtPath<Item>("Assets/Resources/Items/Key items/Knife Handle.asset");
         cs.coward = coward; cs.cowardMover = mover; cs.cowardHead = cowardHead;
+        cs.khalidVoice = voKhalid.transform;
+        cs.lookPoints = new[] { mLookAway, mGlass };
         var enemies = alley1.transform.Find("EnemiesAllGroups");
         cs.alleyEnemiesRoot = enemies;
         cs.skipKhalidMark = mSkip;
@@ -250,46 +241,51 @@ public static class CowardMeetingBuilder
             new CowardMeetingCutscene.Phase
             {
                 name = "Open",
-                // walks in, sees someone coming out of the dust (head first), stops and turns to him
+                // walks in, sees someone coming out of the dust (head first), stops and turns to him, and stays there
                 khalid = new[] { Key(0f, K0, 90f, true), Key(KhalidWalkEnd, K1, KhalidWalkYaw), Key(4.1f, K1, KhalidWalkYaw), Key(5.1f, K1, K1Yaw) },
-                headLook = new[] { new Vector2(0f, 0f), new Vector2(3.4f, 0.8f), new Vector2(5.3f, 0f) },
+                headLook = new[] { new Vector2(0f, 0f), new Vector2(3.4f, 0.8f), new Vector2(5.3f, 0f), new Vector2(gunDown + 1.4f, 0.6f),
+                                   new Vector2(lookAwayAt, 1f), new Vector2(lookBackAt + 0.8f, 0.6f) },
+                // "I'm not leaving." looking off toward the alley, then back at the coward to ask about the boy
+                headLookAt = new[] { new Vector2(0f, -1f), new Vector2(lookAwayAt, 0f), new Vector2(lookBackAt, -1f) },
+                // he looks at Khalid while they talk, off into the fog for the boy
+                cowardLook = new[] { new Vector2(0f, 0f), new Vector2(7.2f, 0.7f), new Vector2(fogFrom, 0f), new Vector2(fogTo + 0.2f, 0.7f) },
+                // "...Other versions?": the gun dips a little; the lower takes over from gunDown
+                gunDip = new[] { new Vector2(0f, 0f), new Vector2(dipStart, 0f), new Vector2(dipStart + 0.6f, 1f), new Vector2(gunDown, 1f), new Vector2(gunDown + 0.45f, 0f) },
                 ambience = new[] { new Vector2(0f, 1f), new Vector2(7.0f, 0.71f) },
             },
             new CowardMeetingCutscene.Phase
             {
                 name = "A",
-                // "I have to." - he turns north and steps off to go past; the coward side-steps into his way
-                khalid = new[] { Key(0f, K1, K1Yaw), Key(AStepStart, K1, K1Yaw), Key(AStepStart + KhalidStepTime, KB, K1YawBlock) },
-                cowardLook = new[] { new Vector2(0f, 0f), new Vector2(14.8f, 0.85f) },
-                grab = new[] { new Vector2(0f, 0f), new Vector2(AHeld - 0.3f, 1f) },
-                // shakes him on "Can't you hear me?!" and "For what?!", holds still on "Let go of me."
-                tug = new[] { new Vector2(0f, 0f), new Vector2(15.4f, 0.05f), new Vector2(18.8f, 0.008f), new Vector2(21.2f, 0.06f), new Vector2(23.7f, 0f) },
-                headLook = new[] { new Vector2(0f, 0f), new Vector2(15.0f, 0.85f) },   // and he looks down at him
+                // stands until "Thanks.", then - on the cut - is walking down the east alley
+                // on "Thanks." (the cut to the walk cam) he is at the alley mouth at once - no blended frame in between
+                khalid = new[] { Key(0f, K1, K1Yaw) }.Concat(WalkKeys(aWalk).Select((k, i) => { k.cut = i == 0; return k; })).ToArray(),
+                headLook = new[] { new Vector2(0f, 0.6f), new Vector2(AWalkStart, 0f) },
+                cowardLook = new[] { new Vector2(0f, 0.7f), new Vector2(AWalkStart + 1f, 0.85f) },
                 ambience = new[] { new Vector2(0f, 0.71f) },
             },
             new CowardMeetingCutscene.Phase
             {
                 name = "B",
-                khalid = new[] { Key(0f, K1, K1Yaw), Key(BStepStart, K1, K1Yaw), Key(BStepStart + KhalidStepTime, KB, K1YawBlock) },
-                cowardLook = new[] { new Vector2(0f, 0f), new Vector2(30.3f, 0.85f) },
-                grab = new[] { new Vector2(0f, 0f), new Vector2(BHeld - 0.3f, 1f) },
-                tug = new[] { new Vector2(0f, 0f), new Vector2(30.1f, 0.05f), new Vector2(33.7f, 0.008f), new Vector2(36.1f, 0.06f), new Vector2(38.6f, 0f) },
-                headLook = new[] { new Vector2(0f, 0f), new Vector2(30.5f, 0.85f) },
+                khalid = new[] { Key(0f, K1, K1Yaw) },
                 ambience = new[] { new Vector2(0f, 0.71f) },
             },
             new CowardMeetingCutscene.Phase
             {
                 name = "End",
-                // turns to watch him run off north
-                khalid = new[] { Key(0f, KB, K1YawBlock), Key(8.3f, KB, K1YawBlock), Key(9.4f, KB, 355f) },
-                cowardLook = new[] { new Vector2(0f, 0.85f), new Vector2(2.0f, 0f) },
-                grab = new[] { new Vector2(0f, 1f), new Vector2(2.0f, 0f) },
-                headLook = new[] { new Vector2(0f, 0.85f), new Vector2(2.0f, 0f) },
-                ambience = new[] { new Vector2(0f, 0.5f), new Vector2(10.5f, 1f) },
+                khalid = WalkKeys(endWalk).ToArray(),
+                // the glass: he looks up at the window on his left, then back ahead
+                headLook = new[] { new Vector2(0f, 0f), new Vector2(LookUpTime, 1f), new Vector2(LookBackTime, 0f) },
+                headLookAt = new[] { new Vector2(0f, 1f) },
+                // follows Khalid with his eyes; the glass takes them; he looks after him once more, then bolts
+                cowardLook = new[] { new Vector2(0f, 0.85f), new Vector2(GlassTime, 0f), new Vector2(InsaneTime - 0.4f, 0.6f), new Vector2(BoltTime - 0.1f, 0f) },
+                ambience = new[] { new Vector2(0f, 0.71f), new Vector2(BoltTime + 2.3f, 1f) },
             },
         };
         // the hidden gameplay camera is put behind him under the last shot, before the blend back
-        cs.gameplayCameraSnapTime = 10.6f;
+        cs.gameplayCameraSnapTime = BoltTime + 2.5f;
+        cs.scaredWalkEnd = CowardArrive;
+        // hands up as the gun comes up (raise ends GunUp + 0.8), down once he says he believes him
+        cs.surrenderUp = GunUp + 0.8f; cs.surrenderDown = handsDown;
 
         // Alley 2 visited = an Alley 2 entrance door was used
         var flagObj = new GameObject("Alley2VisitedFlag");
@@ -317,211 +313,202 @@ public static class CowardMeetingBuilder
     class Ctx
     {
         public CinemachineBrain brain; public Animator khalid, cowardAnim; public GameObject coward;
-        public AudioSource voK, voC, sfxAlcove, sfx2D, wind, windGust, drone, glass;
+        public AudioSource voK, voC, sfxAlcove, sfx2D, wind, windGust, drone, glass, music;
     }
 
     // Khalid walks from the gate to K1 (~4.5 m) by this time
     const float KhalidWalkEnd = 3.9f;
-    // his one step toward the alley (K1 -> KB) in A / B
-    const float AStepStart = 10.3f, BStepStart = 24.2f, KhalidStepTime = 0.9f;
 
-    // he aims at the coward from GunUp until "Look, no knife", then lowers the gun to his side for the rest
-    const float GunUp = 6.3f, GunDown = 26.0f;
+    // Khalid's aim for the scene: a two-handed pistol stance retargeted from Mixamo mocap ("Pistol Idle - Idle With Aimed
+    // Pistol"), with a raise (gun up into the chest, pressed out, right foot stepping back into the stance) and a lower
+    // (down to a low ready, to his side, foot back) built on it in Blender - AnimationTools/khalid_gun_aim.py. The raise
+    // starts and the lower ends on his idle stand pose (idle time 0), the aim loop starts on the raise's last pose.
+    const string GunRaise = Dir + "/Khalid_GunRaise.anim", GunAim = Dir + "/Khalid_GunAim.anim", GunLower = Dir + "/Khalid_GunLower.anim";
+    const float GunRaiseTime = 0.8f, GunLowerTime = 34f / 30f;
+    // he aims at the coward from GunUp; the gun dips a little on "...Other versions?" (the controller tips his arms, the
+    // lower clip would lift his foot halfway) and comes down to his side on "Alright... I believe you."
+    const float GunUp = 6.3f;
+    // after "I'm not leaving." (said looking off toward the alley) he looks back at the coward before asking about the boy
+    const float KhalidTurnBack = 1.3f;
 
-    // Khalid's aim for the scene, standing (his gameplay aim is a deep combat crouch that read as a frozen lunge): the
-    // idle body with the aim's arms moved whole onto its shoulders (his rig is flat - forearms/hands are positioned in
-    // root space - so copying the aim's arm curves onto the upright body had stretched the upper arms to 0.45 m)
-    const string AimStand = Dir + "/Khalid_AimStand.anim";
+    // the Open's beats, from the lines as they fall (the lines follow one another, so a pause in one moves the rest);
+    // kStep is just before "You locked me in that store." (the cut to the two of them)
+    static float kStep, dipStart, gunDown, handsDown, lookAwayAt, lookBackAt, fogFrom, fogTo;
+
+    // the coward's body clip phase where Open / A leave off, so the next timeline carries on from it
+    static float openEndPhase, aEndPhase;
 
     static void BuildOpen(PlayableDirector d, Ctx c, CinemachineVirtualCameraBase[] v)
     {
         var tl = NewTimeline(d, "TL_Coward_Open");
-        const float len = 57f;
-        Activation(tl, d, c.coward, 0, len, ActivationTrack.PostPlaybackState.LeaveAsIs);
+        var (voK, voC) = VoiceTracks(tl, d, c);
+        // the gaps between lines (user: longer, let each line land): ~0.8-1.3 s, longest where the answer is weighed
+        var c1 = Say(tl, voK, voC, "CW2_01", 6.6f);               // "Wait, wait! Don't shoot!" as the gun comes up
+        var k1 = Say(tl, voK, voC, "CW2_02", c1.end + 0.9f);
+        var c2 = Say(tl, voK, voC, "CW2_03", k1.end + 0.8f);
+        var k2 = Say(tl, voK, voC, "CW2_04", c2.end + 1.1f);      // "...Other versions?" - taking it in
+        var c3 = Say(tl, voK, voC, "CW2_05", k2.end + 0.8f);
+        var k3 = Say(tl, voK, voC, "CW2_06", c3.end + 1.2f);      // a breath, the gun coming down
+        var c4 = Say(tl, voK, voC, "CW2_07", k3.end + 0.9f);
+        var k4 = Say(tl, voK, voC, "CW2_08", c4.end + 1.0f);
+        var k5 = Say(tl, voK, voC, "CW2_09", k4.end + KhalidTurnBack);
+        var c5 = Say(tl, voK, voC, "CW2_10", k5.end + 1.0f);
+        var k6 = Say(tl, voK, voC, "CW2_11", c5.end + 1.0f);
+        float len = k6.end + 0.6f;
+        kStep = k1.start - 0.2f; dipStart = k2.start - 0.25f; gunDown = k3.start - 0.2f; handsDown = k3.end + 0.15f;
+        lookAwayAt = k4.start - 0.25f; lookBackAt = k4.end + 0.1f; fogFrom = c5.start; fogTo = c5.end;
 
+        Activation(tl, d, c.coward, 0, len, ActivationTrack.PostPlaybackState.LeaveAsIs);
         var k = Anim(tl, d, "Khalid", c.khalid, TrackOffset.ApplySceneOffsets);
         KClip(k, "rig|khalid_walk", 0f, KhalidWalkEnd + 0.25f, true);   // replaced below by Walk_SH if present
-        // the gameplay aim_raise clip crouches into the combat stance: the gun comes up by cross-fading instead
-        KClip(k, "rig|khalid_idle", KhalidWalkEnd - 0.15f, GunUp + 0.4f, true);
-        KClip(k, AimStand, GunUp, GunDown + 0.6f, true);
-        // "Look, no knife" -> he lowers the gun to his side
-        KClip(k, "rig|khalid_idle", GunDown, len, true, 0.6f);
+        KClip(k, "rig|khalid_idle", KhalidWalkEnd - 0.15f, GunUp + 0.15f, true);
+        KClip(k, GunRaise, GunUp, GunUp + GunRaiseTime, false);
+        KClip(k, GunAim, GunUp + GunRaiseTime - 0.05f, gunDown + 0.15f, true);
+        // "Alright... I believe you." -> the gun down to his side
+        KClip(k, GunLower, gunDown, gunDown + GunLowerTime, false);
+        KClip(k, "rig|khalid_idle", gunDown + GunLowerTime - 0.1f, len, true);
 
-        // walks down the alley not looking; startles when he sees Khalid, then cowers as the gun comes up
+        // creeps down the alley glancing round (the head from Look_Around_Nervously on a head-only layer over the walk;
+        // the controller bends the rest of him into a scared posture, see CowardMeetingCutscene.PoseLayers); startles
+        // when he sees Khalid and throws his hands up (arm IK in the controller, from surrenderUp to surrenderDown) while
+        // his body fidgets and talks underneath
         var cw = Anim(tl, d, "Coward", c.cowardAnim, TrackOffset.ApplyTransformOffsets);
-        var walk = cw.CreateClip(AssetDatabase.LoadAssetAtPath<AnimationClip>(Dir + "/Coward_Walk.anim"));
+        var walk = cw.CreateClip(AssetDatabase.LoadAssetAtPath<AnimationClip>(CarefulWalk));
         walk.start = 0f; walk.duration = CowardArrive + 0.1f;
         Offsets(walk, WalkStart, WalkYaw + WalkHeadingFix, false);
-        Chain(cw, "Reacting_Surprised", CowardArrive - 0.25f, GunUp + 0.6f, C1, CowardYaw, 0.2f);
-        Chain(cw, "Terrified", GunUp + 0.1f, 14.8f, C1, CowardYaw, TerrifiedIn);
-        Chain(cw, "Talking_TwoHands", 14.3f, 22.6f, C1, CowardYaw);
-        Chain(cw, "Hands_Forward_Gesture", 22.1f, 26.4f, C1, CowardYaw);
-        // calmer once the gun is down: upright and jumpy (Terrified's deep crouch hid his face in every close-up)
-        Chain(cw, "Nervously_Look_Around", 25.9f, 42.7f, C1, CowardYaw);
-        Chain(cw, "Look_Over_Shoulder", 42.2f, 42.2f + Mixamo("Look_Over_Shoulder").length, C1, CowardYaw);
-        Chain(cw, "Nervously_Look_Around", 45.5f, 51.0f, C1, CowardYaw, 2.0f);
-        Chain(cw, "Talking_TwoHands", 50.5f, 54.6f, C1, CowardYaw);       // "...Is he yours?"
-        Chain(cw, "Nervously_Look_Around", 54.1f, len, C1, CowardYaw, 4.0f);
+        var looks = tl.CreateTrack<AnimationTrack>(cw, "Coward head (looking round)");
+        looks.avatarMask = HeadMask();
+        var look = looks.CreateClip(Mixamo("Look_Around_Nervously"));
+        look.start = 0f; look.duration = CowardArrive - 0.2f; look.easeOutDuration = 0.5f;
+        ((AnimationPlayableAsset)look.asset).loop = AnimationPlayableAsset.LoopMode.On;
+        Chain(cw, "Reacting_Surprised", CowardArrive - 0.25f, 7.4f, C1, CowardYaw, 0.2f);
+        Chain(cw, "Nervously_Look_Around", 7.0f, c2.start + 0.1f, C1, CowardYaw);
+        Chain(cw, "Talking_TwoHands", c2.start - 0.3f, c2.end + 0.3f, C1, CowardYaw);    // "It wasn't me!..."
+        Chain(cw, "Nervously_Look_Around", c2.end, c4.start + 0.1f, C1, CowardYaw);
+        Chain(cw, "Talking_TwoHands", c4.start - 0.3f, c4.end + 0.3f, C1, CowardYaw);    // "Look, I'm trying to help you..."
+        Chain(cw, "Nervously_Look_Around", c4.end, c5.start + 0.2f, C1, CowardYaw);
+        Chain(cw, "Look_Around_Nervously", c5.start - 0.1f, c5.end + 0.3f, C1, CowardYaw); // peering into the fog for the boy
+        openEndPhase = Chain(cw, "Nervously_Look_Around", c5.end, len, C1, CowardYaw);
 
         var cm = Cameras(tl, d, c.brain);
-        Shot(cm, d, v[0], 0f, 4f);   // (opens under the fade from black)
-        Shot(cm, d, v[1], 4f, GunUp);   // he spots him
-        Shot(cm, d, v[2], GunUp, 8f);   // the gun comes up
-        Shot(cm, d, v[3], 8f, 12.3f);
-        Shot(cm, d, v[4], 12.3f, 14.3f);
-        Shot(cm, d, v[5], 14.3f, 19.5f);
-        Shot(cm, d, v[6], 19.5f, 22.2f);
-        Shot(cm, d, v[7], 22.2f, 26f);
-        Shot(cm, d, v[8], 26f, 32.5f);
-        Shot(cm, d, v[9], 32.5f, 35f);
-        Shot(cm, d, v[3], 35f, 37.5f);
-        Shot(cm, d, v[4], 37.5f, 39.4f);
-        Shot(cm, d, v[3], 39.4f, 41f);
-        Shot(cm, d, v[10], 41f, 42.5f);
-        Shot(cm, d, v[11], 42.5f, 46.4f);
-        Shot(cm, d, v[8], 46.4f, 50.9f);    // "I'm looking for a boy."
-        Shot(cm, d, v[9], 50.9f, 54.4f);    // "...Is he yours?"
-        Shot(cm, d, v[6], 54.4f, len);      // "...He's my brother."
+        Shot(cm, d, v[0], 0f, 4f);                                   // (opens under the fade from black)
+        Shot(cm, d, v[1], 4f, GunUp);                                // he spots him
+        Shot(cm, d, v[2], GunUp, 8f);                                // the gun comes up - "Wait, wait!"
+        Shot(cm, d, v[3], 8f, kStep);                                // hands up, over the gun
+        Shot(cm, d, v[7], kStep, c2.start - 0.15f);                  // "You locked me in that store." gun steady
+        Shot(cm, d, v[8], c2.start - 0.15f, c2.phrases[2] - 0.1f);
+        Shot(cm, d, v[5], c2.phrases[2] - 0.1f, k2.start - 0.15f);
+        Shot(cm, d, v[6], k2.start - 0.15f, c3.start - 0.15f);       // "...Other versions?"
+        Shot(cm, d, v[10], c3.start - 0.15f, gunDown - 0.1f);
+        Shot(cm, d, v[7], gunDown - 0.1f, c4.start - 0.1f);          // the gun comes down, so do his hands
+        Shot(cm, d, v[8], c4.start - 0.1f, c4.phrases[2] - 0.1f);
+        Shot(cm, d, v[3], c4.phrases[2] - 0.1f, k4.start - 0.15f);
+        Shot(cm, d, v[6], k4.start - 0.15f, c5.start - 0.15f);       // "I'm not leaving." - he looks back - "Have you seen a kid..."
+        Shot(cm, d, v[9], c5.start - 0.15f, c5.phrases[2] - 0.1f);
+        Shot(cm, d, v[7], c5.phrases[2] - 0.1f, k6.start - 0.15f);
+        Shot(cm, d, v[6], k6.start - 0.15f, len);                    // "He's my brother. Where did he go?"
 
-        var (voK, voC) = VoiceTracks(tl, d, c);
-        Say(tl, voK, voC, "CW1_001", 8.2f); Say(tl, voK, voC, "CW1_002", 12.5f); Say(tl, voK, voC, "CW1_003", 14.4f);
-        Say(tl, voK, voC, "CW1_004", 19.6f); Say(tl, voK, voC, "CW1_005", 22.3f); Say(tl, voK, voC, "CW1_006", 27.6f);
-        Say(tl, voK, voC, "CW1_007", 29.5f); Say(tl, voK, voC, "CW1_008", 31.0f); Say(tl, voK, voC, "CW1_009", 35.1f);
-        Say(tl, voK, voC, "CW1_010", 37.6f); Say(tl, voK, voC, "CW1_011", 39.5f); Say(tl, voK, voC, "CW1_012", 43.4f);
-        Say(tl, voK, voC, "CW1_013", 46.6f); Say(tl, voK, voC, "CW1_014", 51.05f); Say(tl, voK, voC, "CW1_015", 54.5f);
-
-        // his footsteps in the sand (a step every 0.63 s of the walk)
+        // his footsteps in the sand (a step every half cycle of the careful walk)
         var sfx = AudioTrackFor(tl, d, "SFX (coward)", c.sfxAlcove);
-        for (int i = 0; i < 9; i++) Sound(sfx, "Assets/Audio/Footsteps/Sand/Sand" + (i % 4 + 1) + ".mp3", 0.3f + i * 0.63f);
+        for (int i = 0; 0.3f + i * CarefulStep < CowardArrive; i++) Sound(sfx, "Assets/Audio/Footsteps/Sand/Sand" + (i % 4 + 1) + ".mp3", 0.3f + i * CarefulStep);
         var sfx2 = AudioTrackFor(tl, d, "SFX", c.sfx2D);
         Sound(sfx2, "Assets/Audio/NewSFX/pulls_out_gun.wav", GunUp);
-        var amb = AudioTrackFor(tl, d, "Ambience (wind)", c.wind);
-        Loop(amb, AudioDir + "/Wind_Loop.wav", 0f, len);
-        var dr = AudioTrackFor(tl, d, "Drone", c.drone);
-        var drClip = Loop(dr, AudioDir + "/Drone_Loop.wav", 32.5f, len); drClip.easeInDuration = 3f;
+        Loop(AudioTrackFor(tl, d, "Ambience (wind)", c.wind), AudioDir + "/Wind_Loop.wav", 0f, len);
+        var drClip = Loop(AudioTrackFor(tl, d, "Drone", c.drone), AudioDir + "/Drone_Loop.wav", c2.start, len); drClip.easeInDuration = 3f;
+        Music(tl, d, c, len, true, false);
         Finish(tl);
     }
+
+    // Version A: "The alley by the school..." - "Thanks." cuts the coward off, on a cut to Khalid from behind already walking
+    // down the east alley (no turn shown); "Wait! He went in there hours ago!" behind him and his stride falters
+    static float AWalkStart, AThanks;
+    // "The alley by the school." - his answer to "Where did he go?" (Open ends 0.6 s after it)
+    const float AFirstLine = 0.7f;
 
     static void BuildA(PlayableDirector d, Ctx c, CinemachineVirtualCameraBase[] v)
     {
         var tl = NewTimeline(d, "TL_Coward_A");
-        const float len = 25.5f;
+        float len = aWalk.End;
+        var (voK, voC) = VoiceTracks(tl, d, c);
+        var c6 = Say(tl, voK, voC, "CW2_A1", AFirstLine);
+        Say(tl, voK, voC, "CW2_A2", AThanks);
+        var c7 = Say(tl, voK, voC, "CW2_A3", AWalkStart + FalterAt - LineLength("CW2_A3") - 0.05f);   // ends as his stride falters
+
         Activation(tl, d, c.coward, 0, len, ActivationTrack.PostPlaybackState.LeaveAsIs);
-        // (the retargeted "pull free" clip read as Khalid being shoved round; he holds still while held)
         var k = Anim(tl, d, "Khalid", c.khalid, TrackOffset.ApplySceneOffsets);
-        KhalidBlock(k, AStepStart, len);
+        KClip(k, "rig|khalid_idle", 0f, AWalkStart + 0.02f, true);
+        var sfx2 = AudioTrackFor(tl, d, "SFX", c.sfx2D);
+        aWalkPhase = WalkClips(k, sfx2, aWalk, AWalkStart, len, 0f);
 
         var cw = Anim(tl, d, "Coward", c.cowardAnim, TrackOffset.ApplyTransformOffsets);
-        Chain(cw, "Talking_TwoHands", 0f, 4.3f, C1, CowardYaw);
-        // "People go in. They don't come out." - looking round at the alleys
-        Chain(cw, "Nervously_Look_Around", 3.8f, 10.9f, C1, CowardYaw);
-        // steps into his way and stands there, arms out (a crouched pose doesn't block anyone)
-        CClip(cw, "Left_Strafe_Walk", 10.6f, 11.1f, C1, CowardYaw, false);
-        Chain(cw, "Hands_Forward_Gesture", 10.85f, 14.3f, C2, BlockYaw);
-        // steps up to him, grabs him by the shoulders (CutsceneArmIK, weight keys in the phase) and pleads holding on
-        // (Intercepting flung one arm out and lunged into him; Yelling_Lean is a crouched yell that read as sitting on air)
-        float held = StepIn(cw, 14.0f);
-        APleadPhase = Chain(cw, "Talking_TwoHands", held - 0.3f, len, G, BlockYaw);
-        AHeld = held;
+        Chain(cw, "Nervously_Look_Around", 0f, AFirstLine + 0.3f, C1, CowardYaw, openEndPhase);
+        Chain(cw, "Talking_TwoHands", AFirstLine, c6.end + 0.2f, C1, CowardYaw);
+        Chain(cw, "Nervously_Look_Around", c6.end - 0.1f, c7.start + 0.2f, C1, CowardYaw);
+        aEndPhase = Chain(cw, "Hands_Forward_Gesture", c7.start - 0.1f, len, C1, CowardYaw);   // "Wait!"
 
         var cm = Cameras(tl, d, c.brain);
-        Shot(cm, d, v[0], 0f, 4.0f);
-        Shot(cm, d, v[1], 4.0f, 8.7f);
-        Shot(cm, d, v[5], 8.7f, 10.6f);     // "I have to."
-        Shot(cm, d, v[2], 10.6f, 14.0f);
-        Shot(cm, d, v[3], 14.0f, 21.0f);
-        Shot(cm, d, v[4], 21.0f, len);
+        Shot(cm, d, v[0], 0f, c6.phrases[2] - 0.1f);
+        Shot(cm, d, v[1], c6.phrases[2] - 0.1f, c6.phrases[3] - 0.1f);
+        Shot(cm, d, v[2], c6.phrases[3] - 0.1f, AThanks);   // "Come with me instead, we can-"
+        Shot(cm, d, v[3], AThanks, len);                    // "Thanks." - behind him, already walking down the alley
 
-        var (voK, voC) = VoiceTracks(tl, d, c);
-        Say(tl, voK, voC, "CW1_A01", 0.3f); Say(tl, voK, voC, "CW1_A02", 4.3f); Say(tl, voK, voC, "CW1_A03", 8.8f);
-        Say(tl, voK, voC, "CW1_A04", 11.3f); Say(tl, voK, voC, "CW1_A05", 12.9f); Say(tl, voK, voC, "CW1_A06", 15.3f);
-        Say(tl, voK, voC, "CW1_A07", 19.1f); Say(tl, voK, voC, "CW1_A08", 21.2f);
-
-        var sfx = AudioTrackFor(tl, d, "SFX (coward)", c.sfxAlcove);
-        Sound(sfx, "Assets/Audio/Footsteps/Sand/Sand2.mp3", 10.7f); Sound(sfx, "Assets/Audio/Footsteps/Sand/Sand3.mp3", 10.95f);
-        Sound(sfx, "Assets/Audio/Cloth/Cloth rip edited.mp3", 15.1f, 0.5f);
         Loop(AudioTrackFor(tl, d, "Ambience (wind)", c.wind), AudioDir + "/Wind_Loop.wav", 0f, len);
         Loop(AudioTrackFor(tl, d, "Drone", c.drone), AudioDir + "/Drone_Loop.wav", 0f, len);
+        Music(tl, d, c, len, false, false);
+        FixedLength(tl, len);
         Finish(tl);
     }
 
-    static void BuildB(PlayableDirector d, Ctx c, CinemachineVirtualCameraBase[] v)
+    // Version B (Alley 2 already visited) isn't written yet: an empty stand-in, versionBEnabled stays off
+    static void BuildB(PlayableDirector d, Ctx c)
     {
         var tl = NewTimeline(d, "TL_Coward_B");
-        const float len = 39.3f;
-        Activation(tl, d, c.coward, 0, len, ActivationTrack.PostPlaybackState.LeaveAsIs);
-        var k = Anim(tl, d, "Khalid", c.khalid, TrackOffset.ApplySceneOffsets);
-        KhalidBlock(k, BStepStart, len);
-
-        var cw = Anim(tl, d, "Coward", c.cowardAnim, TrackOffset.ApplyTransformOffsets);
-        Chain(cw, "Talking_TwoHands", 0f, 4.0f, C1, CowardYaw);
-        Chain(cw, "Terrified", 3.5f, 24.8f, C1, CowardYaw, TerrifiedIn);
-        CClip(cw, "Left_Strafe_Walk", 24.5f, 25.0f, C1, CowardYaw, false);
-        Chain(cw, "Hands_Forward_Gesture", 24.75f, 29.8f, C2, BlockYaw);
-        float held = StepIn(cw, 29.5f);
-        Chain(cw, "Talking_TwoHands", held - 0.3f, len, G, BlockYaw);
-        BHeld = held;
-
-        var cm = Cameras(tl, d, c.brain);
-        Shot(cm, d, v[0], 0f, 8.0f);
-        Shot(cm, d, v[1], 8.0f, 17.2f);
-        Shot(cm, d, v[2], 17.2f, 24.5f);
-        Shot(cm, d, v[3], 24.5f, 29.5f);
-        Shot(cm, d, v[4], 29.5f, 36.0f);
-        Shot(cm, d, v[5], 36.0f, len);
-
-        var (voK, voC) = VoiceTracks(tl, d, c);
-        Say(tl, voK, voC, "CW1_B01", 0.3f); Say(tl, voK, voC, "CW1_B02", 4.0f); Say(tl, voK, voC, "CW1_B03", 8.3f);
-        Say(tl, voK, voC, "CW1_B04", 12.0f); Say(tl, voK, voC, "CW1_B05", 13.3f); Say(tl, voK, voC, "CW1_B06", 15.7f);
-        Say(tl, voK, voC, "CW1_B07", 18.7f); Say(tl, voK, voC, "CW1_B08", 21.1f); Say(tl, voK, voC, "CW1_B09", 25.2f);
-        Say(tl, voK, voC, "CW1_B10", 28.4f); Say(tl, voK, voC, "CW1_B11", 30.0f); Say(tl, voK, voC, "CW1_B12", 33.9f);
-        Say(tl, voK, voC, "CW1_B13", 36.1f);
-
-        var sfx = AudioTrackFor(tl, d, "SFX (coward)", c.sfxAlcove);
-        Sound(sfx, "Assets/Audio/Footsteps/Sand/Sand2.mp3", 24.6f); Sound(sfx, "Assets/Audio/Footsteps/Sand/Sand3.mp3", 24.85f);
-        Sound(sfx, "Assets/Audio/Cloth/Cloth rip edited.mp3", 30.6f, 0.5f);
-        Loop(AudioTrackFor(tl, d, "Ambience (wind)", c.wind), AudioDir + "/Wind_Loop.wav", 0f, len);
-        Loop(AudioTrackFor(tl, d, "Drone", c.drone), AudioDir + "/Drone_Loop.wav", 0f, len);
+        Activation(tl, d, c.coward, 0, 0.1f, ActivationTrack.PostPlaybackState.LeaveAsIs);
         Finish(tl);
     }
+
+    // both versions end the same: "HEY! I'M TRYING TO SAVE YOUR LIFE!" at his back; glass crashes from a window up on his
+    // left, the coward freezes, Khalid stops, looks up at it and back ahead, and walks on; "You're insane..." - a beat -
+    // and the coward bolts north
+    const float GlassTime = 2.3f, LookUpTime = 2.65f, LookBackTime = 4.2f, InsaneTime = 5.4f, BoltTime = 7.3f;
 
     static void BuildEnd(PlayableDirector d, Ctx c, CinemachineVirtualCameraBase[] v)
     {
         var tl = NewTimeline(d, "TL_Coward_End");
-        const float len = 13.5f;
-        Activation(tl, d, c.coward, 0, 12.5f, ActivationTrack.PostPlaybackState.Inactive);
+        float len = endWalk.End;
+        Activation(tl, d, c.coward, 0, BoltTime + 5f, ActivationTrack.PostPlaybackState.Inactive);
 
         var k = Anim(tl, d, "Khalid", c.khalid, TrackOffset.ApplySceneOffsets);
-        KClip(k, "rig|khalid_idle", 0f, len, true);
+        var sfx2 = AudioTrackFor(tl, d, "SFX", c.sfx2D);
+        WalkClips(k, sfx2, endWalk, 0f, EndStop + 0.3f, aWalkPhase);
+        KClip(k, "rig|khalid_idle", EndStop, EndGo + 0.3f, true);
+        WalkClips(k, sfx2, endWalk, EndGo, len, 0f);
 
         var cw = Anim(tl, d, "Coward", c.cowardAnim, TrackOffset.ApplyTransformOffsets);
-        // still pleading where A left off (same point of the clip, so nothing pops), lets go when the glass breaks at 2 s
-        Chain(cw, "Talking_TwoHands", 0f, 2.35f, G, BlockYaw, APleadPhase);
-        Chain(cw, "Reacting_Surprised", 2.0f, 3.45f, GRecoil, BlockYaw, 0.2f);
-        float backEnd = 3.15f + 3.87f * BackOff / 1.68f;
-        CClip(cw, "Walk_Backwards_Fear", 3.15f, backEnd, GRecoil, BlockYaw, false);
-        // he stops with his feet together (2.3 s into the clip) and sinks into the cower from there
-        Chain(cw, "Terrified", backEnd - 0.5f, RunStart + 0.3f, BackedOff, BlockYaw, TerrifiedIn + 0.2f);
-        RunLegs(cw);
+        Chain(cw, "Hands_Forward_Gesture", 0f, GlassTime + 0.25f, C1, CowardYaw, aEndPhase);
+        // the glass: he startles and freezes there (the startle's end, slowed right down), says it quietly, waits, bolts
+        CClip(cw, "Reacting_Surprised", GlassTime, GlassTime + 1.25f, C1, CowardYaw, false);
+        var frozen = CClip(cw, "Reacting_Surprised", GlassTime + 1.2f, BoltTime + 0.15f, C1, CowardYaw, false, 0f, 1.2f);
+        frozen.timeScale = 0.12f;
+        RunLegs(cw, C1, BoltTime);
 
         var cm = Cameras(tl, d, c.brain);
-        Shot(cm, d, v[0], 0f, 4f);
-        Shot(cm, d, v[1], 4f, 8f);
-        Shot(cm, d, v[2], 8f, 10f);   // he's lost in the dust by ~9.5 s
-        var back = Shot(cm, d, v[3], 10f, len); back.easeOutDuration = 1.5f;   // a beat on Khalid, then back to play
+        Shot(cm, d, v[0], 0f, GlassTime);                    // "HEY!"
+        Shot(cm, d, v[1], GlassTime, InsaneTime - 0.35f);    // behind Khalid: he stops, looks up at the window, walks on
+        Shot(cm, d, v[2], InsaneTime - 0.35f, BoltTime);     // "You're insane..." and a beat
+        Shot(cm, d, v[3], BoltTime, BoltTime + 2.3f);        // he runs off into the dust
+        var back = Shot(cm, d, v[1], BoltTime + 2.3f, len); back.easeOutDuration = 1.5f;   // behind Khalid, then back to play
 
         var (voK, voC) = VoiceTracks(tl, d, c);
-        Say(tl, voK, voC, "CW1_E01", 4.4f); Say(tl, voK, voC, "CW1_E02", 8.6f);
+        Say(tl, voK, voC, "CW2_E1", 0.3f); Say(tl, voK, voC, "CW2_E2", InsaneTime);
 
-        Sound(AudioTrackFor(tl, d, "Glass (far)", c.glass), "Assets/Audio/Glass Debris/GlassDestroy.wav", 2.0f);
-        var sfx = AudioTrackFor(tl, d, "SFX (coward)", c.sfxAlcove);
-        Sound(sfx, "Assets/Audio/Footsteps/Sand/Sand1.mp3", 3.6f); Sound(sfx, "Assets/Audio/Footsteps/Sand/Sand4.mp3", 4.5f);
-        var sfx2 = AudioTrackFor(tl, d, "SFX", c.sfx2D);
-        Sound(sfx2, "Assets/Audio/Footsteps/Sand/Sand2.mp3", 8.25f); Sound(sfx2, "Assets/Audio/Footsteps/Sand/Sand3.mp3", 8.5f);
-        Sound(sfx2, "Assets/Audio/Footsteps/Sand/Sand1.mp3", 8.75f); Sound(sfx2, "Assets/Audio/Footsteps/Sand/Sand4.mp3", 9.0f);
+        Sound(AudioTrackFor(tl, d, "Glass", c.glass), "Assets/Audio/Glass Debris/GlassDestroy.wav", GlassTime);
+        for (int i = 0; i < 5; i++) Sound(sfx2, "Assets/Audio/Footsteps/Sand/Sand" + (i % 4 + 1) + ".mp3", BoltTime + 0.3f + i * 0.25f / RunScale);
         Loop(AudioTrackFor(tl, d, "Ambience (wind)", c.wind), AudioDir + "/Wind_Loop.wav", 0f, len);
-        var gust = Loop(AudioTrackFor(tl, d, "Wind returns", c.windGust), AudioDir + "/Wind_Loop.wav", 10.5f, len); gust.easeInDuration = 1f; gust.easeOutDuration = 1.2f;
-        Loop(AudioTrackFor(tl, d, "Drone", c.drone), AudioDir + "/Drone_Loop.wav", 0f, 2.0f);
+        var gust = Loop(AudioTrackFor(tl, d, "Wind returns", c.windGust), AudioDir + "/Wind_Loop.wav", BoltTime + 1.5f, len); gust.easeInDuration = 1f; gust.easeOutDuration = 1.2f;
+        Loop(AudioTrackFor(tl, d, "Drone", c.drone), AudioDir + "/Drone_Loop.wav", 0f, GlassTime);
+        Music(tl, d, c, len, false, true);
+        FixedLength(tl, len);
         Finish(tl);
     }
 
@@ -529,26 +516,124 @@ public static class CowardMeetingBuilder
     // west of the blue barrel (x -177.5..-175.8, z -26.7..-25.5): he runs there first, then straight up the alley between
     // the hand truck and the white car into the dust
     static readonly Vector3 ExitTurn = new Vector3(-177.95f, Floor, -26.1f);
-    const float RunStart = 8.0f, RunSpeed = 4.7f;
+    // Coward_Run.anim is baked at 4.7 m/s; played at RunScale he runs ~3.2 m/s (at full speed he was gone in a blink)
+    const float RunSpeed = 4.7f, RunScale = 0.68f;
 
-    // set while building A / B, used by the phases and by End
-    static float AHeld, BHeld, APleadPhase;
-
-    // Coward_Run.anim (the in-place Run baked to 4.7 m/s root motion): one leg to the turn, one up the alley. The second
-    // leg carries the run cycle on (clipIn) and is placed back by the distance that skips, since the clip's start
-    // offset is removed at its first frame.
-    static void RunLegs(AnimationTrack cw)
+    // Coward_Run.anim (the in-place Run baked to root motion): one leg to the turn, one up the alley. The second leg
+    // carries the run cycle on (clipIn) and is placed back by the distance that skips, since the clip's start offset is
+    // removed at its first frame. (He turns to run on a cut.)
+    static void RunLegs(AnimationTrack cw, Vector3 from, float start)
     {
         var runClip = AssetDatabase.LoadAssetAtPath<AnimationClip>(Dir + "/Coward_Run.anim");
-        float leg1 = Vector3.Distance(BackedOff, ExitTurn) / RunSpeed;
+        float leg1 = Vector3.Distance(from, ExitTurn) / (RunSpeed * RunScale);
         var a = cw.CreateClip(runClip);
-        a.start = RunStart; a.duration = leg1 + 0.2f;
-        Offsets(a, BackedOff, YawTo(BackedOff, ExitTurn), false);
+        a.start = start; a.duration = leg1 + 0.2f; a.timeScale = RunScale;
+        Offsets(a, from, YawTo(from, ExitTurn), false);
         var b = cw.CreateClip(runClip);
-        float yaw2 = YawTo(ExitTurn, ExitEnd);
-        b.start = RunStart + leg1 - 0.1f; b.clipIn = leg1 - 0.1f;
-        b.duration = 12.5f - (float)b.start;
-        Offsets(b, ExitTurn - Quaternion.Euler(0f, yaw2, 0f) * Vector3.forward * RunSpeed * (leg1 - 0.1f), yaw2, false);
+        float yaw2 = YawTo(ExitTurn, ExitEnd), skipped = (leg1 - 0.1f) * RunScale;
+        b.start = start + leg1 - 0.1f; b.clipIn = skipped; b.timeScale = RunScale;
+        b.duration = 6f;
+        Offsets(b, ExitTurn - Quaternion.Euler(0f, yaw2, 0f) * Vector3.forward * RunSpeed * skipped, yaw2, false);
+    }
+
+    // ── Khalid's walk off, down the east alley. Each walk is his distance along that way over time, sampled
+    // from a speed profile; the controller moves him through keys at constant speed and the walk clip is played at the
+    // matching rate, so the feet don't slide. A's walk carries straight on into End's (same clip phase and distance). ──
+    class Walk { public float t0; public readonly List<float> s = new List<float>(); public const float Dt = 1f / 30f; public float End => t0 + (s.Count - 1) * Dt; }
+    static Walk aWalk, endWalk;
+    static float aWalkPhase;
+    // A: walking from the cut on; a beat after "He could already be-" his stride falters for a step
+    const float FalterAt = 4.6f, FalterTime = 0.9f, AWalkLength = 6.5f;
+    // End: he stops for the glass, looks up at it and back, then walks on
+    const float EndStop = 2.9f, EndGo = 4.7f, EndLength = 13.0f;
+
+    static void PlanWalks()
+    {
+        // "Thanks." cuts in on the coward's "we can-", on the cut to him walking
+        AThanks = AFirstLine + LineLength("CW2_A1") - 0.1f;
+        AWalkStart = AThanks;
+        aWalk = PlanWalk(AWalkStart, 0f, AWalkLength, t =>
+        {
+            float v = WalkSpeed;
+            if (t > FalterAt && t < FalterAt + FalterTime) v *= 1f - 0.65f * Mathf.Sin(Mathf.PI * (t - FalterAt) / FalterTime);
+            return v;
+        });
+        endWalk = PlanWalk(0f, aWalk.s[aWalk.s.Count - 1], EndLength, t =>
+        {
+            if (t < GlassTime) return WalkSpeed;
+            if (t < EndStop) return WalkSpeed * 0.5f * (1f + Mathf.Cos(Mathf.PI * (t - GlassTime) / (EndStop - GlassTime)));
+            if (t < EndGo) return 0f;
+            return WalkSpeed * Mathf.SmoothStep(0f, 1f, (t - EndGo) / 0.7f);
+        });
+    }
+
+    static Walk PlanWalk(float t0, float s0, float duration, System.Func<float, float> speed)
+    {
+        var w = new Walk { t0 = t0 };
+        float dist = s0; w.s.Add(dist);
+        int n = Mathf.RoundToInt(duration / Walk.Dt);
+        for (int i = 0; i < n; i++) { dist += speed((i + 0.5f) * Walk.Dt) * Walk.Dt; w.s.Add(dist); }
+        return w;
+    }
+
+    static float WalkS(Walk w, float t)
+    {
+        float f = Mathf.Clamp((t - w.t0) / Walk.Dt, 0f, w.s.Count - 1.001f);
+        int i = (int)f;
+        return Mathf.Lerp(w.s[i], w.s[i + 1], f - i);
+    }
+
+    // down the east alley
+    static Vector3 WalkPos(float dist)
+    {
+        Vector3[] pts = { EastIn, EastFar };
+        for (int i = 0; i < pts.Length - 1; i++)
+        {
+            float seg = Vector3.Distance(pts[i], pts[i + 1]);
+            if (dist <= seg || i == pts.Length - 2) return Vector3.LerpUnclamped(pts[i], pts[i + 1], dist / seg);
+            dist -= seg;
+        }
+        return pts[pts.Length - 1];
+    }
+
+    // the way he faces: along the path, rounded over the corner
+    static float WalkYawAt(float dist) => YawTo(WalkPos(Mathf.Max(0f, dist - 0.7f)), WalkPos(dist + 0.7f));
+
+    // pose keys every 0.2 s, passed through at constant speed
+    static IEnumerable<CowardMeetingCutscene.PoseKey> WalkKeys(Walk w)
+    {
+        for (float t = w.t0; t < w.End + 0.1f; t += 0.2f)
+        {
+            float time = Mathf.Min(t, w.End), dist = WalkS(w, time);
+            var key = Key(time, WalkPos(dist), WalkYawAt(dist));
+            key.linear = true;
+            yield return key;
+        }
+    }
+
+    // the walk clip from `from` to `to` in short pieces, each played at the speed he is moving then (never slower than
+    // 0.35, a near-stop is left to an idle blended over it); a footstep each half cycle. Returns the clip phase reached.
+    static float WalkClips(AnimationTrack k, AudioTrack steps, Walk w, float from, float to, float phase)
+    {
+        var clip = KhalidClip("rig|khalid_walk");
+        float L = clip.length;
+        // the first and last pieces are 0.5 s, so a blend to or from idle overlaps only one of them
+        var cuts = new List<float> { from };
+        for (float t = from + 0.5f; t < to - 0.5f; t += 0.25f) cuts.Add(t);
+        cuts.Add(to);
+        int stepIndex = 0;
+        for (int i = 0; i < cuts.Count - 1; i++)
+        {
+            float a = cuts[i], b = cuts[i + 1];
+            float rate = Mathf.Max(0.35f, (WalkS(w, b) - WalkS(w, a)) / (b - a) / WalkSpeed);
+            var c = KClip(k, "rig|khalid_walk", a, b, true);
+            c.clipIn = Mathf.Repeat(phase, L); c.timeScale = rate;
+            float next = phase + (b - a) * rate;
+            for (float half = Mathf.Floor(phase / (L * 0.5f)) + 1; half * L * 0.5f < next; half++)
+                Sound(steps, "Assets/Audio/Footsteps/Sand/Sand" + (stepIndex++ % 4 + 1) + ".mp3", a + (half * L * 0.5f - phase) / rate);
+            phase = next;
+        }
+        return phase;
     }
 
     // Terrified's first 0.7 s are an upright stand before he cowers (it looked like going to idle and then getting scared)
@@ -601,25 +686,6 @@ public static class CowardMeetingBuilder
         }
     }
 
-    // the coward's two quick steps from where he blocks (C2) up to Khalid (G); returns when he gets there
-    static float StepIn(AnimationTrack cw, float start)
-    {
-        const float rate = 1.3f;
-        float dur = Vector3.Distance(C2, G) / (CowardWalkSpeed * rate);
-        var c = cw.CreateClip(AssetDatabase.LoadAssetAtPath<AnimationClip>(Dir + "/Coward_Walk.anim"));
-        c.start = start; c.duration = dur + 0.15f; c.timeScale = rate;
-        Offsets(c, C2, YawTo(C2, G), false);
-        return start + dur;
-    }
-
-    // Khalid in A / B: gun down at his side; one step toward the alley (the controller moves him K1 -> KB)
-    static void KhalidBlock(AnimationTrack k, float step, float len)
-    {
-        KClip(k, "rig|khalid_idle", 0f, step + 0.3f, true);
-        KClip(k, "rig|khalid_walk", step - 0.05f, step + KhalidStepTime + 0.15f, true);
-        KClip(k, "rig|khalid_idle", step + KhalidStepTime - 0.25f, len, true);
-    }
-
     // ───────────────────────── timeline helpers ─────────────────────────
 
     static TimelineAsset NewTimeline(PlayableDirector d, string name)
@@ -630,11 +696,19 @@ public static class CowardMeetingBuilder
         foreach (var t in tl.GetRootTracks().ToList()) tl.DeleteTrack(t);
         if (tl.markerTrack != null) foreach (var m in tl.markerTrack.GetMarkers().ToList()) tl.markerTrack.DeleteMarker(m);
         tl.editorSettings.frameRate = 30;
+        tl.durationMode = TimelineAsset.DurationMode.BasedOnClips;
         d.playableAsset = tl;
         return tl;
     }
 
     static void Finish(TimelineAsset tl) { FixBlends(tl); EditorUtility.SetDirty(tl); }
+
+    // ends with the walk (the last footstep sounds would run it on, with Khalid's walk clips already over)
+    static void FixedLength(TimelineAsset tl, float len)
+    {
+        tl.durationMode = TimelineAsset.DurationMode.FixedLength;
+        tl.fixedDuration = len;
+    }
 
     static void Activation(TimelineAsset tl, PlayableDirector d, GameObject go, float start, float end, ActivationTrack.PostPlaybackState post)
     {
@@ -642,6 +716,57 @@ public static class CowardMeetingBuilder
         var clip = t.CreateDefaultClip(); clip.start = start; clip.duration = end - start;
         t.postPlaybackState = post;
         d.SetGenericBinding(t, go);
+    }
+
+    // A Mixamo walk cycle repeated into one straight walk of `seconds`: the root carries on forward cycle after cycle
+    // (Timeline can't loop root motion), every other curve gets its small start/end mismatch spread over the cycle so
+    // the seams don't pop. Humanoid curves; the foot goals are body-relative and repeat as they are.
+    // Baked once: re-baking over the clip on every build left the in-memory clip stale, and the first Play after a build
+    // walked him from the world origin (the clip offsets lost). Delete the .anim to bake it again.
+    static void BakeLoopedWalk(string mixamoName, string outPath, float seconds)
+    {
+        if (AssetDatabase.LoadAssetAtPath<AnimationClip>(outPath) != null) return;
+        var src = Mixamo(mixamoName);
+        float L = src.length; int cycles = Mathf.CeilToInt(seconds / L);
+        var clip = new AnimationClip { name = System.IO.Path.GetFileNameWithoutExtension(outPath), frameRate = 30f };
+        int n = Mathf.RoundToInt(cycles * L * 30f);
+        foreach (var b in AnimationUtility.GetCurveBindings(src))
+        {
+            var c = AnimationUtility.GetEditorCurve(src, b);
+            float v0 = c.Evaluate(0f), delta = c.Evaluate(L) - v0;
+            bool advance = b.propertyName == "RootT.x" || b.propertyName == "RootT.z";
+            var keys = new Keyframe[n + 1];
+            for (int i = 0; i <= n; i++)
+            {
+                float t = i / 30f;
+                int k = Mathf.Min(Mathf.FloorToInt(t / L), cycles - 1);
+                float u = t - k * L;
+                keys[i] = new Keyframe(t, c.Evaluate(u) + (advance ? k * delta : -delta * (u / L)));
+            }
+            var curve = new AnimationCurve(keys);
+            for (int i = 0; i < keys.Length; i++) AnimationUtility.SetKeyLeftTangentMode(curve, i, AnimationUtility.TangentMode.ClampedAuto);
+            for (int i = 0; i < keys.Length; i++) AnimationUtility.SetKeyRightTangentMode(curve, i, AnimationUtility.TangentMode.ClampedAuto);
+            AnimationUtility.SetEditorCurve(clip, b, curve);
+        }
+        var st = AnimationUtility.GetAnimationClipSettings(clip);
+        st.loopTime = false; st.keepOriginalPositionY = true;
+        AnimationUtility.SetAnimationClipSettings(clip, st);
+        var existing = AssetDatabase.LoadAssetAtPath<AnimationClip>(outPath);
+        if (existing == null) AssetDatabase.CreateAsset(clip, outPath);
+        else { EditorUtility.CopySerialized(clip, existing); EditorUtility.SetDirty(existing); }
+        AssetDatabase.SaveAssets();
+    }
+
+    // humanoid mask with only the head + neck: a layer that turns his head without touching the walk under it
+    static AvatarMask HeadMask()
+    {
+        string path = Dir + "/Coward_HeadOnly.mask";
+        var m = AssetDatabase.LoadAssetAtPath<AvatarMask>(path);
+        if (m == null) { m = new AvatarMask(); AssetDatabase.CreateAsset(m, path); }
+        for (int i = 0; i < (int)AvatarMaskBodyPart.LastBodyPart; i++)
+            m.SetHumanoidBodyPartActive((AvatarMaskBodyPart)i, i == (int)AvatarMaskBodyPart.Head);
+        EditorUtility.SetDirty(m);
+        return m;
     }
 
     static AnimationTrack Anim(TimelineAsset tl, PlayableDirector d, string name, Animator target, TrackOffset offsets)
@@ -739,6 +864,33 @@ public static class CowardMeetingBuilder
         return clip;
     }
 
+    // Music: a PLACEHOLDER track the user picked to hear the mood (not licensed - swap it before anything ships). Any audio
+    // file named Music_Placeholder in AudioDir; none = no music track. One piece running on across Open -> A -> End: each
+    // timeline picks the track up where the last one left it (looping if it is shorter), fading in at the start and out
+    // at the end, under the voices.
+    const float MusicVolume = 0.35f;
+    static AudioClip music;
+    static float musicAt;
+
+    static void FindMusic()
+    {
+        music = AssetDatabase.FindAssets("Music_Placeholder t:AudioClip", new[] { AudioDir })
+            .Select(g => AssetDatabase.LoadAssetAtPath<AudioClip>(AssetDatabase.GUIDToAssetPath(g))).FirstOrDefault(a => a != null);
+        musicAt = 0f;
+        Debug.Log(music != null ? "[CowardMeeting] music: " + AssetDatabase.GetAssetPath(music) : "[CowardMeeting] no Music_Placeholder in " + AudioDir + " - no music");
+    }
+
+    static void Music(TimelineAsset tl, PlayableDirector d, Ctx c, float len, bool first, bool last)
+    {
+        if (music == null || c.music == null) return;
+        var clip = AudioTrackFor(tl, d, "Music (placeholder)", c.music).CreateClip(music);
+        clip.start = 0f; clip.duration = len; clip.clipIn = musicAt % music.length;
+        ((AudioPlayableAsset)clip.asset).loop = true;
+        if (first) clip.easeInDuration = 2.5f;
+        if (last) clip.easeOutDuration = 3f;
+        musicAt += len;
+    }
+
     static TimelineClip Loop(AudioTrack t, string path, float start, float end)
     {
         var clip = t.CreateClip(AssetDatabase.LoadAssetAtPath<AudioClip>(path));
@@ -747,21 +899,63 @@ public static class CowardMeetingBuilder
         return clip;
     }
 
-    // one voice placeholder clip on the speaker's track + the subtitle marker on the timeline's marker row
-    static void Say(TimelineAsset tl, AudioTrack k, AudioTrack c, string id, float start)
+    const string VoiceDir = Dir + "/Voice Lines";
+    // One actor voices both men, so the coward's lines are lowered into a deeper man's voice (rubberband pitch shift with
+    // the formants moved along, same length) in Voice Lines/<CowardVoice>/CowardN.wav: Coward_Deep ~-3.5 semitones,
+    // Coward_Deeper ~-5.5. (Higher and formant-only versions were tried and sounded wrong.) Empty = the original recordings.
+    const string CowardVoice = "Coward_Deep";
+
+    // a time in the recording -> the time in the line once its pauses are in
+    // Breaks put into the coward's lines at quiet points between words (he rushed through his "..."): the pauses column
+    // of lines.tsv, baked into Voice Lines/Paced/<version>/ by AnimationTools/cutscene_coward/pace_voice.py. (Splitting
+    // the line into Timeline clips instead made it stutter.) A pause pushes the rest of the line - and the lines after
+    // it - later, and its subtitles with it.
+    static float Later(Line line, float t)
+    {
+        float add = 0f;
+        foreach (var p in line.pauses) if (t >= p.x - 0.001f) add += p.y;
+        return t + add;
+    }
+
+    // from the line's start to the end of its speech, pauses included
+    static float LineLength(string id) => Later(lines[id], lines[id].speechEnd);
+
+    class Spoken { public float start, end; public readonly List<float> phrases = new List<float>(); }
+
+    // a recorded line on the speaker's track + its subtitles: a long line is cut into
+    // phrases (id + b, c, d...) that come up as they are spoken. Returns when it starts, its speech ends and each phrase.
+    static Spoken Say(TimelineAsset tl, AudioTrack k, AudioTrack c, string id, float start)
     {
         var line = lines[id];
-        var track = line.spk == "K" ? k : c;
-        string wav = AudioDir + "/" + id + "_" + (line.spk == "K" ? "Khalid" : "Coward") + ".wav";
-        var clip = track.CreateClip(AssetDatabase.LoadAssetAtPath<AudioClip>(wav));
+        string audio = line.spk == "C" ? "Paced/" + (CowardVoice != "" ? CowardVoice : "Original") + "/" + Path.ChangeExtension(line.audio, ".wav") : line.audio;
+        var clipAsset = AssetDatabase.LoadAssetAtPath<AudioClip>(VoiceDir + "/" + audio);
+        if (clipAsset == null) Debug.LogError("[CowardMeeting] missing voice line " + VoiceDir + "/" + audio + " (run pace_voice.py)");
+        var clip = (line.spk == "K" ? k : c).CreateClip(clipAsset);
         clip.start = start; clip.displayName = id;
+
+        var phrases = new List<Line> { line };
+        for (char part = 'b'; lines.TryGetValue(id + part, out var phrase); part++) phrases.Add(phrase);
+        var said = new Spoken { start = start, end = start + LineLength(id) };
+        for (int i = 0; i < phrases.Count; i++)
+        {
+            float at = start + Later(line, phrases[i].offset);
+            // a phrase stays up until the next one comes, the last a moment past the speech
+            float until = i + 1 < phrases.Count ? start + Later(line, phrases[i + 1].offset) + 0.15f : Mathf.Max(at + 1.2f, said.end + 0.6f);
+            Subtitle(tl, phrases[i], at, until - at);
+            said.phrases.Add(at);
+        }
+        return said;
+    }
+
+    static void Subtitle(TimelineAsset tl, Line line, float at, float duration)
+    {
         if (tl.markerTrack == null) tl.CreateMarkerTrack();
-        var marker = tl.markerTrack.CreateMarker<SubtitleMarker>(start + 0.1);
+        var marker = tl.markerTrack.CreateMarker<SubtitleMarker>(at + 0.05);
         var entry = subtitles.col.SharedData.GetEntry(line.en);
         marker.line = new LocalizedString(subtitles.col.TableCollectionName, entry.Id);
-        marker.duration = line.dur - 0.15f;
-        marker.lineId = id;
-        marker.name = id;
+        marker.duration = duration;
+        marker.lineId = line.id;
+        marker.name = line.id;
     }
 
     static PlayableDirector Director(Transform parent, string name)
@@ -789,19 +983,6 @@ public static class CowardMeetingBuilder
                 t.gameObject.SetActive(true);
                 EditorUtility.SetDirty(t.gameObject);
             }
-    }
-
-    // the ground paper ("coward") closest to a point, for the paper insert
-    static Vector3 NearestPaper(Vector3 near, float maxDistance)
-    {
-        Vector3 best = near; float bestD = maxDistance;
-        foreach (var r in Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
-        {
-            if (!r.name.StartsWith("Paper") || r.bounds.size.y > 0.2f) continue;
-            float dist = Vector2.Distance(new Vector2(r.bounds.center.x, r.bounds.center.z), new Vector2(near.x, near.z));
-            if (dist < bestD) { bestD = dist; best = r.bounds.center; }
-        }
-        return best;
     }
 
     static CanvasGroup BuildSkipUI(Transform root, out Image fill)
@@ -869,6 +1050,19 @@ public static class CowardMeetingBuilder
         return vc;
     }
 
+    // a camera that follows a walker from behind (the offset turns with him, smoothed round corners), aimed at his head
+    static CinemachineVirtualCamera FollowCam(Transform parent, string name, Transform follow, Transform lookAt)
+    {
+        var vc = Vcam(parent, name, follow.position + new Vector3(0f, 1.8f, -2.7f), follow.position + Vector3.up * 1.5f, 42f, lookAt, 0.5f, null, 0f, 0.6f, 0.4f);
+        vc.Follow = follow;
+        var body = vc.AddCinemachineComponent<CinemachineTransposer>();
+        body.m_BindingMode = CinemachineTransposer.BindingMode.LockToTargetWithWorldUp;
+        body.m_FollowOffset = new Vector3(0.35f, 1.75f, -2.7f);
+        body.m_XDamping = body.m_YDamping = body.m_ZDamping = 0.6f;
+        body.m_YawDamping = 0f;
+        return vc;
+    }
+
     static void Drift(CinemachineVirtualCamera vc, Vector3 move, float fov, float duration)
     {
         var d = vc.gameObject.AddComponent<CutsceneCameraDrift>();
@@ -884,6 +1078,25 @@ public static class CowardMeetingBuilder
         s.playOnAwake = false; s.spatialBlend = spatial ? 1f : 0f; s.volume = volume; s.outputAudioMixerGroup = group;
         s.minDistance = 2f; s.maxDistance = 40f;
         return s;
+    }
+
+    // a voice in the scene: mostly positional (some stays centred, so cuts don't swing it hard across), full up close,
+    // about half at 15 m, never lost; muffled (the close-mic top end rolled off) and a short alley reverb on it
+    static void Voice(AudioSource s)
+    {
+        s.spatialBlend = 0.85f; s.spread = 70f; s.dopplerLevel = 0f;
+        s.rolloffMode = AudioRolloffMode.Custom; s.minDistance = 1f; s.maxDistance = 40f;
+        s.SetCustomCurve(AudioSourceCurveType.CustomRolloff, new AnimationCurve(
+            new Keyframe(0f, 1f), new Keyframe(3f / 40f, 1f), new Keyframe(15f / 40f, 0.55f), new Keyframe(1f, 0.3f)));
+        var lp = s.gameObject.AddComponent<AudioLowPassFilter>();
+        lp.cutoffFrequency = 4200f; lp.lowpassResonanceQ = 1f;   // muffled a little (user: 7 kHz still too clean)
+        var rv = s.gameObject.AddComponent<AudioReverbFilter>();
+        rv.reverbPreset = AudioReverbPreset.User;
+        rv.dryLevel = 0f; rv.room = -1300f; rv.roomHF = -400f; rv.roomLF = 0f;
+        rv.decayTime = 1.2f; rv.decayHFRatio = 0.7f;
+        rv.reflectionsLevel = -900f; rv.reflectionsDelay = 0.01f;
+        rv.reverbLevel = -300f; rv.reverbDelay = 0.015f;
+        rv.diffusion = 100f; rv.density = 100f;
     }
 
     static Transform Child(Transform parent, string name)
@@ -917,15 +1130,34 @@ public static class CowardMeetingBuilder
         return b;
     }
 
+    // AnimationTools/cutscene_coward/lines.tsv: id, speaker, English, Arabic, phrase start in the recording, recording,
+    // where its speech ends, pauses (where:seconds;...). Each line is put in the Subtitles table (keyed by its English)
+    // if it isn't there yet.
     static void LoadLines()
     {
         lines = new Dictionary<string, Line>();
+        var inv = System.Globalization.CultureInfo.InvariantCulture;
         foreach (var raw in File.ReadAllLines("AnimationTools/cutscene_coward/lines.tsv", System.Text.Encoding.UTF8))
         {
-            if (string.IsNullOrWhiteSpace(raw)) continue;
+            if (string.IsNullOrWhiteSpace(raw) || raw.StartsWith("#")) continue;
             var f = raw.Split('\t');
-            lines[f[0]] = new Line { id = f[0], spk = f[1], en = f[2], ar = f[3], dur = float.Parse(f[4], System.Globalization.CultureInfo.InvariantCulture) };
+            lines[f[0]] = new Line { id = f[0], spk = f[1], en = f[2], ar = f[3], offset = float.Parse(f[4], inv), audio = f[5],
+                                     speechEnd = f.Length > 6 && f[6] != "" ? float.Parse(f[6], inv) : 0f,
+                                     pauses = f.Length > 7 && f[7] != "" ? f[7].Split(';').Select(pz => { var ab = pz.Split(':'); return new Vector2(float.Parse(ab[0], inv), float.Parse(ab[1], inv)); }).ToArray() : new Vector2[0] };
         }
-        subtitles = new StringTableCollectionRef { col = LocalizationEditorSettings.GetStringTableCollection("Subtitles") };
+        var col = LocalizationEditorSettings.GetStringTableCollection("Subtitles");
+        subtitles = new StringTableCollectionRef { col = col };
+        foreach (var line in lines.Values)
+        {
+            var entry = col.SharedData.GetEntry(line.en) ?? col.SharedData.AddKey(line.en);
+            foreach (var table in col.StringTables)
+            {
+                string text = table.LocaleIdentifier.Code.StartsWith("ar") ? line.ar : line.en;
+                var e = table.GetEntry(entry.Id);
+                if (e == null) table.AddEntry(entry.Id, text); else e.Value = text;
+                EditorUtility.SetDirty(table);
+            }
+        }
+        EditorUtility.SetDirty(col.SharedData);
     }
 }

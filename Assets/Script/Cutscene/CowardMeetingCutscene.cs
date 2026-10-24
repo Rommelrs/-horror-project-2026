@@ -1,6 +1,8 @@
 using System;
+using Cinemachine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Playables;
@@ -25,6 +27,10 @@ public class CowardMeetingCutscene : MonoBehaviour
         public float yaw;
         [Tooltip("Key 0 of the opening: start from wherever the player actually is when the trigger fires.")]
         public bool fromCurrent;
+        [Tooltip("Reach this key at constant speed instead of easing in and out (a walk passing through it).")]
+        public bool linear;
+        [Tooltip("A camera cut: hold the previous key until this one's time, then jump here (no in-between frames).")]
+        public bool cut;
     }
 
     [Serializable]
@@ -37,6 +43,8 @@ public class CowardMeetingCutscene : MonoBehaviour
         public PoseKey[] cowardMover = new PoseKey[0];
         [Tooltip("x = time, y = head-look weight (Khalid turning his head toward the coward).")]
         public Vector2[] headLook = new Vector2[0];
+        [Tooltip("x = time, y = what Khalid looks at from then on: -1 the coward's head, else an index into lookPoints. His gaze eases across.")]
+        public Vector2[] headLookAt = new Vector2[0];
         [Tooltip("x = time, y = head-look weight of the coward toward Khalid's face (while he pleads holding him).")]
         public Vector2[] cowardLook = new Vector2[0];
         [Tooltip("x = time, y = weight of the coward's hands on Khalid's shoulders.")]
@@ -45,6 +53,8 @@ public class CowardMeetingCutscene : MonoBehaviour
         public Vector2[] tug = new Vector2[0];
         [Tooltip("x = time, y = ambience volume multiplier (1 = normal, 0.71 = -3 dB, 0.5 = -6 dB).")]
         public Vector2[] ambience = new Vector2[0];
+        [Tooltip("x = time, y = 0..1 of gunDipAngle: Khalid lowering his aimed gun a little (straight lines between keys).")]
+        public Vector2[] gunDip = new Vector2[0];
     }
 
     [Header("Timelines")]
@@ -64,6 +74,10 @@ public class CowardMeetingCutscene : MonoBehaviour
     public GameObject coward;
     public Transform cowardMover;
     public Transform cowardHead;
+    [Tooltip("Khalid's voice source: kept at his head while the cutscene runs.")]
+    public Transform khalidVoice;
+    [Tooltip("Other things Khalid looks at (phase headLookAt): off toward the alley, the window the glass breaks in.")]
+    public Transform[] lookPoints = new Transform[0];
     [Tooltip("Enemies under this root that are still alive when the scene starts are despawned (Alley 1).")]
     public Transform alleyEnemiesRoot;
     public float despawnRadius = 60f;
@@ -90,6 +104,25 @@ public class CowardMeetingCutscene : MonoBehaviour
 
     [Tooltip("Where the coward's wrists go on Khalid's shoulders: from each shoulder joint, in Khalid's space (x right, y up, z forward).")]
     public Vector3 grabOffset = new Vector3(0f, 0.06f, 0.13f);
+    [Tooltip("Push-pulls a second while the coward shakes Khalid by the shoulders.")]
+    public float shakeRate = 1.7f;
+    [Tooltip("Multiplies the phases' tug (how far Khalid's shoulders go, metres).")]
+    public float shakeGain = 0.45f;
+    [Tooltip("Degrees the coward's hands tremble (he's scared the whole scene).")]
+    public float handTremble = 4f;
+    [Tooltip("How far the coward's walk-in is bent into the scared posture (hunched, shoulders up, arms clutched to his chest); the rest is the walk's own arm swing.")]
+    [Range(0f, 1f)] public float scaredWalk = 0.85f;
+    [Tooltip("Open timeline time the scared posture has faded out by (he arrives and startles); the builder sets it.")]
+    public float scaredWalkEnd = 5.5f;
+    [Tooltip("How far the coward puts his hands up (surrendering) while Khalid aims at him.")]
+    [Range(0f, 1f)] public float surrender = 0.9f;
+    [Tooltip("Open timeline times: his hands are fully up by surrenderUp and start coming down at surrenderDown; the builder sets them.")]
+    public float surrenderUp = 7.1f, surrenderDown = 26.2f;
+    [Tooltip("Where his wrists go with his hands up: from each shoulder joint, in his space (x outward, y up, z forward).")]
+    public Vector3 handsUpOffset = new Vector3(0.16f, 0.16f, 0.32f);
+
+    [Tooltip("Degrees Khalid's arms and gun tip down about his shoulders at gunDip 1 (\"...Other versions?\").")]
+    public float gunDipAngle = 12f;
 
     [Tooltip("The cutscene starts by fading to black and back in on its first shot (seconds each way).")]
     public float startFade = 0.5f;
@@ -110,8 +143,16 @@ public class CowardMeetingCutscene : MonoBehaviour
     float skipHeld, promptShowTime;
     Vector3 startPos; float startYaw;
     CutsceneHeadLook headLook, cowardHeadLook;
-    CutsceneArmIK cowardGrab;
-    Transform khalidModel; Quaternion khalidModelRot; bool rocking; float tug;
+    Transform khalidGaze; Vector3 gazeVel;
+    CutsceneArmIK cowardGrab, cowardHandsUp;
+    float tug;
+    // being shaken (see ShakeKhalid)
+    Transform[] kSpine, kCarry, kArmBones = new Transform[0];
+    Transform kChest, kHead, kArmTwistL, kArmTwistR;
+    Transform[] cSpine, cTremble; Transform cHead, cHips;
+    HumanPoseHandler cPose; HumanPose cHumanPose;
+    Spring torsoPitch, torsoRoll, headPitch, headRoll, armSwing;
+    float shakeClock;
     Collider trigger;
 
     void Awake()
@@ -191,7 +232,14 @@ public class CowardMeetingCutscene : MonoBehaviour
     {
         var player = Player.instance;
         if (!Application.isPlaying || running || player == null) return;
-        foreach (var g in debugHide) if (g != null) g.SetActive(false);
+        foreach (var g in debugHide)
+        {
+            if (g == null) continue;
+            // the rope gate is shown burned: its "These ropes are blocking the way" goes with it
+            var rope = g.GetComponentInParent<BurnableObstacle>(true);
+            if (rope != null) { rope.enabled = false; foreach (var c in rope.GetComponents<Collider>()) c.enabled = false; }
+            g.SetActive(false);
+        }
         foreach (var g in debugShow) if (g != null) g.SetActive(true);
         // stand him in the trigger, facing out of the gate
         if (player.controller != null) player.controller.enabled = false;
@@ -247,7 +295,13 @@ public class CowardMeetingCutscene : MonoBehaviour
             if (t.name == "neck.x") headLook.neck = t;
             else if (t.name == "head.x") headLook.head = t;
         }
-        headLook.target = cowardHead;
+        // he looks at a point that eases from one thing to the next (the coward, the alley, the window)
+        if (khalidGaze == null) khalidGaze = new GameObject("KhalidGaze").transform;
+        khalidGaze.SetParent(transform, false);
+        if (cowardHead != null) khalidGaze.position = cowardHead.position;
+        gazeVel = Vector3.zero;
+        headLook.target = khalidGaze;
+        headLook.facing = player.transform;   // (his model is turned 90 degrees inside the Player)
         headLook.pitchShare = 0.5f;   // he looks down at the (shorter) coward holding his arm
         headLook.weight = 0f; headLook.targetWeight = 0f;
 
@@ -269,11 +323,23 @@ public class CowardMeetingCutscene : MonoBehaviour
     {
         Transform K(string n) { foreach (var t in model.GetComponentsInChildren<Transform>()) if (t.name == n) return t; return null; }
         var facing = Player.instance != null ? Player.instance.transform : model;   // the exported model's own axes aren't his facing
-        khalidModel = model;
+        // his rig is flat: the arms (with the gun) and the head sit under the root, not under the chest, so bending the
+        // spine has to carry them along by hand
+        kSpine = new[] { K("c_spine_01.x"), K("c_spine_02.x"), K("c_spine_03.x") };
+        kChest = K("spine_03.x"); kHead = K("head.x");
+        kCarry = new[] { K("arm_stretch.l"), K("arm_stretch.r"), K("forearm.l"), K("forearm.r"), K("forearm_stretch.l"), K("forearm_stretch.r"), K("head_scale_fix.x") };
+        kArmTwistL = K("arm_twist.l"); kArmTwistR = K("arm_twist.r");
         if (coward == null) return;
         var anim = coward.GetComponent<Animator>();
-        cowardGrab = coward.GetComponent<CutsceneArmIK>();
-        if (cowardGrab == null) cowardGrab = coward.AddComponent<CutsceneArmIK>();
+        cSpine = new[] { anim.GetBoneTransform(HumanBodyBones.Spine), anim.GetBoneTransform(HumanBodyBones.Chest), anim.GetBoneTransform(HumanBodyBones.UpperChest) };
+        cHead = anim.GetBoneTransform(HumanBodyBones.Head);
+        cHips = anim.GetBoneTransform(HumanBodyBones.Hips);
+        cPose = new HumanPoseHandler(anim.avatar, anim.transform);
+        cTremble = new[] { anim.GetBoneTransform(HumanBodyBones.LeftLowerArm), anim.GetBoneTransform(HumanBodyBones.RightLowerArm),
+                           anim.GetBoneTransform(HumanBodyBones.LeftHand), anim.GetBoneTransform(HumanBodyBones.RightHand) };
+        var iks = coward.GetComponents<CutsceneArmIK>();
+        cowardGrab = iks.Length > 0 ? iks[0] : coward.AddComponent<CutsceneArmIK>();
+        cowardHandsUp = iks.Length > 1 ? iks[1] : coward.AddComponent<CutsceneArmIK>();
         cowardGrab.space = coward.transform;
         // facing each other: his left hand on Khalid's right shoulder; the wrist a little above and in front of the joint
         foreach (var left in new[] { true, false })
@@ -303,6 +369,26 @@ public class CowardMeetingCutscene : MonoBehaviour
             arm.curlBones = curl.ToArray();
         }
         cowardGrab.weight = 0f; cowardGrab.targetWeight = 0f;
+
+        // hands up at gunpoint ("don't shoot"): wrists at head height, a bit wider than his shoulders and in front of
+        // him, elbows down at his sides, fingers straight up, palms flat toward Khalid
+        cowardHandsUp.space = coward.transform;
+        cowardHandsUp.fingerDirection = new Vector3(0f, 1f, 0.15f);
+        cowardHandsUp.palmDirection = Vector3.forward;
+        cowardHandsUp.curl = 0f;   // fingers straight, spread
+        cowardHandsUp.smoothTime = 0.01f;
+        foreach (var left in new[] { true, false })
+        {
+            var g = left ? cowardGrab.left : cowardGrab.right;
+            var arm = left ? cowardHandsUp.left : cowardHandsUp.right;
+            arm.upper = g.upper; arm.lower = g.lower; arm.hand = g.hand;
+            arm.fingerRef = g.fingerRef; arm.thumbRef = g.thumbRef; arm.curlBones = g.curlBones;
+            arm.target = g.upper;   // from his own shoulder joint
+            arm.targetSpace = coward.transform;
+            arm.elbowHint = new Vector3(left ? -0.35f : 0.35f, -0.7f, 0f);    // elbows down by his sides
+            arm.thumbDirection = new Vector3(left ? 1f : -1f, 0f, 0f);         // thumbs in: palms face forward
+        }
+        cowardHandsUp.weight = 0f; cowardHandsUp.targetWeight = 0f;
     }
 
     IEnumerator Co_Run()
@@ -364,13 +450,16 @@ public class CowardMeetingCutscene : MonoBehaviour
         if (headLook != null) { headLook.targetWeight = 0f; headLook.weight = 0f; }
         if (cowardHeadLook != null) { cowardHeadLook.targetWeight = 0f; cowardHeadLook.weight = 0f; }
         if (cowardGrab != null) { cowardGrab.targetWeight = 0f; cowardGrab.weight = 0f; }
-        tug = 0f; RockKhalid();
+        if (cowardHandsUp != null) { cowardHandsUp.targetWeight = 0f; cowardHandsUp.weight = 0f; }
+        tug = 0f; torsoPitch = torsoRoll = headPitch = headRoll = armSwing = default;
         if (AmbienceHandler.Instance != null) AmbienceHandler.Instance.UpdateAmbienceVolume(1f);
         if (CameraSystem.Instance != null) CameraSystem.Instance.ForceShowPlayer = false;
         if (skipPrompt != null) skipPrompt.alpha = 0f;
 
         running = false; IsPlaying = false; current = null; currentPhase = -1;
     }
+
+    void OnDestroy() => cPose?.Dispose();
 
     // ───────────────────────── per frame ─────────────────────────
 
@@ -380,16 +469,33 @@ public class CowardMeetingCutscene : MonoBehaviour
     {
         if (!running || skipping || current == null || currentPhase < 0 || currentPhase >= phases.Length) return;
         var phase = phases[currentPhase];
-        float t = (float)current.time;
+        // the director evaluates after Update: its time here is last frame's. Use the time it is about to reach, so on a
+        // cut Khalid is already where the new shot expects him (else the walk cam's first frame framed him at the old spot)
+        float t = (float)current.time + (current.timeUpdateMode == DirectorUpdateMode.GameTime ? Time.deltaTime : Time.unscaledDeltaTime);
 
         var player = Player.instance;
         if (player != null && phase.khalid != null && phase.khalid.Length > 0)
         {
             Evaluate(phase.khalid, t, true, true, out var p, out var yaw);
-            player.transform.SetPositionAndRotation(new Vector3(p.x, startPos.y, p.z), Quaternion.Euler(0f, yaw, 0f));
+            Vector3 was = player.transform.position, now = new Vector3(p.x, startPos.y, p.z);
+            player.transform.SetPositionAndRotation(now, Quaternion.Euler(0f, yaw, 0f));
+            // a jump on a cut (into the alley on "Thanks."): the cameras following him start there, no swoop. He turns
+            // too, and the walk cam damps in his local space, so a warp (position only) still swung it round behind
+            // him - forget their damping history instead: the first frame of the shot is exactly in place.
+            if ((now - was).sqrMagnitude > 1f && camerasRoot != null)
+                foreach (var vc in camerasRoot.GetComponentsInChildren<CinemachineVirtualCameraBase>())
+                    vc.PreviousStateIsValid = false;
         }
         if (headLook != null && phase.headLook != null && phase.headLook.Length > 0)
             headLook.targetWeight = Step(phase.headLook, t);
+        if (khalidGaze != null)
+        {
+            int at = phase.headLookAt != null && phase.headLookAt.Length > 0 ? Mathf.RoundToInt(Step(phase.headLookAt, t)) : -1;
+            Transform look = at >= 0 && at < lookPoints.Length ? lookPoints[at] : cowardHead;
+            if (look != null) khalidGaze.position = Vector3.SmoothDamp(khalidGaze.position, look.position, ref gazeVel, 0.3f);
+            // at the coward he mostly turns his head; at something (the alley, the window) he tips it right up or down to it
+            if (headLook != null) headLook.pitchShare = at >= 0 ? 0.9f : 0.5f;
+        }
         if (cowardHeadLook != null)
             cowardHeadLook.targetWeight = phase.cowardLook != null && phase.cowardLook.Length > 0 ? Step(phase.cowardLook, t) : 0f;
         if (cowardGrab != null)
@@ -419,7 +525,11 @@ public class CowardMeetingCutscene : MonoBehaviour
     // Runs before the CinemachineBrain's LateUpdate (execution order).
     void LateUpdate()
     {
-        RockKhalid();
+        if (running && khalidVoice != null && kHead != null) khalidVoice.position = kHead.position;
+        ShakeKhalid();
+        GunDip();
+        PoseLayers();
+        TrembleHands();
         if (!running || skipping || current == null || currentPhase < 0 || currentPhase >= phases.Length) return;
         var phase = phases[currentPhase];
         if (cowardMover != null && phase.cowardMover != null && phase.cowardMover.Length > 0)
@@ -429,16 +539,209 @@ public class CowardMeetingCutscene : MonoBehaviour
         }
     }
 
-    // The coward shakes him: Khalid's whole model rocks a little about his feet, toward the coward and back, in uneven
-    // pulls (noise, not a sine); the coward's hands follow his shoulders (CutsceneArmIK runs after this).
-    void RockKhalid()
+    // Poses the coward is bent into on top of whatever clip plays, in muscle space so they fit any clip. The hips are put
+    // back where the clip had them, so his legs and feet don't move.
+    // The Mixamo walks swing their arms like a man out for a stroll: on the walk-in he is hunched over, shoulders up,
+    // elbows tucked in and his hands clutched together under his chin (the head stays on its looking-round layer).
+    static readonly (string muscle, float value)[] ScaredPose =
     {
-        if (khalidModel == null) return;
-        if (!running || tug <= 0.0001f) { if (rocking) { khalidModel.localRotation = khalidModelRot; rocking = false; } return; }
-        if (!rocking) { khalidModelRot = khalidModel.localRotation; rocking = true; }
-        float n = Mathf.PerlinNoise(Time.time * 4.5f, 0.37f) * 2f - 1f;
-        float degrees = n * tug / 1.65f * Mathf.Rad2Deg;          // tug = metres at shoulder height
-        khalidModel.localRotation = Quaternion.AngleAxis(degrees, Vector3.right) * khalidModelRot;
+        ("Spine Front-Back", -0.35f), ("Chest Front-Back", -0.5f), ("UpperChest Front-Back", -0.8f),
+        ("Left Shoulder Down-Up", 0.7f), ("Right Shoulder Down-Up", 0.7f),
+        ("Left Shoulder Front-Back", -1f), ("Right Shoulder Front-Back", -1f),
+        ("Left Arm Down-Up", -0.8f), ("Right Arm Down-Up", -0.8f),
+        ("Left Arm Front-Back", -0.3f), ("Right Arm Front-Back", -0.3f),
+        ("Left Arm Twist In-Out", -0.2f), ("Right Arm Twist In-Out", -0.2f),
+        ("Left Forearm Stretch", -0.6f), ("Right Forearm Stretch", -0.6f),
+    };
+    // While the gun is on him he shrinks into his shoulders, a little bent over, hands open (fingers straight and a little
+    // spread: +1 Stretched is a flat hand); his hands go up by arm IK (HandsUp).
+    static readonly (string muscle, float value)[] SurrenderPose = new[]
+    {
+        ("Spine Front-Back", -0.15f), ("Chest Front-Back", -0.2f),
+        ("Left Shoulder Down-Up", 0.4f), ("Right Shoulder Down-Up", 0.4f),
+    }.Concat(OpenHands()).ToArray();
+
+    static IEnumerable<(string, float)> OpenHands()
+    {
+        foreach (var side in new[] { "Left", "Right" })
+            foreach (var finger in new[] { "Thumb", "Index", "Middle", "Ring", "Little" })
+            {
+                for (int j = 1; j <= 3; j++) yield return ($"{side} {finger} {j} Stretched", 1f);
+                yield return ($"{side} {finger} Spread", 0.4f);
+            }
+    }
+    static int[] scaredMuscles, surrenderMuscles;
+
+    static int[] MuscleIndices((string muscle, float value)[] pose)
+    {
+        var idx = new int[pose.Length];
+        for (int i = 0; i < pose.Length; i++) idx[i] = System.Array.IndexOf(HumanTrait.MuscleName, pose[i].muscle);
+        return idx;
+    }
+
+    static float Ramp(float t, float from, float to) => Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(from, to, t));
+
+    void PoseLayers()
+    {
+        if (!running || cPose == null || coward == null || !coward.activeInHierarchy || current != open || open == null) { HandsUp(0f); return; }
+        float t = (float)open.time;
+        float scared = scaredWalk * (1f - Ramp(t, scaredWalkEnd - 0.6f, scaredWalkEnd));
+        float hands = surrender * Ramp(t, surrenderUp - 0.6f, surrenderUp) * (1f - Ramp(t, surrenderDown, surrenderDown + 0.8f));
+        HandsUp(hands);
+        if (scared <= 0f && hands <= 0f) return;
+        scaredMuscles ??= MuscleIndices(ScaredPose);
+        surrenderMuscles ??= MuscleIndices(SurrenderPose);
+        Vector3 hipsPos = cHips.position; Quaternion hipsRot = cHips.rotation;
+        cPose.GetHumanPose(ref cHumanPose);
+        Blend(ScaredPose, scaredMuscles, scared);
+        Blend(SurrenderPose, surrenderMuscles, hands);
+        cPose.SetHumanPose(ref cHumanPose);
+        cHips.SetPositionAndRotation(hipsPos, hipsRot);
+    }
+
+    // his wrists beside his head (CutsceneArmIK runs after this), shaking a little in the air
+    void HandsUp(float w)
+    {
+        if (cowardHandsUp == null) return;
+        cowardHandsUp.weight = cowardHandsUp.targetWeight = w;
+        if (w <= 0f) return;
+        float t = Time.time * 7f;
+        for (int i = 0; i < 2; i++)
+        {
+            var arm = i == 0 ? cowardHandsUp.left : cowardHandsUp.right;
+            var shake = new Vector3(Mathf.PerlinNoise(t, i * 5.1f) - 0.5f, Mathf.PerlinNoise(i * 2.7f, t) - 0.5f, 0f) * 0.02f;
+            arm.targetOffset = new Vector3(i == 0 ? -handsUpOffset.x : handsUpOffset.x, handsUpOffset.y, handsUpOffset.z) + shake;
+        }
+    }
+
+    void Blend((string muscle, float value)[] pose, int[] idx, float w)
+    {
+        if (w <= 0f) return;
+        for (int i = 0; i < pose.Length; i++)
+            if (idx[i] >= 0) cHumanPose.muscles[idx[i]] = Mathf.Lerp(cHumanPose.muscles[idx[i]], pose[i].value, w);
+    }
+
+    // the coward's hands shake the whole scene: a fast, uneven tremor on the forearms (a little) and the wrists (more),
+    // on top of whatever clip plays; when he holds Khalid the arm IK (after this) takes the hands over
+    void TrembleHands()
+    {
+        if (!running || cTremble == null || coward == null || !coward.activeInHierarchy || handTremble <= 0f) return;
+        float t = Time.time * 9f;
+        for (int i = 0; i < cTremble.Length; i++)
+        {
+            var b = cTremble[i];
+            if (b == null) continue;
+            float amp = handTremble * (i < 2 ? 0.35f : 1f);
+            float x = Mathf.PerlinNoise(t, i * 7.3f) * 2f - 1f, y = Mathf.PerlinNoise(i * 3.1f, t * 1.13f) * 2f - 1f, z = Mathf.PerlinNoise(t * 0.87f, 11f + i) * 2f - 1f;
+            b.localRotation = Quaternion.Euler(x * amp, y * amp * 0.6f, z * amp) * b.localRotation;
+        }
+    }
+
+    // damped spring (x follows a target, or is kicked by an acceleration)
+    struct Spring
+    {
+        public float x, v;
+        public float Step(float target, float hz, float damping, float kick, float dt)
+        {
+            float w = 2f * Mathf.PI * hz;
+            v += (w * w * (target - x) - 2f * damping * w * v + kick) * dt;
+            x += v * dt;
+            return x;
+        }
+    }
+
+    // The coward shakes him by the shoulders: an uneven push-pull (~shakeRate a second, phase `tug` = how far his shoulders
+    // go, in metres). Khalid gives at the waist and spine (a springy follow, a little side-to-side too), his head lags and
+    // snaps after the chest, his hanging arms swing; his feet stay put. The coward leans into each pull and push, a beat
+    // ahead. Runs after the Animator wrote this frame's pose and before the coward's hands are put on the shoulders
+    // (CutsceneArmIK) and the head-looks.
+    void ShakeKhalid()
+    {
+        float dt = Time.deltaTime;
+        if (!running || kChest == null || dt <= 0f) return;
+        float amp = tug * shakeGain;
+        if (amp < 0.0005f && Mathf.Abs(torsoPitch.x) + Mathf.Abs(torsoPitch.v) + Mathf.Abs(headPitch.x) + Mathf.Abs(headPitch.v) < 0.01f) return;
+        dt = Mathf.Min(dt, 1f / 30f);
+
+        // push-pull: a sine whose speed and strength wander a little (people don't shake like a metronome)
+        shakeClock += dt * shakeRate * (0.8f + 0.4f * Mathf.PerlinNoise(Time.time * 0.7f, 3.1f));
+        float strength = 0.65f + 0.7f * Mathf.PerlinNoise(Time.time * 1.3f, 8.2f);
+        float pull = Mathf.Sin(shakeClock * 2f * Mathf.PI) * strength;                 // + = toward the coward
+        float side = Mathf.Sin(shakeClock * 2f * Mathf.PI + 1.3f) * 0.35f * strength;
+        const float chestHeight = 0.5f;                                                  // spine base -> shoulders
+        float pitchTarget = Mathf.Asin(Mathf.Clamp(amp * pull / chestHeight, -0.5f, 0.5f)) * Mathf.Rad2Deg;
+        float rollTarget = Mathf.Asin(Mathf.Clamp(amp * side / chestHeight, -0.5f, 0.5f)) * Mathf.Rad2Deg;
+
+        float v0 = torsoPitch.v, r0 = torsoRoll.v;
+        float pitch = torsoPitch.Step(pitchTarget, 3.2f, 0.45f, 0f, dt);
+        float roll = torsoRoll.Step(rollTarget, 3.2f, 0.5f, 0f, dt);
+        float pitchAcc = (torsoPitch.v - v0) / dt, rollAcc = (torsoRoll.v - r0) / dt;
+        // the head and the hanging arms are carried by the chest and lag behind it (kicked the other way by its acceleration)
+        float hp = Mathf.Clamp(headPitch.Step(0f, 2.4f, 0.35f, -0.9f * pitchAcc, dt), -18f, 18f);
+        float hr = Mathf.Clamp(headRoll.Step(0f, 2.4f, 0.4f, -0.7f * rollAcc, dt), -12f, 12f);
+        float arm = Mathf.Clamp(armSwing.Step(0f, 1.6f, 0.3f, -0.8f * pitchAcc, dt), -20f, 20f);
+
+        var body = Player.instance != null ? Player.instance.transform : kChest;
+        Vector3 fwd = body.forward, right = body.right;
+
+        // spine, spread over its three joints; the flat-rigged arms + head follow the chest
+        Vector3 chestPos = kChest.position; Quaternion chestRot = kChest.rotation;
+        float[] share = { 0.3f, 0.35f, 0.35f };
+        for (int i = 0; i < kSpine.Length; i++)
+            if (kSpine[i] != null) kSpine[i].rotation = Quaternion.AngleAxis(pitch * share[i], right) * Quaternion.AngleAxis(roll * share[i], fwd) * kSpine[i].rotation;
+        Quaternion dq = kChest.rotation * Quaternion.Inverse(chestRot);
+        foreach (var b in kCarry)
+            if (b != null) b.SetPositionAndRotation(kChest.position + dq * (b.position - chestPos), dq * b.rotation);
+
+        if (kHead != null) kHead.rotation = Quaternion.AngleAxis(hp, right) * Quaternion.AngleAxis(hr, fwd) * kHead.rotation;
+
+        // arms swing from the shoulders (upper-arm twist bones carry part of the sleeve and turn ~90% with the arm)
+        foreach (var (twist, bones) in new[] { (kArmTwistL, new[] { kCarry[0], kCarry[2], kCarry[4] }), (kArmTwistR, new[] { kCarry[1], kCarry[3], kCarry[5] }) })
+        {
+            if (twist == null) continue;
+            Vector3 pivot = twist.position; Quaternion q = Quaternion.AngleAxis(arm, right);
+            foreach (var b in bones) if (b != null) b.SetPositionAndRotation(pivot + q * (b.position - pivot), q * b.rotation);
+            twist.rotation = Quaternion.Slerp(Quaternion.identity, q, 0.9f) * twist.rotation;
+        }
+
+        // the coward leans back into each pull and forward into each push, ahead of Khalid (he's the one doing it)
+        if (cSpine != null && coward != null)
+        {
+            Transform c = coward.transform;
+            float cp = -0.45f * pitchTarget, cr = -0.4f * rollTarget;
+            float[] cshare = { 0.35f, 0.35f, 0.3f };
+            for (int i = 0; i < cSpine.Length; i++)
+                if (cSpine[i] != null) cSpine[i].rotation = Quaternion.AngleAxis(cp * cshare[i], c.right) * Quaternion.AngleAxis(cr * cshare[i], c.forward) * cSpine[i].rotation;
+            if (cHead != null) cHead.rotation = Quaternion.AngleAxis(-0.5f * hp, c.right) * cHead.rotation;
+        }
+    }
+
+    // Khalid lowers his aimed gun a little: both arms (and the gun in his hands) tip down together about the line through
+    // his shoulders, so the grip stays as the clip has it. The twist bones carry part of the sleeve.
+    void GunDip()
+    {
+        if (!running || current == null || currentPhase < 0 || currentPhase >= phases.Length || kCarry == null || kArmTwistL == null || kArmTwistR == null) return;
+        var keys = phases[currentPhase].gunDip;
+        if (keys == null || keys.Length == 0) return;
+        float angle = Lerp(keys, (float)current.time) * gunDipAngle;
+        if (Mathf.Abs(angle) < 0.01f) return;
+        var body = Player.instance != null ? Player.instance.transform : kChest;
+        Quaternion q = Quaternion.AngleAxis(angle, body.right);
+        foreach (var (twist, bones) in new[] { (kArmTwistL, new[] { kCarry[0], kCarry[2], kCarry[4] }), (kArmTwistR, new[] { kCarry[1], kCarry[3], kCarry[5] }) })
+        {
+            Vector3 pivot = twist.position;
+            foreach (var b in bones) if (b != null) b.SetPositionAndRotation(pivot + q * (b.position - pivot), q * b.rotation);
+            twist.rotation = Quaternion.Slerp(Quaternion.identity, q, 0.9f) * twist.rotation;
+        }
+    }
+
+    // straight lines between (time, value) keys
+    static float Lerp(Vector2[] keys, float t)
+    {
+        if (t <= keys[0].x) return keys[0].y;
+        for (int i = 1; i < keys.Length; i++)
+            if (t <= keys[i].x) return Mathf.Lerp(keys[i - 1].y, keys[i].y, Mathf.InverseLerp(keys[i - 1].x, keys[i].x, t));
+        return keys[keys.Length - 1].y;
     }
 
     // between pose keys: eased in/out (smooth) or at constant speed
@@ -455,8 +758,9 @@ public class CowardMeetingCutscene : MonoBehaviour
         {
             if (t > keys[i].time) continue;
             var a = Get(i - 1); var b = Get(i);
+            if (b.cut && t < b.time) { pos = a.position; yaw = a.yaw; return; }
             float u = Mathf.InverseLerp(a.time, b.time, t);
-            if (smooth) u = u * u * (3f - 2f * u);
+            if (smooth && !b.linear) u = u * u * (3f - 2f * u);
             pos = Vector3.Lerp(a.position, b.position, u);
             yaw = Mathf.LerpAngle(a.yaw, b.yaw, u);
             return;

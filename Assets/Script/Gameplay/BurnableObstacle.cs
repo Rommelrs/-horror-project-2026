@@ -111,9 +111,29 @@ public class BurnableObstacle : MonoBehaviour
         }
     }
     
+    // The trigger can miss the player leaving: a cutscene switches his CharacterController off while he stands
+    // here and moves him away, and a disabled collider never gets OnTriggerExit. So check he is really still in it.
+    private bool PlayerStillInRange()
+    {
+        if (Player.instance == null || Player.instance.controller == null) return false;
+        CharacterController cc = Player.instance.controller;
+        Vector3 p = cc.transform.TransformPoint(cc.center);
+        foreach (Collider c in GetComponents<Collider>())
+            if (c.enabled && c.isTrigger && (c.ClosestPoint(p) - p).sqrMagnitude <= Mathf.Pow(cc.radius + cc.height * 0.5f, 2f))
+                return true;
+        return false;
+    }
+
     private void Update()
     {
-        if (playerInRange && !hasBeenBurned && Input.GetKeyDown(KeyCode.E))
+        if (playerInRange && !PlayerStillInRange())
+        {
+            playerInRange = false;
+            if (currentInRange == this)
+                currentInRange = null;
+        }
+
+        if (playerInRange && !hasBeenBurned && !CowardMeetingCutscene.IsPlaying && Input.GetKeyDown(KeyCode.E))
         {
             // Don't trigger if subtitle system is already active or in cooldown
             if (SubtitleManager.instance != null && (SubtitleManager.instance.IsSubtitleBusy() || SubtitleManager.instance.IsWithinCooldownPeriod()))

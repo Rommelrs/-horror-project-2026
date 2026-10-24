@@ -74,6 +74,18 @@ public class ItemInspectionHandler : MonoBehaviour
         //Subscribe
         interactionInput.action.performed += OnInteractButtonPressed;
         readInput.action.performed += OnReadButtonPressed;
+
+        StartCoroutine(Co_HideInspectionCamera());
+    }
+
+    // The inspection camera starts active so its PSXShaderManager.Start runs at scene start like it always has (the
+    // Main Camera's manager runs after it and sets the PSX shader globals); one frame later it's turned off so it only
+    // renders while an item is inspected or shown in the inventory
+    IEnumerator Co_HideInspectionCamera()
+    {
+        yield return null;
+        if (!InspectionMenuIsActive())
+            inspectionCameraObj.SetActive(false);
     }
 
     private void Update()

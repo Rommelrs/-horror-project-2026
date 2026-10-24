@@ -132,7 +132,9 @@ public class SubtitleManager : MonoBehaviour
         }
     }
 
-    public static void ShowSubtitle(LocalizedString localizedString, bool freezeGame = true, Action callbakActionOnCompleted = null)
+    /// <param name="showFor">Spoken lines (cutscenes): above 0, the line appears whole at once (no typewriter) and closes
+    /// after this many seconds, so it keeps pace with the voice.</param>
+    public static void ShowSubtitle(LocalizedString localizedString, bool freezeGame = true, Action callbakActionOnCompleted = null, float showFor = -1f)
     {
         if (instance != null)
         {
@@ -140,7 +142,7 @@ public class SubtitleManager : MonoBehaviour
             instance.shouldFreezeGame = freezeGame;
             instance.callbackOnCompleted = callbakActionOnCompleted;
             instance.currentSubtitleList = new List<string>();
-            instance.UpdateSubtitle(subtitle);
+            instance.UpdateSubtitle(subtitle, showFor);
         }
     }
 
@@ -180,21 +182,22 @@ public class SubtitleManager : MonoBehaviour
         UpdateSubtitle(subtitle);
     }
 
-    void UpdateSubtitle(string subtitle)
+    void UpdateSubtitle(string subtitle, float showFor = -1f)
     {
         if (showSubtitleCR != null) StopCoroutine(showSubtitleCR);
-        showSubtitleCR = StartCoroutine(Co_UpdateSubtitle(subtitle));
+        showSubtitleCR = StartCoroutine(Co_UpdateSubtitle(subtitle, showFor));
     }
 
-    IEnumerator Co_UpdateSubtitle(string subtitle)
+    IEnumerator Co_UpdateSubtitle(string subtitle, float showFor = -1f)
     {
+        bool spoken = showFor > 0f;
         subtitleBusy = true;
         if (shouldFreezeGame)
             Time.timeScale = 0f;
 
         subtitleTxt.text = string.Empty;
 
-        if (useTypewriterEffect)
+        if (useTypewriterEffect && !spoken)
         {
             for (int i = 0; i < subtitle.Length; i++)
             {
@@ -210,7 +213,7 @@ public class SubtitleManager : MonoBehaviour
         // Auto-dismiss last subtitle if no more in queue
         if (currentSubtitleList == null || currentSubtitleList.Count <= 0)
         {
-            yield return new WaitForSecondsRealtime(autoDismissDelay);
+            yield return new WaitForSecondsRealtime(spoken ? showFor : autoDismissDelay);
             
             // Close subtitle
             subtitleTxt.text = string.Empty;
