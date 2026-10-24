@@ -306,7 +306,8 @@ public class EnemyDashAttackState : EnemyState
         if (Player.instance.isRolling)
             return;
 
-        if (enemy.PlayerInRange(enemy.stats.attackRange))
+        // in range AND nothing solid between him and the player (the dash used the raw distance, so it could hit through a wall)
+        if (enemy.PlayerInAttackRange())
         {
             damaged = true;
 

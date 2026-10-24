@@ -211,20 +211,47 @@ public class Enemy : MonoBehaviour, IPoolable
         }
     }
 
+    // Not every enemy controller has a "Speed" (or "Velocity") parameter. SetFloat on a missing one logs a warning with a stack trace
+    // every frame for every such enemy, which is nearly free in the editor but slows a build down badly (Player.log writes). So only
+    // drive the parameters the controller really has; checked once per Animator/controller.
+    Animator animParamsChecked;
+    RuntimeAnimatorController animParamsController;
+    bool hasVelocityParam, hasSpeedParam;
+
+    void CacheAnimParams()
+    {
+        animParamsChecked = anim;
+        animParamsController = anim.runtimeAnimatorController;
+        hasVelocityParam = false;
+        hasSpeedParam = false;
+        foreach (var p in anim.parameters)
+        {
+            if (p.type != AnimatorControllerParameterType.Float) continue;
+            if (p.name == "Velocity") hasVelocityParam = true;
+            else if (p.name == "Speed") hasSpeedParam = true;
+        }
+    }
+
     private void HandleAnimation()
     {
+        if (anim == null) return;
+        if (animParamsChecked != anim || animParamsController != anim.runtimeAnimatorController) CacheAnimParams();
+
         //Smothly Lerp to new Velocity for smoother animation transition
         currentVelocity = Mathf.Lerp(currentVelocity, (agent.velocity.magnitude >= 0.1) ? agent.velocity.magnitude : 0, stats.animationSmoothness * Time.deltaTime);
-        anim.SetFloat("Velocity", currentVelocity);
-        
+        if (hasVelocityParam) anim.SetFloat("Velocity", currentVelocity);
+
         // Also set Speed parameter (0 = idle, 1 = walk, 2 = run)
-        float speed = 0f;
-        if (currentVelocity > 0.1f)
+        if (hasSpeedParam)
         {
-            // Walking/running - map velocity to 0-2 range
-            speed = Mathf.Clamp(currentVelocity / stats.movementSpeed * 2f, 0f, 2f);
+            float speed = 0f;
+            if (currentVelocity > 0.1f)
+            {
+                // Walking/running - map velocity to 0-2 range
+                speed = Mathf.Clamp(currentVelocity / stats.movementSpeed * 2f, 0f, 2f);
+            }
+            anim.SetFloat("Speed", speed);
         }
-        anim.SetFloat("Speed", speed);
     }
 
     public bool PlayerInRange(float range)

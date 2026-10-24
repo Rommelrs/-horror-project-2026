@@ -17,7 +17,7 @@ using UnityEditor;
 public class QuestionerTestBench : MonoBehaviour
 {
     /// <summary>Which enemy a scenario page is about. Numpad 0 flips between the pages.</summary>
-    public enum EnemyKind { Questioner, BagBearer }
+    public enum EnemyKind { Questioner, BagBearer, Runner }
 
     [System.Serializable]
     public class EnemySpawn
@@ -54,6 +54,7 @@ public class QuestionerTestBench : MonoBehaviour
     public GameObject questionerPrefab;
     public GameObject questionerNoRunningPrefab;
     public GameObject bagBearerPrefab;
+    public GameObject runnerPrefab;
     public Item pistolItem;
     public Item ammoItem;
     public int reserveAmmoToGive = 30;
@@ -82,6 +83,9 @@ public class QuestionerTestBench : MonoBehaviour
         public float firstThrowTime = -1f;
         public float lastThrowTime = -1f;
         public int attacks;
+        public string lastState = "";
+        public readonly List<string> stateLog = new List<string>();     // "time:State" for every state change (capped), shows the whole behaviour flow
+        public readonly Dictionary<string, int> stateEntries = new Dictionary<string, int>();
         public float firstAttackTime = -1f;
         public float firstChaseTime = -1f;
         public float firstMoveTime = -1f;
@@ -225,10 +229,10 @@ public class QuestionerTestBench : MonoBehaviour
         var kb = Keyboard.current;
         if (kb == null || p == null) return;
 
-        // Page switch (Questioner <-> BagBearer scenario lists)
+        // Page switch (Questioner -> BagBearer -> Runner -> ...)
         if (kb.numpad0Key.wasPressedThisFrame)
         {
-            page = page == EnemyKind.Questioner ? EnemyKind.BagBearer : EnemyKind.Questioner;
+            page = NextPage(page);
             Toast("Page: " + page + " (" + PageIndices(page).Count + " scenarios) - press Numpad 1-9 / PgDn");
         }
 
@@ -289,6 +293,26 @@ public class QuestionerTestBench : MonoBehaviour
 
     // ------------------------------------------------------------- scenarios
 
+    static string ShortState(string s)
+    {
+        return s.Replace("RunnerEnemy", "R").Replace("Enemy", "").Replace("State", "");
+    }
+
+    /// <summary>The state flow of every spawned enemy ("t:State t:State ..."), plus how often each state was entered (for automated checks).</summary>
+    public string DebugFlow()
+    {
+        var sb = new System.Text.StringBuilder();
+        int n = 0;
+        foreach (var l in live)
+        {
+            n++;
+            sb.Append("enemy" + n + " flow: " + string.Join(" ", l.stateLog.ToArray()) + " | entries: ");
+            foreach (var kv in l.stateEntries) sb.Append(ShortState(kv.Key) + "=" + kv.Value + " ");
+            sb.Append("| dmg taken " + playerDamageTaken + " in " + playerHitsTaken + " hit(s); ");
+        }
+        return sb.ToString();
+    }
+
     /// <summary>One line per spawned enemy with the same timers the panel shows (for automated checks).</summary>
     public string DebugTimers()
     {
@@ -316,9 +340,15 @@ public class QuestionerTestBench : MonoBehaviour
         return PageIndices(scenarios[globalIndex].kind).IndexOf(globalIndex) + 1;
     }
 
+    static EnemyKind NextPage(EnemyKind k)
+    {
+        return k == EnemyKind.Questioner ? EnemyKind.BagBearer : k == EnemyKind.BagBearer ? EnemyKind.Runner : EnemyKind.Questioner;
+    }
+
     GameObject PrefabFor(EnemyKind kind)
     {
         if (kind == EnemyKind.BagBearer) return bagBearerPrefab;
+        if (kind == EnemyKind.Runner) return runnerPrefab;
         return useNoRunningVariant && questionerNoRunningPrefab != null ? questionerNoRunningPrefab : questionerPrefab;
     }
 
@@ -535,6 +565,16 @@ public class QuestionerTestBench : MonoBehaviour
             if (l.enemy == null) continue;
             var e = l.enemy;
             bool dead = e.health != null && e.health.IsDead;
+
+            // behaviour flow: every state change with its time (shown in DebugTimers and under the enemy's tag)
+            string st = e.currentState;
+            if (!string.IsNullOrEmpty(st) && st != "PAUSED!" && st != l.lastState)
+            {
+                l.lastState = st;
+                if (l.stateLog.Count < 80) l.stateLog.Add((Time.time - scenarioStartTime).ToString("0.0") + ":" + ShortState(st));
+                l.stateEntries[st] = (l.stateEntries.TryGetValue(st, out int cnt) ? cnt : 0) + 1;
+            }
+
             Vector3 pos = e.transform.position;
             float moved = (pos - l.lastPos).magnitude / Mathf.Max(Time.deltaTime, 0.0001f);
             l.lastPos = pos;
@@ -616,8 +656,7 @@ public class QuestionerTestBench : MonoBehaviour
         }
 
         var sb = new StringBuilder();
-        EnemyKind otherPage = page == EnemyKind.Questioner ? EnemyKind.BagBearer : EnemyKind.Questioner;
-        sb.AppendLine("<b><color=#9fe>PAGE: " + page.ToString().ToUpper() + "</color></b>   <b>Numpad 0</b> switch to " + otherPage + " page");
+        sb.AppendLine("<b><color=#9fe>PAGE: " + page.ToString().ToUpper() + "</color></b>   <b>Numpad 0</b> next page (" + NextPage(page) + ")");
         sb.AppendLine("<b>SCENARIOS</b>   Numpad 1-9 jump  |  PgUp / PgDn prev / next  |  F5 restart  |  F11 clear enemies  |  Del clear results");
         sb.AppendLine("<b>RESULT</b>   Shoot the floating button in a scenario room: orange = unmarked, green = PASS, red = FAIL (shoot again to cycle)");
         var pageIdx = PageIndices(page);
@@ -730,6 +769,11 @@ public class QuestionerTestBench : MonoBehaviour
             string text = "<b>" + state + "</b>  d " + dist.ToString("0.0") + "m  v " + speed.ToString("0.0") + "  hp " + hp + agentInfo;
             if (e is BagBearerEnemy bagE)
                 text += "\nbags " + LoadedBags(bagE) + "/" + (bagE.bagBearerReloadGroup != null ? bagE.bagBearerReloadGroup.Length : 0) + "  throws " + l.throws + (e.HoldPositionDuringChase ? "  HOLDING" : "");
+            if (e is RunnerEnemy && l.stateLog.Count > 0)
+            {
+                int from = Mathf.Max(0, l.stateLog.Count - 4);
+                text += "\n<color=#bde>" + string.Join(" > ", l.stateLog.GetRange(from, l.stateLog.Count - from).ToArray()) + "</color>";
+            }
             if (l.stuckTime > 1.2f) text += "\n<color=#f55><b>STUCK " + l.stuckTime.ToString("0.0") + "s</b></color> " + StuckInfo(e);
             else if (e.stateMachine != null && e.stateMachine.CurrentState == e.chaseState && e.chaseState.QueueLeader != null)
                 text += "\n<color=#6cf><b>QUEUEING</b> behind a teammate (waiting on purpose)</color>";

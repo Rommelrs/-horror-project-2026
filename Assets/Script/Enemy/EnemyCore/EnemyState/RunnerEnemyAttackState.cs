@@ -11,6 +11,11 @@ public class RunnerEnemyAttackState : EnemyState
 
     public override void Enter()
     {
+        // canLeave keeps whatever it was when this state was left last time (true on the very first entry). The leave check runs
+        // before canLeave is recomputed in Update, so without this reset every other attack was left again on its first frame:
+        // he flickered Attack -> Sidestep and the swing played while he was already strafing.
+        canLeave = false;
+
         // Calculate leave time based on attack animation + small buffer
         float minimumTimeToLeave = enemy.stats.attackDelay + enemy.stats.attackCooldown - 0.1f;
         readyToLeaveTime = Time.time + minimumTimeToLeave;

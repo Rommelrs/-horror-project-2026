@@ -22776,24 +22776,30 @@ MonoBehaviour:
   reloadDuration: 1.3
   isReloading: 0
   reloadTimeThresholds:
-  - maxStability: 75
-    minStability: 50
+  - maxStability: 80
+    minStability: 60
+    reloadDurationMultiplier: 1.25
+  - maxStability: 60
+    minStability: 40
     reloadDurationMultiplier: 1.5
-  - maxStability: 50
-    minStability: 25
+  - maxStability: 40
+    minStability: 20
     reloadDurationMultiplier: 2
-  - maxStability: 25
+  - maxStability: 20
     minStability: 0
     reloadDurationMultiplier: 3
   bulletSpread: 0.01
   bulletSpreadThresholds:
-  - maxStability: 75
-    minStability: 50
+  - maxStability: 80
+    minStability: 60
+    bulletSpreadMultiplier: 1.25
+  - maxStability: 60
+    minStability: 40
     bulletSpreadMultiplier: 1.5
-  - maxStability: 50
-    minStability: 25
+  - maxStability: 40
+    minStability: 20
     bulletSpreadMultiplier: 2
-  - maxStability: 25
+  - maxStability: 20
     minStability: 0
     bulletSpreadMultiplier: 4
   maxBulletPierceCount: 3
@@ -27963,28 +27969,35 @@ MonoBehaviour:
   idleBobMultiplier: {x: 0.1, y: 0.3, z: 0.3}
   walkingBobMultiplier: {x: 0.1, y: 0.1, z: 0.1}
   bobStabilityThresholds:
-  - maxStability: 100
-    minStability: 75
+  - maxStability: 101
+    minStability: 80
     bobMultiplier: 1
     aimCrosshairMultiplierX: 6000
     aimCrosshairMultiplierY: 1500
     fpAimPointRotationIntensityX: 0.1
     fpAimPointRotationIntensityY: 1
-  - maxStability: 75
-    minStability: 50
+  - maxStability: 80
+    minStability: 60
+    bobMultiplier: 1.5
+    aimCrosshairMultiplierX: 8000
+    aimCrosshairMultiplierY: 1500
+    fpAimPointRotationIntensityX: 0.1
+    fpAimPointRotationIntensityY: 1
+  - maxStability: 60
+    minStability: 40
     bobMultiplier: 2
     aimCrosshairMultiplierX: 10000
     aimCrosshairMultiplierY: 1500
     fpAimPointRotationIntensityX: 0.1
     fpAimPointRotationIntensityY: 1
-  - maxStability: 50
-    minStability: 25
+  - maxStability: 40
+    minStability: 20
     bobMultiplier: 3
     aimCrosshairMultiplierX: 14000
     aimCrosshairMultiplierY: -100
     fpAimPointRotationIntensityX: 0.1
     fpAimPointRotationIntensityY: 1
-  - maxStability: 25
+  - maxStability: 20
     minStability: 0
     bobMultiplier: 8
     aimCrosshairMultiplierX: 37000

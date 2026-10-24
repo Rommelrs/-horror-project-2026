@@ -13,9 +13,10 @@ public static class PlayerResourceChecker
     public const float HEALTH_MEDIUM = 0.75f;    // 75%
     
     // Stability thresholds
-    public const float STABILITY_CRITICAL = 0.25f;
-    public const float STABILITY_LOW = 0.50f;
-    public const float STABILITY_MEDIUM = 0.75f;
+    // (match the stability tiers in PlayerStability: Fractured < 20, Disturbed < 40, Shaken < 60)
+    public const float STABILITY_CRITICAL = 0.20f;
+    public const float STABILITY_LOW = 0.40f;
+    public const float STABILITY_MEDIUM = 0.60f;
     
     // Ammo thresholds
     public const int AMMO_CRITICAL = 5;

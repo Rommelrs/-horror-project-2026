@@ -90,11 +90,20 @@ MonoBehaviour:
   disableEnemyAfterDeath: 1
   releaseTime: 12
   rotationSmoothness: 3
+  idleMinDuration: 1
+  idleMaxDuration: 3
+  chaseStartLookDuration: 2
+  chaseStartTurnSpeed: 0
   detectionMode: 0
   visionRadius: 12
   movementSpeed: 2
   useAdvancedPathfinding: 1
   useOptimizedPathfinding: 1
+  chaseDirectApproach: 0
+  queueBehindChance: 0
+  queueBehindRange: 6
+  queueBehindSpacing: 1.6
+  queueDecisionInterval: 3
   useDynamicChaseSpeed: 0
   sprintDistanceThreshold: 10
   sprintSpeedMultiplier: 1.5
@@ -103,6 +112,7 @@ MonoBehaviour:
   knockBackForce: 1.2
   stillThreshold: 0.2
   maxKnockbackTime: 5
+  weakpointKnockbackScale: 1
   canHeavyKnockBack: 1
   heavyKnockBackDuration: 3
   wakeUpDuration: 2
@@ -111,6 +121,7 @@ MonoBehaviour:
   wanderingSpeed: 1
   canHearGunshots: 1
   investigateDuration: 5
+  becomesAggressiveWhenAlerted: 0
   damage: 20
   attackRate: 20
   attackIndexes: 
@@ -151,11 +162,19 @@ MonoBehaviour:
   animationSmoothness: 3
   sideStepLookRotation: 30
   sideStepAccelaration: 6
-  sideStepSpeed: 1.8
+  sideStepSpeed: 0.3
   sideStepDurationMin: 3
   sideStepDurationMax: 7
   sideStepCooldown: 3
   sideStepChance: 100
+  sideStepOnlyWhenAimedAt: 0
+  sideStepAimAngle: 12
+  sideStepReactionTime: 0.25
+  sideStepRerollInterval: 1.5
+  sideStepSpeedVariation: 0.35
+  sideStepAnimGroundSpeed: 0.2
+  sideStepMinAnimSpeed: 0.5
+  sideStepMaxAnimSpeed: 4
 --- !u!114 &7328513853709502882
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -187,6 +206,7 @@ MonoBehaviour:
   isDamageByWeakpointHit: 0
   iFrameDuration: 1
   enableIFrames: 0
+  isInvincible: 0
 --- !u!54 &7064483923256008814
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -429,7 +449,7 @@ MonoBehaviour:
   sideStepRange: 8
   dashTrailRenderer: {fileID: 3420176159951352227}
   dashPS: {fileID: 7857682484837940992}
-  sideStepInjuredSpeed: 0.4
+  sideStepInjuredSpeed: 0.1
   injuredMovementSpeed: 1
   playLookAroundAtWaypoints: 1
   sideStepToRight: 1

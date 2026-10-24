@@ -16,6 +16,13 @@ public class PlayerStability : MonoBehaviour
     [SerializeField] float stabilityUpdateFrequency = 0.5f;
     [SerializeField] GameObject distortedAudioRevertZoneObj;
 
+    // Stability tiers (shared by the inventory label, the gun / reload / sway tables on the Player prefab, the screen effects and loot):
+    //   Stable 80-100 | Unsteady 60-79 | Shaken 40-59 | Disturbed 20-39 | Fractured 0-19
+    public const int StableFrom = 80;
+    public const int UnsteadyFrom = 60;
+    public const int ShakenFrom = 40;
+    public const int DisturbedFrom = 20;
+
     public int stability = 100;
     public int maxStability = 100;
 
@@ -31,7 +38,7 @@ public class PlayerStability : MonoBehaviour
     private void Update()
     {
         float processedStabilityValue = (float)stability;
-        if (processedStabilityValue <= 25f) processedStabilityValue = 0f;
+        if (processedStabilityValue < DisturbedFrom) processedStabilityValue = 0f;        // Fractured: full effect
 
         //Update Stability UI
         if(stabilityFill != null)
@@ -83,7 +90,7 @@ public class PlayerStability : MonoBehaviour
             Debug.LogWarning("PlayerStability: whiteVignetteOverlay is not assigned!");
         }
 
-        if (processedStabilityValue <= 25)
+        if (processedStabilityValue < DisturbedFrom)
         {
             //Turn on Distorted Audio
             if (!distortedAudioRevertZoneObj.activeSelf)

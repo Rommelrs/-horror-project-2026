@@ -136,7 +136,6 @@ public class CircuitBoxInteractable : Interactable
 
         // nothing left to press E on
         if (coll != null) coll.enabled = false;
-        if (InteractPromptUI.instance != null) InteractPromptUI.instance.HidePrompt();
 
         busy = false;
         onOpened?.Invoke();

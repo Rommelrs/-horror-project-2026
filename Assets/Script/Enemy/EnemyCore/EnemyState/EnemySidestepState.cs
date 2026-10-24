@@ -39,7 +39,9 @@ public class EnemySidestepState : EnemyState
         // Slower or faster step each time
         speedFactor = 1f + UnityEngine.Random.Range(-enemy.stats.sideStepSpeedVariation, enemy.stats.sideStepSpeedVariation);
 
-        sidewalkMode = enemy.stats.sideStepAnimGroundSpeed > 0f && !(enemy is RunnerEnemy);
+        // (the Runner takes part too: his strafe clips cover only ~0.2 m/s of ground at normal speed, so at 1.8 m/s he skated;
+        //  the Sidestep state of RunnerEnemyController has a StrafeAnimSpeed speed parameter now)
+        sidewalkMode = enemy.stats.sideStepAnimGroundSpeed > 0f;
         sidewalkSpeed = 0f;
         if (sidewalkMode)
         {
@@ -147,22 +149,15 @@ public class EnemySidestepState : EnemyState
                 continue;
             }
 
+            // The old version pushed with a small impulse each physics step (accel * dt = 0.12 m/s per step for the Runner), which is
+            // about what the floor's friction takes away again (0.6 * 9.81 m/s^2 for a 1 kg body): he strafed in place at ~0.2-0.5 m/s
+            // instead of the configured 1.8 m/s. Drive the sideways velocity directly, like the sidewalk mode does (gravity untouched).
             float maxSpeed = enemy.stats.sideStepSpeed * speedFactor;
-
-            if (isSidesteppingToRight)
-            {
-                //Sidestepping to Right
-                if (enemy.rb.linearVelocity.magnitude < maxSpeed)
-                    enemy.rb.AddForce(enemy.transform.right * enemy.stats.sideStepAccelaration * Time.fixedDeltaTime, ForceMode.Impulse);
-                enemy.rb.linearVelocity = Vector3.ClampMagnitude(enemy.rb.linearVelocity, maxSpeed);
-            }
-            else
-            {
-                //Sidestepping to Left
-                if (enemy.rb.linearVelocity.magnitude < maxSpeed)
-                    enemy.rb.AddForce(-enemy.transform.right * enemy.stats.sideStepAccelaration * Time.fixedDeltaTime, ForceMode.Impulse);
-                enemy.rb.linearVelocity = Vector3.ClampMagnitude(enemy.rb.linearVelocity, maxSpeed);
-            }
+            sidewalkSpeed = Mathf.MoveTowards(sidewalkSpeed, maxSpeed, enemy.stats.sideStepAccelaration * Time.fixedDeltaTime);
+            Vector3 dirSide = enemy.transform.right * (isSidesteppingToRight ? 1f : -1f);
+            dirSide.y = 0f;
+            dirSide.Normalize();
+            enemy.rb.linearVelocity = dirSide * sidewalkSpeed + Vector3.up * enemy.rb.linearVelocity.y;
         }
     }
 }

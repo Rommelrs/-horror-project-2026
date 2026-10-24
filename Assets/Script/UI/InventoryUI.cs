@@ -278,22 +278,22 @@ public class InventoryUI : MonoBehaviour
         string stabilityStr = string.Empty;
         Color stabilityColor = Color.white;
         
-        if (stability >= 100)
+        if (stability >= PlayerStability.StableFrom)
         {
             stabilityStr = stableString.GetLocalizedString();
             stabilityColor = stableColor;
         }
-        else if (stability >= 80)
+        else if (stability >= PlayerStability.UnsteadyFrom)
         {
             stabilityStr = unsteadyString.GetLocalizedString();
             stabilityColor = unsteadyColor;
         }
-        else if (stability >= 60)
+        else if (stability >= PlayerStability.ShakenFrom)
         {
             stabilityStr = shakenString.GetLocalizedString();
             stabilityColor = shakenColor;
         }
-        else if (stability >= 40)
+        else if (stability >= PlayerStability.DisturbedFrom)
         {
             stabilityStr = disturbedString.GetLocalizedString();
             stabilityColor = disturbedColor;

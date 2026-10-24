@@ -86,10 +86,11 @@ public class RunnerEnemy : Enemy
         anim.SetInteger("Injured", 0);
     }
 
+    // A knee hit no longer slows him down or makes him limp (he only gets knocked back / staggered by the hurt state).
+    // The old slow-down made one hit turn him into an easy target; set these to true-ish values again to bring it back.
     void SetInjuredSpeed()
     {
-        stats.movementSpeed = injuredMovementSpeed;
-        stats.sideStepSpeed = sideStepInjuredSpeed;
+        // intentionally empty
     }
 
     void SetDefaultSpeed()
@@ -159,7 +160,8 @@ public class RunnerEnemy : Enemy
 
         if (health.IsDead) return;
 
-        if (PlayerInRange(stats.attackRange) && PlayerInFOV())
+        // attack range + line of sight (no hits through walls) + facing him
+        if (PlayerInAttackRange() && PlayerInFOV())
         {
             //Successful hit
             Player.instance.health.Damage(stats.damage);
@@ -194,9 +196,6 @@ public class RunnerEnemy : Enemy
                 weakpointHitCount = 1;
                 anim.SetFloat("InjuredKneeDirection", 0);
 
-                injured = true;
-                anim.SetInteger("Injured", 1);
-
                 SetInjuredSpeed();
                 // Advance to next weakpoint (right knee)
                 enemyWeakpoint.AdvanceSequentialIndex();
@@ -209,9 +208,6 @@ public class RunnerEnemy : Enemy
 
                 // Reset cycle - go back to left knee
                 leftKneeDamaged = false;
-
-                injured = true;
-                anim.SetInteger("Injured", 1);
 
                 SetInjuredSpeed();
                 // Advance to next weakpoint (cycles back to left knee)
@@ -321,8 +317,9 @@ public class RunnerEnemy : Enemy
                 else if (stats.enemyType == EnemyType.Wandering)
                 {
                     //Wandering Enemy Type
-                    // Detect player in vision range
-                    if (PlayerInRange(stats.visionRadius))
+                    // Detect the player the same way every other enemy does (vision cone + radius per Stats.detectionMode).
+                    // He used the bare radius: a patrolling Runner noticed you 360 degrees around him, behind his back.
+                    if (EnemyDetectionHelper.CheckDetection(this))
                     {
                         stateMachine.ChangeState(chaseState);
                     }
@@ -339,8 +336,8 @@ public class RunnerEnemy : Enemy
         {
             if (stats.enemyType == EnemyType.Wandering || stats.enemyType == EnemyType.Aggressive)
             {
-                //If within vision radius
-                if (PlayerInRange(stats.visionRadius))
+                //If the player is inside his vision
+                if (EnemyDetectionHelper.CheckDetection(this))
                 {
                     stateMachine.ChangeState(chaseState);
                 }
@@ -352,8 +349,9 @@ public class RunnerEnemy : Enemy
         {
             if (currentState.canLeave)
             {
-                // If within sidestep range
-                if (PlayerInRange(sideStepRange))
+                // If within sidestep range AND he can actually see you (before, he started strafing / winding up for a dash behind walls,
+                // tables and platforms because only the straight-line distance counted)
+                if (PlayerInRange(sideStepRange) && HasLineOfSightToPlayer())
                 {
                     // Don't increment if we just came from hurt state (sideStepCount is 0)
                     // This prevents immediate dash after waking up
@@ -376,8 +374,10 @@ public class RunnerEnemy : Enemy
         {
             if (currentState.canLeave)
             {
-                if (!PlayerInRange(stats.visionRadius))
+                if (!PlayerInRange(stats.visionRadius) || !HasLineOfSightToPlayer())
                 {
+                    // out of range or lost sight (he strafed behind cover / you went round a corner): go and find you
+                    sideStepCount = 0;
                     stateMachine.ChangeState(chaseState);
                 }
                 else
@@ -386,9 +386,9 @@ public class RunnerEnemy : Enemy
                     if(sideStepCount >= 1)
                     {
                         sideStepCount = 0;
-                        
+
                         // If player is very close (within attack range), use simple attack instead of dash
-                        if (PlayerInRange(stats.attackRange))
+                        if (PlayerInAttackRange())
                         {
                             stateMachine.ChangeState(runnerAttackState);
                         }
@@ -412,7 +412,7 @@ public class RunnerEnemy : Enemy
             if (currentState.canLeave)
             {
                 // Always exit after one attack - don't stay in attack state
-                if (!PlayerInRange(stats.visionRadius))
+                if (!PlayerInRange(stats.visionRadius) || !HasLineOfSightToPlayer())
                 {
                     stateMachine.ChangeState(chaseState);
                 }
@@ -430,7 +430,7 @@ public class RunnerEnemy : Enemy
         {
             if (currentState.canLeave)
             {
-                if (!PlayerInRange(stats.visionRadius))
+                if (!PlayerInRange(stats.visionRadius) || !HasLineOfSightToPlayer())
                 {
                     stateMachine.ChangeState(chaseState);
                 }

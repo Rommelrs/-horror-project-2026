@@ -17,6 +17,7 @@ public static class QuestionerTestBenchBuilder
     const string PrefabPath = "Assets/Prefab/Enemy/QuestionerEnemy.prefab";
     const string PrefabNoRunPath = "Assets/Prefab/Enemy/QuestionerEnemyNoRunning.prefab";
     const string BagBearerPath = "Assets/Prefab/Enemy/BagBearerEnemy.prefab";
+    const string RunnerPath = "Assets/Prefab/Enemy/RunnerEnemy.prefab";
     const string PistolPath ="Assets/Resources/Items/Pistol.asset";
     const string AmmoPath = "Assets/Resources/Items/Supplies/Light Ammo.asset";
     const string MatFolder = "Assets/Materials/QuestionerBench";
@@ -58,6 +59,7 @@ public static class QuestionerTestBenchBuilder
         bench.questionerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath);
         bench.questionerNoRunningPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabNoRunPath);
         bench.bagBearerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(BagBearerPath);
+        bench.runnerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(RunnerPath);
         currentKind = QuestionerTestBench.EnemyKind.Questioner;
         bench.pistolItem = AssetDatabase.LoadAssetAtPath<Item>(PistolPath);
         bench.ammoItem = AssetDatabase.LoadAssetAtPath<Item>(AmmoPath);
@@ -269,9 +271,9 @@ public static class QuestionerTestBenchBuilder
             new Vector3(0f, 0f, -10f), 0f, 100, true,
             new[] { EnemyWandering(new Vector3(0f, 0f, 8f), 0f) });
 
-        // Corridor: the button sits flush on the corridor wall (the 1.8 m default would be inside the wall)
-        foreach (var sc in bench.scenarios)
-            if (sc.name.StartsWith("Corridor")) sc.buttonOffset = new Vector3(1.3f, 1.3f, 0f);
+        AddRunnerScenarios(bench, spawns, A, B, C, D, E, F);
+
+        FixCorridorButtons(bench);
 
         // ---- NavMesh surface (children only, physics colliders)
         var surface = root.AddComponent<NavMeshSurface>();
@@ -287,6 +289,126 @@ public static class QuestionerTestBenchBuilder
             NavMeshAssetManager.instance.StartBakingSurfaces(new Object[] { surface });
 
         return bench;
+    }
+
+    // Corridor: the button sits flush on the corridor wall (the 1.8 m default would be inside the wall)
+    static void FixCorridorButtons(QuestionerTestBench bench)
+    {
+        foreach (var sc in bench.scenarios)
+            if (sc.name.StartsWith("Corridor")) sc.buttonOffset = new Vector3(1.3f, 1.3f, 0f);
+    }
+
+    /// <summary>Adds (or re-adds) only the Runner page to the bench that is already in the open scene, without touching rooms, NavMesh or the other pages.</summary>
+    [MenuItem("Tools/Questioner Test Bench/Add Runner Page To Existing Bench")]
+    public static void AddRunnerPageMenu()
+    {
+        var root = GameObject.Find(RootName);
+        var bench = root != null ? root.GetComponent<QuestionerTestBench>() : null;
+        if (bench == null) { Debug.LogError("[QuestionerTestBench] No bench in the open scene - use 'Rebuild Bench In Open Scene' first."); return; }
+
+        var geo = root.transform.Find("Geometry");
+        var spawns = root.transform.Find("Spawns");
+        Transform Room(string n) { return geo != null ? geo.Find(n) : null; }
+        Transform A = Room("A Open Field"), B = Room("B Table"), C = Room("C Corridor"), D = Room("D Wall With Doorway"), E = Room("E Zigzag"), F = Room("F Platforms");
+        if (spawns == null || A == null || B == null || C == null || D == null || E == null || F == null) { Debug.LogError("[QuestionerTestBench] The bench is missing a room - use 'Rebuild Bench In Open Scene'."); return; }
+
+        // remove an older Runner page (scenarios + their spawn containers) so this can be run again
+        for (int i = bench.scenarios.Count - 1; i >= 0; i--)
+        {
+            var sc = bench.scenarios[i];
+            if (sc.kind != QuestionerTestBench.EnemyKind.Runner) continue;
+            if (sc.playerSpawn != null && sc.playerSpawn.parent != null) Object.DestroyImmediate(sc.playerSpawn.parent.gameObject);
+            bench.scenarios.RemoveAt(i);
+        }
+
+        bench.runnerPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(RunnerPath);
+        EnsureMaterials();
+        AddRunnerScenarios(bench, spawns, A, B, C, D, E, F);
+        FixCorridorButtons(bench);
+        EditorUtility.SetDirty(bench);
+        EditorSceneManager.MarkSceneDirty(root.scene);
+        Debug.Log("[QuestionerTestBench] Runner page added: " + bench.scenarios.FindAll(s => s.kind == QuestionerTestBench.EnemyKind.Runner).Count + " scenarios (Numpad 0 cycles Questioner > BagBearer > Runner).");
+    }
+
+    // ================= PAGE 3: Runner (melee: sidestep 3-7 s inside 8 m -> 1 s windup -> dash 5 m/s past you; knees are weak points during the windup) =================
+    static void AddRunnerScenarios(QuestionerTestBench bench, Transform spawns, Transform A, Transform B, Transform C, Transform D, Transform E, Transform F)
+    {
+        currentKind = QuestionerTestBench.EnemyKind.Runner;
+
+        AddScenario(bench, spawns, A, "Open field - far chase (19 m)",
+            "Flow: Idle -> Chase -> Sidestep (3-7 s) -> Dash windup (1 s) -> dash -> Sidestep ... How long until he first moves (idle 1-3 s + 2 s stare)? First hit? Does the sprint speed look right? Does he ever stand still or walk up and attack without the routine?",
+            new Vector3(0f, 0f, -10f), 0f, 100, false,
+            new[] { Enemy(new Vector3(0f, 0f, 9f), 180f) });
+
+        AddScenario(bench, spawns, A, "Open field - point blank (2.8 m)",
+            "He starts inside his 8 m sidestep range but outside the 1.8 m attack range. Does he strafe for 3-7 s before doing anything (free time)? Then windup + dash from 2.8 m? Hit once per dash or more? Do you get hit while rolling (should dodge)?",
+            new Vector3(0f, 0f, -2f), 0f, 100, false,
+            new[] { Enemy(new Vector3(0f, 0f, 0.8f), 180f) });
+
+        AddScenario(bench, spawns, A, "Open field - ambush from behind",
+            "He spawns 5 m behind you facing away. How long until he commits? Does the dash track you when you move during the 1 s windup? Can you outrun the dash (5 m/s)?",
+            new Vector3(0f, 0f, -4.5f), 0f, 100, false,
+            new[] { Enemy(new Vector3(0f, 0f, -9.5f), 180f) });
+
+        AddScenario(bench, spawns, A, "Open field - two Runners",
+            "Do the dashes overlap, hit together, collide or block each other while strafing? Do they ever get stuck on each other?",
+            new Vector3(0f, 0f, -10f), 0f, 100, false,
+            new[] { Enemy(new Vector3(-6f, 0f, 9f), 160f), Enemy(new Vector3(6f, 0f, 9f), 200f) });
+
+        AddScenario(bench, spawns, A, "Open field - gun duel (20 m, gun + ammo)",
+            "Shoot him while he closes in. Body hit = knockback anim; does a body hit during Sidestep make him dash instantly? Knee weak points show up only during the dash windup (hit one = hurt state + injured speed). 700 hp: shots to kill? Stun-lock?",
+            new Vector3(0f, 0f, -10f), 0f, 100, true,
+            new[] { Enemy(new Vector3(0f, 0f, 10f), 180f) });
+
+        AddScenario(bench, spawns, A, "Weak point drill (7 m, gun + ammo)",
+            "He starts 7 m away (inside sidestep range), so the 1 s dash windup comes fast. Shoot a knee during the windup: hurt -> wake-up -> chase. Second hit = falling-down variant. Check injured speed (stays slow?) and that he never freezes in a hurt state.",
+            new Vector3(0f, 0f, -3.5f), 0f, 100, true,
+            new[] { Enemy(new Vector3(0f, 0f, 3.5f), 180f) });
+
+        AddScenario(bench, spawns, B, "Table loop - run around the block",
+            "Strafe (agent off, physics) and dash around a 3x9 block: does he wedge into the table, dash into it, stand stuck in a windup, or cut corners?",
+            new Vector3(0f, 0f, -8f), 0f, 100, false,
+            new[] { Enemy(new Vector3(0f, 0f, 8f), 180f) });
+
+        AddScenario(bench, spawns, C, "Corridor - strafe + dash in a 2.8 m hallway",
+            "Sidestep pushes him sideways into a wall and the agent is off: does he get wedged, fall off the NavMesh, or keep strafing against the wall for the whole 3-7 s? Does the dash work in the hallway?",
+            new Vector3(0f, 0f, -7f), 0f, 100, false,
+            new[] { Enemy(new Vector3(0f, 0f, 6f), 180f) });
+
+        AddScenario(bench, spawns, D, "Through the wall - 1.8 m apart, wall in between",
+            "Wall between you at 1.8 m. He must not strafe/dash/hit you through the wall: he should path the 23 m way round. Do you take damage through the wall (dash + attack use raw distance)?",
+            new Vector3(-6f, 0f, 0.9f), 180f, 100, false,
+            new[] { Enemy(new Vector3(-6f, 0f, -0.9f), 0f) });
+
+        AddScenario(bench, spawns, D, "Wall with doorway - far side",
+            "16 m straight-line, 28 m through the door. Does he path to the door, or start strafing at the wall as soon as you are inside 8 m (straight distance)?",
+            new Vector3(-6f, 0f, 8f), 180f, 100, false,
+            new[] { Enemy(new Vector3(-6f, 0f, -8f), 0f) });
+
+        AddScenario(bench, spawns, E, "Zigzag baffles - winding path",
+            "Chase around corners: does he strafe behind a baffle when you are 8 m away through the wall, dash into a baffle, or get stuck mid windup?",
+            new Vector3(-8f, 0f, 10f), 180f, 100, false,
+            new[] { Enemy(new Vector3(8f, 0f, -10f), 0f) });
+
+        AddScenario(bench, spawns, F, "Ramp platform - you are on top (y=2)",
+            "Player on a platform reachable only via the ramp. Does he find the ramp, or strafe/dash against the platform side while you are within 8 m?",
+            new Vector3(-6f, 2f, 7f), 180f, 100, true,
+            new[] { Enemy(new Vector3(-6f, 0f, -9f), 0f) });
+
+        AddScenario(bench, spawns, F, "Unreachable platform - you are on top (y=3)",
+            "No route up. What does he do: strafe forever, dash at the wall, hit you through the platform edge? Does the dash's stuck-abort fire and does he reset cleanly?",
+            new Vector3(6f, 3f, 7f), 180f, 100, true,
+            new[] { Enemy(new Vector3(6f, 0f, -9f), 0f) });
+
+        AddScenario(bench, spawns, A, "Sentinel patrol - sneak past (Wandering)",
+            "Wandering Runner on 4 waypoints: does he do the look-around at each waypoint, notice you only inside the cone, and how long does he take to chase? (Runner has no give-up timer - does he ever return to patrol?)",
+            new Vector3(0f, 0f, -11f), 0f, 100, false,
+            new[] { EnemyPatrol(spawns, A, new Vector3(-9f, 0f, 8f), new[] { new Vector3(-9f, 0f, 8f), new Vector3(9f, 0f, 8f), new Vector3(9f, 0f, -6f), new Vector3(-9f, 0f, -6f) }) });
+
+        AddScenario(bench, spawns, A, "Gunshot lure - he stands still facing away",
+            "Wandering Runner 18 m away facing away. Fire the gun: Investigate, then notice you and chase? Or ignore it? What happens if you shoot him from behind (body hit while Idle/Wander)?",
+            new Vector3(0f, 0f, -10f), 0f, 100, true,
+            new[] { EnemyWandering(new Vector3(0f, 0f, 8f), 0f) });
     }
 
     // --------------------------------------------------------------- helpers

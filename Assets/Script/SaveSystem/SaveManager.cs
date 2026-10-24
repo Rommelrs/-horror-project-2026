@@ -18,9 +18,13 @@ public class SaveManager : MonoBehaviour
     
     private string saveDirectory;
     private SaveData currentSaveData;
-    private float sessionStartTime;
-    private float accumulatedPlaytime; // Total playtime from previous sessions
-    
+    // Playtime in seconds, counted in REAL time while a gameplay scene is open. (It used to be Time.time, which stops while the game
+    // is paused - inventory, notes, pause menu, frozen subtitles - and also counted the time spent in the main menu.)
+    private double playtimeSeconds;
+    private const float MaxPlaytimeStep = 1f;      // a frame longer than this (scene load, editor hiccup) only counts this much
+    private const string MenuSceneName = "Menu";
+    public float Playtime => (float)playtimeSeconds;
+
     // Runtime tracking - items picked up this session (persists until save)
     // Made static so they persist even if instance is temporarily replaced
     private static HashSet<string> runtimePickedUpItems = new HashSet<string>();
@@ -53,16 +57,29 @@ public class SaveManager : MonoBehaviour
                 Directory.CreateDirectory(saveDirectory);
             }
             
-            sessionStartTime = Time.time;
-            // Load previously accumulated playtime from PlayerPrefs
-            accumulatedPlaytime = PlayerPrefs.GetFloat("TotalPlaytime", 0f);
+            // Playtime of the last save / session end (Continue after relaunching picks up from here; Load overrides it with the slot's value)
+            playtimeSeconds = PlayerPrefs.GetFloat("TotalPlaytime", 0f);
         }
         else
         {
             Destroy(gameObject);
         }
     }
-    
+
+    private void Update()
+    {
+        if (instance != this) return;
+        if (SceneManager.GetActiveScene().name == MenuSceneName) return;       // time in the main menu is not playtime
+        playtimeSeconds += Mathf.Min(Time.unscaledDeltaTime, MaxPlaytimeStep);
+    }
+
+    private void OnApplicationQuit()
+    {
+        if (instance != this) return;
+        PlayerPrefs.SetFloat("TotalPlaytime", (float)playtimeSeconds);
+        PlayerPrefs.Save();
+    }
+
     #region Save Operations
     
     /// <summary>
@@ -81,8 +98,7 @@ public class SaveManager : MonoBehaviour
         saveData.saveFileName = GetSaveFileName(slotIndex);
         saveData.sceneName = SceneManager.GetActiveScene().name;
         saveData.saveDate = DateTime.Now;
-        float thisSessionTime = Time.time - sessionStartTime;
-        saveData.playtime = accumulatedPlaytime + thisSessionTime;
+        saveData.playtime = (float)playtimeSeconds;
         // Persist total playtime so next session starts from here
         PlayerPrefs.SetFloat("TotalPlaytime", saveData.playtime);
         PlayerPrefs.Save();
@@ -232,6 +248,13 @@ public class SaveManager : MonoBehaviour
             }
             
             currentSaveData = saveData;
+
+            // story flags come from this save's own list again (not from whatever was played before the load)
+            StoryFlags.ResetSession();
+
+            // playtime carries on from the loaded save (not from whatever was saved last in another slot)
+            playtimeSeconds = saveData.playtime;
+            PlayerPrefs.SetFloat("TotalPlaytime", saveData.playtime);
 
             // ...and loading a save makes that save the point Continue returns to (not a newer checkpoint from before the load)
             if (CheckpointManager.instance != null)
@@ -513,10 +536,10 @@ public class SaveManager : MonoBehaviour
         runtimeTriggeredZones.Clear();
         runtimeUsedInteractables.Clear();
         runtimeCurrentMusicTrack = "";
+        StoryFlags.ResetSession();
 
         // Reset playtime for new game
-        accumulatedPlaytime = 0f;
-        sessionStartTime = Time.time;
+        playtimeSeconds = 0;
         PlayerPrefs.SetFloat("TotalPlaytime", 0f);
         PlayerPrefs.Save();
         

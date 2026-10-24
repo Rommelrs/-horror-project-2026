@@ -103,6 +103,18 @@ public class DoorInteractionHandler : MonoBehaviour
 
             if (currentInteractable != null && busy == false)
             {
+                //One-way (shortcut) door tried from its wrong side: it does not open until it was opened once from the other side
+                if (currentInteractable.IsBlockedFrom(currentDoorTriggerType))
+                {
+                    if (currentInteractable.OnInteractionFailed != null)
+                        currentInteractable.OnInteractionFailed.Invoke();
+
+                    AudioClip blockedClip = currentInteractable.customLockedClip != null ? currentInteractable.customLockedClip : doorLockedClip;
+                    audioSource.PlayOneShot(blockedClip);
+                    currentInteractable.ShowWrongSideLine();   // "Does not open from this side"
+                    return;
+                }
+
                 //Check if door requires certain key (a door that was already unlocked with its key no longer needs it)
                 if (currentInteractable.requiresKey && !(currentInteractable.unlockStepWithKey && currentInteractable.IsUnlocked))
                 {
@@ -168,6 +180,10 @@ public class DoorInteractionHandler : MonoBehaviour
                     audioSource.PlayOneShot(lockedClip);
                     return;
                 }
+
+                //A one-way door opened from its correct side now opens from both sides
+                if (currentInteractable.oneWayUntilOpened && currentDoorTriggerType != currentInteractable.blockedSide)
+                    currentInteractable.MarkOpenedFromCorrectSide();
 
                 //Start New Door Enter Sequence
                 StartCoroutine(Co_ActivateDoorEnterSequence(currentInteractable, currentDoorTriggerType));
