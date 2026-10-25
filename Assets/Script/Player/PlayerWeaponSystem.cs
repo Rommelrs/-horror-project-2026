@@ -173,6 +173,26 @@ public class PlayerWeaponSystem : MonoBehaviour
     public int maxBulletPierceCount = 1;
     public float bulletPierceDelay = 0.35f;
 
+    [Header("Pellets (shotgun)")]
+    [Tooltip("1 = a single bullet (pistol). More = a shotgun cone: 'damage' is the whole shot at point blank, split between the pellets. Set by PlayerWeaponSwitcher for the gun that is out.")]
+    public int pelletsPerShot = 1;
+    [Tooltip("Radius of the pellet cone (same units as bulletSpread).")]
+    public float pelletSpread = 0.06f;
+    [Tooltip("Pellets do full damage up to this distance, then fall off towards pelletMinDamageFraction at weaponRange.")]
+    public float pelletFalloffStart = 6f;
+    public float pelletMinDamageFraction = 0.3f;
+    [Tooltip("Pellets are traced from this far behind the muzzle (about the hands / eyes), so an enemy already touching the barrels - the muzzle inside its collider - is still hit point blank.")]
+    public float pelletTraceBack = 0.9f;
+    [Tooltip("How hard a full point-blank blast shoves an enemy back, as a multiple of its normal hit knockback. Scales down with how much of the shot landed.")]
+    public float pelletKnockback = 4f;
+
+    // Per-gun overrides set by PlayerWeaponSwitcher (null / defaults = the pistol)
+    [HideInInspector] public AudioClip shootClipOverride;
+    [HideInInspector] public float shootClipVolume = 0.8f;
+    [HideInInspector] public bool ejectCartridge = true;
+    [HideInInspector] public float shotKick = 0f;           // camera shake on every shot (0 = none)
+    AudioClip ShootClip => shootClipOverride != null ? shootClipOverride : pistolShootClip;
+
     [System.Serializable]
     public struct BulletSpreadThreshold
     {
@@ -562,14 +582,15 @@ public class PlayerWeaponSystem : MonoBehaviour
                     //audioSource.PlayOneShot(pistolShootClip);
 
                     //Play Shoot SFX
-                    SoundEffectManager.instance.PlaySFX(pistolShootClip, 0.8f, true);
+                    SoundEffectManager.instance.PlaySFX(ShootClip, shootClipVolume, true);
 
                     // Alert nearby enemies to the gunshot sound
                     AlertEnemiesInRadius();
 
                     //Shooting in First Person View
                     muzzleFlash.Play();
-                    cartridgeEjection.Play();
+                    if (ejectCartridge) cartridgeEjection.Play();
+                    if (shotKick > 0f && cameraShaker != null) cameraShaker.ApplyShake(shotKick, shakeDuration);
 
                     float currentBulletSpread = bulletSpread;
 
@@ -594,10 +615,17 @@ public class PlayerWeaponSystem : MonoBehaviour
                     //Debug Dray Ray
                     Debug.DrawLine(rayOrigin, rayOrigin + (gunEnd.forward * weaponRange), Color.red, 4f);
 
-                    RaycastHit []hits = Physics.RaycastAll(rayOrigin, gunEnd.forward, weaponRange, hitLayer, QueryTriggerInteraction.Ignore);
-                    if (hits != null && hits.Length > 0)
+                    if (pelletsPerShot > 1)
                     {
-                        HandleHits(hits);
+                        FirePellets(rayOrigin, gunEnd, 0f);
+                    }
+                    else
+                    {
+                        RaycastHit []hits = Physics.RaycastAll(rayOrigin, gunEnd.forward, weaponRange, hitLayer, QueryTriggerInteraction.Ignore);
+                        if (hits != null && hits.Length > 0)
+                        {
+                            HandleHits(hits);
+                        }
                     }
                 }
                 else
@@ -818,14 +846,15 @@ public class PlayerWeaponSystem : MonoBehaviour
         }
 
         //Play Shoot SFX
-        SoundEffectManager.instance.PlaySFX(pistolShootClip, 0.8f, true);
+        SoundEffectManager.instance.PlaySFX(ShootClip, shootClipVolume, true);
 
                     // Alert nearby enemies to the gunshot sound
                     AlertEnemiesInRadius();
 
         //Shooting in Third Person View
         muzzleFlashTP.Play();
-        cartridgeEjectionTP.Play();
+        if (ejectCartridge) cartridgeEjectionTP.Play();
+        if (shotKick > 0f && cameraShaker != null) cameraShaker.ApplyShake(shotKick * 0.5f, shakeDuration);
 
         float currentBulletSpread = bulletSpread;
         if (!playerStability.calmingInhalerIsActive)
@@ -841,10 +870,17 @@ public class PlayerWeaponSystem : MonoBehaviour
         }
 
         Vector3 rayOrigin = gunEndTP.position;
-        RaycastHit [] hits = Physics.RaycastAll(rayOrigin, ApplyBulletSpread(gunEndTP, currentBulletSpread), weaponRange, hitLayer, QueryTriggerInteraction.Ignore);
-        if (hits != null && hits.Length > 0)
+        if (pelletsPerShot > 1)
         {
-            HandleHits(hits);
+            FirePellets(rayOrigin, gunEndTP, currentBulletSpread);
+        }
+        else
+        {
+            RaycastHit [] hits = Physics.RaycastAll(rayOrigin, ApplyBulletSpread(gunEndTP, currentBulletSpread), weaponRange, hitLayer, QueryTriggerInteraction.Ignore);
+            if (hits != null && hits.Length > 0)
+            {
+                HandleHits(hits);
+            }
         }
 
         player.isAttacking = true;
@@ -1013,68 +1049,8 @@ public class PlayerWeaponSystem : MonoBehaviour
                     damageInfo[i].isHittingWeakpoint = true;
                 }
 
-                if ((damageInfo[i].hitbox != null && damageInfo[i].hitbox.damageType == DamageType.Weakpoint) || hitProjectile || pierceWeakpointActive)
-                {
-                    //Weakpoint Damage
-                    if (HitstopManager.instance != null)
-                        HitstopManager.instance.FreezeTime(hitstopDuration);
-
-                    weakPointAudioSource.clip = weakPointHitSoundEffects[Random.Range(0, weakPointHitSoundEffects.Length)];
-                    weakPointAudioSource.Play();
-
-                    // Play bonus sound unaffected by hitstop
-                    if (weakPointBonusSounds != null && weakPointBonusSounds.Length > 0)
-                    {
-                        AudioClip randomClip = weakPointBonusSounds[Random.Range(0, weakPointBonusSounds.Length)];
-                        if (SoundEffectManager.instance != null)
-                        {
-                            SoundEffectManager.instance.PlaySFX(randomClip, weakPointBonusVolume);
-                        }
-                        else
-                        {
-                            GameObject tempAudio = new GameObject("TempWeakpointBonusAudio");
-                            AudioSource bonusSource = tempAudio.AddComponent<AudioSource>();
-                            bonusSource.clip = randomClip;
-                            bonusSource.volume = weakPointBonusVolume;
-                            bonusSource.spatialBlend = 0f;
-                            bonusSource.ignoreListenerPause = true;
-                            bonusSource.Play();
-                            Destroy(tempAudio, randomClip.length + 0.1f);
-                        }
-                    }
-
-                    if (cameraShaker != null)
-                        cameraShaker.ApplyShake(shakeIntensity, shakeDuration);
-
-                    // Reset fire cooldown instantly on weakpoint hit
-                    nextFire = 0f;
-
-                    if(damageInfo[i].hitbox!= null && damageInfo[i].hitbox.damageType == DamageType.Weakpoint)
-                        Destroy(damageInfo[i].hitbox.gameObject);
-                }
-                else if (damageInfo[i].hitbox != null && damageInfo[i].hitbox.damageType == DamageType.Headshot)
-                {
-                    //Headshot Damage
-                    //Play SFX
-                    if (SoundEffectManager.instance != null)
-                        SoundEffectManager.instance.PlaySFXAtPosition(headshotSFX, damageInfo[i].hit.point, 0.8f);
-                    else
-                        AudioSource.PlayClipAtPoint(headshotSFX, damageInfo[i].hit.point, 0.8f);
-                }
-                else
-                {
-                    //Normal Damage
-                    AudioClip normalHitClip = hitSFX[Random.Range(0, hitSFX.Length)];
-                    if (SoundEffectManager.instance != null)
-                        SoundEffectManager.instance.PlaySFXAtPosition(normalHitClip, damageInfo[i].hit.point, 0.8f);
-                    else
-                        AudioSource.PlayClipAtPoint(normalHitClip, damageInfo[i].hit.point, 0.8f);
-                }
-
+                DamageEnemy(damageInfo[i], currentDamage);
                 damagedEnemies.Add(damageInfo[i].enemy);
-                damageInfo[i].enemy.health.isDamageByWeakpointHit = damageInfo[i].isHittingWeakpoint;
-                damageInfo[i].enemy.health.SetLastHitPoint(damageInfo[i].hit.point);
-                damageInfo[i].enemy.health.Damage(Mathf.RoundToInt(currentDamage));
 
                 if (damageInfo[i].isHittingWeakpoint)
                     pierceWeakpointActive = true;
@@ -1082,6 +1058,166 @@ public class PlayerWeaponSystem : MonoBehaviour
         }
 
         yield return null;
+    }
+
+    /// <summary>Hit feedback (weakpoint hitstop + sounds / headshot / normal) and the damage itself, for one enemy hit.</summary>
+    void DamageEnemy(DamageInfo info, float currentDamage)
+    {
+        if (info.isHittingWeakpoint)
+        {
+            //Weakpoint Damage
+            if (HitstopManager.instance != null)
+                HitstopManager.instance.FreezeTime(hitstopDuration);
+
+            weakPointAudioSource.clip = weakPointHitSoundEffects[Random.Range(0, weakPointHitSoundEffects.Length)];
+            weakPointAudioSource.Play();
+
+            // Play bonus sound unaffected by hitstop
+            if (weakPointBonusSounds != null && weakPointBonusSounds.Length > 0)
+            {
+                AudioClip randomClip = weakPointBonusSounds[Random.Range(0, weakPointBonusSounds.Length)];
+                if (SoundEffectManager.instance != null)
+                {
+                    SoundEffectManager.instance.PlaySFX(randomClip, weakPointBonusVolume);
+                }
+                else
+                {
+                    GameObject tempAudio = new GameObject("TempWeakpointBonusAudio");
+                    AudioSource bonusSource = tempAudio.AddComponent<AudioSource>();
+                    bonusSource.clip = randomClip;
+                    bonusSource.volume = weakPointBonusVolume;
+                    bonusSource.spatialBlend = 0f;
+                    bonusSource.ignoreListenerPause = true;
+                    bonusSource.Play();
+                    Destroy(tempAudio, randomClip.length + 0.1f);
+                }
+            }
+
+            if (cameraShaker != null)
+                cameraShaker.ApplyShake(shakeIntensity, shakeDuration);
+
+            // Reset fire cooldown instantly on weakpoint hit
+            nextFire = 0f;
+
+            if(info.hitbox!= null && info.hitbox.damageType == DamageType.Weakpoint)
+                Destroy(info.hitbox.gameObject);
+        }
+        else if (info.hitbox != null && info.hitbox.damageType == DamageType.Headshot)
+        {
+            //Headshot Damage
+            //Play SFX
+            if (SoundEffectManager.instance != null)
+                SoundEffectManager.instance.PlaySFXAtPosition(headshotSFX, info.hit.point, 0.8f);
+            else
+                AudioSource.PlayClipAtPoint(headshotSFX, info.hit.point, 0.8f);
+        }
+        else
+        {
+            //Normal Damage
+            AudioClip normalHitClip = hitSFX[Random.Range(0, hitSFX.Length)];
+            if (SoundEffectManager.instance != null)
+                SoundEffectManager.instance.PlaySFXAtPosition(normalHitClip, info.hit.point, 0.8f);
+            else
+                AudioSource.PlayClipAtPoint(normalHitClip, info.hit.point, 0.8f);
+        }
+
+        info.enemy.health.isDamageByWeakpointHit = info.isHittingWeakpoint;
+        info.enemy.health.SetLastHitPoint(info.hit.point);
+        info.enemy.health.Damage(Mathf.RoundToInt(currentDamage));
+    }
+
+    /// <summary>
+    /// A shotgun shot: pelletsPerShot rays in a cone round aim.forward, each stopping at the first thing it hits. Pellets
+    /// are summed per target, so an enemy takes one hit (one sound, one damage number) worth all the pellets that struck
+    /// it, with the strongest hitbox any of them found (weakpoint over headshot over body). Pellet damage falls off with
+    /// distance; world hits kick up dust. Enemies are shoved back harder the more of the blast hit them.
+    /// </summary>
+    void FirePellets(Vector3 muzzle, Transform aim, float shakySpread)
+    {
+        Vector3 origin = muzzle - aim.forward * pelletTraceBack;
+        float pelletDamage = damage / (float)pelletsPerShot;
+        var enemies = new Dictionary<Enemy, DamageInfo>();
+        var enemyDamage = new Dictionary<Enemy, float>();
+        var worldTargets = new Dictionary<Health, RaycastHit>();
+        var worldDamage = new Dictionary<Health, float>();
+        bool lockHit = false;
+
+        for (int p = 0; p < pelletsPerShot; p++)
+        {
+            Vector2 c = Random.insideUnitCircle * (pelletSpread + shakySpread);
+            Vector3 dir = (aim.forward + aim.right * c.x + aim.up * c.y).normalized;
+            if (!FirstHitNotPlayer(origin, dir, weaponRange + pelletTraceBack, out RaycastHit hit))
+                continue;
+            Debug.DrawLine(origin, hit.point, Color.yellow, 2f);
+
+            float falloff = Mathf.Lerp(1f, pelletMinDamageFraction, Mathf.InverseLerp(pelletFalloffStart, weaponRange, hit.distance - pelletTraceBack));
+            float d = pelletDamage * falloff;
+            Enemy enemy = hit.collider.GetComponentInParent<Enemy>();
+            if (enemy != null)
+            {
+                Hitbox hitbox = hit.collider.GetComponent<Hitbox>();
+                bool weak = hitbox != null && hitbox.damageType == DamageType.Weakpoint;
+                d *= hitbox != null ? hitbox.damageMultiplier : 1f;
+                var info = new DamageInfo(hit, hitbox, enemy, weak);
+                if (enemies.TryGetValue(enemy, out DamageInfo best))
+                {
+                    // keep the strongest hitbox found on this enemy
+                    int Rank(DamageInfo x) => x.isHittingWeakpoint ? 2 : (x.hitbox != null && x.hitbox.damageType == DamageType.Headshot ? 1 : 0);
+                    if (Rank(info) > Rank(best)) enemies[enemy] = info;
+                    enemyDamage[enemy] += d;
+                }
+                else
+                {
+                    enemies[enemy] = info;
+                    enemyDamage[enemy] = d;
+                }
+                continue;
+            }
+
+            Lock lockObject = hit.collider.GetComponentInParent<Lock>();
+            if (lockObject != null && lockObject.IsShootable)
+            {
+                if (!lockHit) { SpawnDecal(hit, metalHitEffect, false); lockObject.LockDamaged(); }
+                lockHit = true;
+                continue;
+            }
+
+            Health worldHealth = hit.collider.GetComponentInParent<Health>();
+            if (worldHealth != null)
+            {
+                if (!worldTargets.ContainsKey(worldHealth)) { worldTargets[worldHealth] = hit; worldDamage[worldHealth] = 0f; }
+                worldDamage[worldHealth] += d;
+                continue;
+            }
+
+            if (sandHitEffect != null) SpawnDecal(hit, sandHitEffect, false);
+        }
+
+        foreach (var kv in enemies)
+        {
+            // the more of the blast landed, the harder it shoves him back
+            kv.Key.pendingKnockbackScale = 1f + (pelletKnockback - 1f) * Mathf.Clamp01(enemyDamage[kv.Key] / damage);
+            DamageEnemy(kv.Value, enemyDamage[kv.Key]);
+            kv.Key.pendingKnockbackScale = 1f;      // enemy types that ignore it must not carry it to the next hit
+        }
+        foreach (var kv in worldTargets)
+        {
+            kv.Key.SetLastHitPoint(kv.Value.point);
+            kv.Key.Damage(Mathf.Max(1, Mathf.RoundToInt(worldDamage[kv.Key])));
+        }
+    }
+
+    // the nearest hit along the ray that is not the player themself (the pellet trace starts back at the player)
+    bool FirstHitNotPlayer(Vector3 origin, Vector3 dir, float range, out RaycastHit best)
+    {
+        best = default;
+        float bestDistance = float.MaxValue;
+        foreach (var h in Physics.RaycastAll(origin, dir, range, hitLayer, QueryTriggerInteraction.Ignore))
+        {
+            if (h.distance >= bestDistance || h.collider.transform.IsChildOf(transform)) continue;
+            best = h; bestDistance = h.distance;
+        }
+        return bestDistance < float.MaxValue;
     }
 
     void SpawnDecal(RaycastHit hit, GameObject prefab, bool setParent = true)

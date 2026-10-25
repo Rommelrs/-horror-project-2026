@@ -458,6 +458,7 @@ public class BagBearerEnemy : Enemy
                 this.damageForceMultiplier = Player.instance.playerWeaponSystem.weakpointHitEnemyKnockbackMultiplier * stats.weakpointKnockbackScale;
             else
                 this.damageForceMultiplier = 1f;
+            this.damageForceMultiplier *= ConsumeKnockbackScale();
 
             // Fixed enemies: allow knockback state for weakpoint hits, otherwise just play animation
             if(stats.enemyType != EnemyType.Fixed || health.isDamageByWeakpointHit)

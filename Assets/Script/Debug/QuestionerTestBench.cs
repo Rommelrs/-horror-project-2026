@@ -58,6 +58,9 @@ public class QuestionerTestBench : MonoBehaviour
     public Item pistolItem;
     public Item ammoItem;
     public int reserveAmmoToGive = 30;
+    public Item shotgunItem;
+    public Item shellsItem;
+    public int shellsToGive = 24;
 
     [Header("Scenarios")]
     public List<Scenario> scenarios = new List<Scenario>();
@@ -255,7 +258,11 @@ public class QuestionerTestBench : MonoBehaviour
         bool shift = kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed;
         if (kb.f6Key.wasPressedThisFrame) AddStability(shift ? -50 : -10);
         if (kb.f7Key.wasPressedThisFrame) AddStability(shift ? 50 : 10);
-        if (kb.f8Key.wasPressedThisFrame) { GiveGun(); Toast("Gun + full mag + " + reserveAmmoToGive + " reserve"); }
+        if (kb.f8Key.wasPressedThisFrame)
+        {
+            if (shift) { GiveShotgun(); Toast("Shotgun + " + shellsToGive + " shells (1 / 2 switch guns)"); }
+            else { GiveGun(); Toast("Gun + full mag + " + reserveAmmoToGive + " reserve"); }
+        }
         if (kb.f9Key.wasPressedThisFrame)
         {
             infiniteAmmo = !infiniteAmmo;
@@ -506,6 +513,15 @@ public class QuestionerTestBench : MonoBehaviour
         }
     }
 
+    void GiveShotgun()
+    {
+        var p = Player.instance;
+        if (p == null || p.inventory == null) return;
+        if (shotgunItem != null && !p.inventory.HasItem(shotgunItem)) p.inventory.AddItem(shotgunItem, 1);   // the switcher takes it out
+        if (shellsItem != null && shellsToGive > 0) p.inventory.AddItem(shellsItem, shellsToGive);
+        if (p.playerWeaponSystem != null) p.playerWeaponSystem.weaponIsEnabled = true;
+    }
+
     void ApplyToggles()
     {
         foreach (var l in live)
@@ -670,7 +686,7 @@ public class QuestionerTestBench : MonoBehaviour
             sb.AppendLine(i == current ? "  <color=#ffd24a>> </color>" + mark + colored : "    " + mark + colored);
         }
         sb.AppendLine();
-        sb.AppendLine("<b>PLAYER</b>   F6 / F7 stability -10 / +10 (Shift = 50)  |  F8 give gun + ammo  |  F9 infinite ammo  |  F10 invincible mode");
+        sb.AppendLine("<b>PLAYER</b>   F6 / F7 stability -10 / +10 (Shift = 50)  |  F8 give gun + ammo (Shift = shotgun + shells, 1 / 2 switch)  |  F9 infinite ammo  |  F10 invincible mode");
         sb.AppendLine("<b>ENEMY</b>   Num/ sidestep  |  Num* offset pathfinding  |  Num- dynamic speed  |  Num. freeze AI  |  F3 running / no-running variant");
         sb.AppendLine("<b>MISC</b>   F1 hide panel  |  F2 hide other gym enemies  |  F4 slow-mo");
         sb.AppendLine();

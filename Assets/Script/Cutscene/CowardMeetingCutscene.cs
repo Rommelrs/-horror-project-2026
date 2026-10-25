@@ -6,7 +6,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Playables;
-using UnityEngine.UI;
+using UnityEngine.Timeline;
 
 // "The coward's first meeting" (Alley 1). Plays once, the first time the player walks back past the alcove with the
 // knife handle: Open -> A (Alley 2 not visited) or B (Alley 2 visited) -> End, each its own PlayableDirector/Timeline.
@@ -66,6 +66,9 @@ public class CowardMeetingCutscene : MonoBehaviour
     public Phase[] phases = new Phase[4];
     [Tooltip("Off: always plays version A. On: plays version B instead when Alley 2 has already been visited.")]
     public bool versionBEnabled;
+    [Tooltip("Muted source the other version's tracks are bound to at the start (tracks named \"... [A]\" / \"... [B]\" in "
+           + "timelines both versions play): silences them and drops their subtitles.")]
+    public AudioSource otherVersionSink;
 
     [Header("Conditions")]
     public Item knifeHandle;
@@ -87,6 +90,9 @@ public class CowardMeetingCutscene : MonoBehaviour
 
     [Header("Where Khalid is left after a skip")]
     public Transform skipKhalidMark;
+    [Tooltip("Cycle offset of the walk clip in Khalid's Animator Controller (WalkMove), set by the builder: the end hands "
+           + "his stride over to it at the same point.")]
+    public float walkCycleOffset;
 
     [Header("Left as the scene leaves it (the chair he knocks over)")]
     public Transform tippedChairPivot;
@@ -97,9 +103,9 @@ public class CowardMeetingCutscene : MonoBehaviour
     public float gameplayCameraSnapTime = 11.5f;
 
     [Header("Skip")]
+    [Tooltip("Hold time if the scene has no CutsceneSkipper. Normally the skipper's hold time and its \"Hold E to skip\" "
+           + "prompt are used, so every cutscene's prompt looks the same.")]
     public float skipHoldTime = 1f;
-    public CanvasGroup skipPrompt;
-    public Image skipFill;
     public CutsceneSubtitleReceiver[] subtitleReceivers;
 
     [Tooltip("Where the coward's wrists go on Khalid's shoulders: from each shoulder joint, in Khalid's space (x right, y up, z forward).")]
@@ -140,9 +146,10 @@ public class CowardMeetingCutscene : MonoBehaviour
     PlayableDirector current;
     int currentPhase = -1;
     bool running, skipping, gameplayCameraSnapped;
-    float skipHeld, promptShowTime;
+    float skipHeld;
     Vector3 startPos; float startYaw;
     CutsceneHeadLook headLook, cowardHeadLook;
+    Animator khalidAnim;
     Transform khalidGaze; Vector3 gazeVel;
     CutsceneArmIK cowardGrab, cowardHandsUp;
     float tug;
@@ -165,7 +172,6 @@ public class CowardMeetingCutscene : MonoBehaviour
     {
         if (coward != null) coward.SetActive(false);
         if (camerasRoot != null) camerasRoot.SetActive(false);
-        if (skipPrompt != null) skipPrompt.alpha = 0f;
         if (StoryFlags.Has(DoneFlag) && !ignoreConditions)
         {
             if (trigger != null) trigger.enabled = false;
@@ -220,6 +226,7 @@ public class CowardMeetingCutscene : MonoBehaviour
         startYaw = player.transform.eulerAngles.y;
 
         DespawnAlleyEnemies();
+        UseVersion(PlaysB ? "B" : "A");
         BindKhalid(player);
         SetupHeadLook(player);
 
@@ -267,6 +274,28 @@ public class CowardMeetingCutscene : MonoBehaviour
         }
     }
 
+    bool PlaysB => versionBEnabled && StoryFlags.Has(Alley2Flag);
+
+    // Tracks named "... [A]" / "... [B]" belong to one version (in timelines both versions play: the Open's second line,
+    // the End's music). The other version's go to the muted sink - no sound, and no receiver there for their subtitles.
+    void UseVersion(string version)
+    {
+        if (otherVersionSink == null) return;
+        foreach (var d in Directors())
+        {
+            if (d == null || !(d.playableAsset is TimelineAsset tl)) continue;
+            bool changed = false;
+            foreach (var track in tl.GetOutputTracks())
+            {
+                string n = track.name;
+                if (!(n.EndsWith(" [A]") || n.EndsWith(" [B]")) || n.EndsWith(" [" + version + "]")) continue;
+                d.SetGenericBinding(track, otherVersionSink);
+                changed = true;
+            }
+            if (changed && d.playableGraph.IsValid()) d.RebuildGraph();
+        }
+    }
+
     // the timelines' "Khalid" animation tracks follow whatever player object exists at runtime
     void BindKhalid(Player player)
     {
@@ -274,6 +303,7 @@ public class CowardMeetingCutscene : MonoBehaviour
         foreach (var a in player.GetComponentsInChildren<Animator>())
             if (a.name == "MainCharacterAnimated") { anim = a; break; }
         if (anim == null) return;
+        khalidAnim = anim;
         foreach (var d in Directors())
         {
             if (d == null || d.playableAsset == null) continue;
@@ -396,7 +426,7 @@ public class CowardMeetingCutscene : MonoBehaviour
         var order = new List<(PlayableDirector d, int phase)>
         {
             (open, 0),
-            versionBEnabled && StoryFlags.Has(Alley2Flag) ? (versionB, 2) : (versionA, 1),
+            PlaysB ? (versionB, 2) : (versionA, 1),
             (end, 3),
         };
 
@@ -429,7 +459,9 @@ public class CowardMeetingCutscene : MonoBehaviour
     {
         StoryFlags.Set(DoneFlag);
 
+        float walkPhase = skipped ? -1f : WalkPhaseNow(current);
         foreach (var d in Directors()) if (d != null && d.state == PlayState.Playing) d.Stop();
+        HandOverAnimation(walkPhase);
         foreach (var r in subtitleReceivers) if (r != null) r.CloseNow();
         if (coward != null) coward.SetActive(false);
         if (camerasRoot != null) camerasRoot.SetActive(false);
@@ -454,9 +486,47 @@ public class CowardMeetingCutscene : MonoBehaviour
         tug = 0f; torsoPitch = torsoRoll = headPitch = headRoll = armSwing = default;
         if (AmbienceHandler.Instance != null) AmbienceHandler.Instance.UpdateAmbienceVolume(1f);
         if (CameraSystem.Instance != null) CameraSystem.Instance.ForceShowPlayer = false;
-        if (skipPrompt != null) skipPrompt.alpha = 0f;
+        if (CutsceneSkipper.Instance != null) CutsceneSkipper.Instance.HideHint();
+        skipHeld = 0f;
 
         running = false; IsPlaying = false; current = null; currentPhase = -1;
+
+        // a checkpoint where the meeting leaves him: the done flag only reached disk at the next checkpoint / manual save,
+        // so quitting before that and continuing (back at the knife handle) played the meeting again
+        if (CheckpointManager.instance != null) CheckpointManager.instance.TriggerCheckpoint("Coward meeting");
+    }
+
+    // Where in his walk cycle the timeline has Khalid now (0-1), or -1 if he isn't walking.
+    float WalkPhaseNow(PlayableDirector d)
+    {
+        if (d == null || khalidAnim == null || !(d.playableAsset is TimelineAsset tl)) return -1f;
+        double t = d.time;
+        foreach (var track in tl.GetOutputTracks())
+        {
+            if (!(track is AnimationTrack) || d.GetGenericBinding(track) != khalidAnim) continue;
+            foreach (var c in track.GetClips())
+                if (t >= c.start && t <= c.end + 0.05 && c.animationClip != null && c.animationClip.name == WalkClipName)
+                    return Mathf.Repeat((float)c.ToLocalTime(Math.Min(t, c.end - 0.0001)) / c.animationClip.length, 1f);
+        }
+        return -1f;
+    }
+
+    // His Animator Controller takes over from the timeline in the pose the timeline left him in. It sat where it was
+    // left when the cutscene began, so he snapped back to that and his stride restarted. Still walking: its walk state
+    // on the same clip at the same point of the stride (holding W walks straight on, letting go eases into the idle).
+    // Otherwise (a skip, under the fade) standing.
+    const string WalkClipName = "Walk_SH";
+
+    void HandOverAnimation(float walkPhase)
+    {
+        if (khalidAnim == null) return;
+        bool walking = walkPhase >= 0f;
+        khalidAnim.SetFloat("x", 0f);
+        khalidAnim.SetFloat("y", walking ? 1f : 0f);
+        khalidAnim.SetFloat("Velocity", walking ? 1f : 0f);
+        khalidAnim.SetBool("Turning", false);
+        khalidAnim.Play("WalkMove", 0, walking ? Mathf.Repeat(walkPhase - walkCycleOffset, 1f) : 0f);
+        khalidAnim.Update(0f);
     }
 
     void OnDestroy() => cPose?.Dispose();
@@ -780,19 +850,22 @@ public class CowardMeetingCutscene : MonoBehaviour
 
     void HandleSkip()
     {
-        // hold E, same as the game's other cutscenes (CutsceneSkipper)
+        // hold E, same as the game's other cutscenes, and shown with their prompt (the scene's CutsceneSkipper: it
+        // shows up for a moment whenever a key is pressed, so it never covers the scene for long)
+        var prompt = CutsceneSkipper.Instance;
+        float holdTime = prompt != null ? prompt.HoldDuration : skipHoldTime;
         bool held = (Keyboard.current != null && Keyboard.current.eKey.isPressed)
                     || (Gamepad.current != null && Gamepad.current.startButton.isPressed);
-        if (held) { skipHeld += Time.unscaledDeltaTime; promptShowTime = 2f; }
+        if (held) skipHeld += Time.unscaledDeltaTime;
         else skipHeld = Mathf.Max(0f, skipHeld - Time.unscaledDeltaTime * 2f);
 
-        // the prompt shows up for a moment whenever a key is pressed, so it never covers the scene for long
-        if (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame) promptShowTime = 2f;
-        promptShowTime -= Time.unscaledDeltaTime;
-        if (skipPrompt != null) skipPrompt.alpha = Mathf.MoveTowards(skipPrompt.alpha, promptShowTime > 0f ? 1f : 0f, Time.unscaledDeltaTime * 4f);
-        if (skipFill != null) skipFill.fillAmount = Mathf.Clamp01(skipHeld / skipHoldTime);
+        if (prompt != null)
+        {
+            if (held || (Keyboard.current != null && Keyboard.current.anyKey.wasPressedThisFrame)) prompt.ShowHint();
+            prompt.SetHoldProgress(skipHeld / holdTime);
+        }
 
-        if (skipHeld >= skipHoldTime) StartCoroutine(Co_Skip());
+        if (skipHeld >= holdTime) StartCoroutine(Co_Skip());
     }
 
     IEnumerator Co_Skip()

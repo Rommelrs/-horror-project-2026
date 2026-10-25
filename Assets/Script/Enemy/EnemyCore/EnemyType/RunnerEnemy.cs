@@ -188,6 +188,7 @@ public class RunnerEnemy : Enemy
                 this.damageForceMultiplier = Player.instance.playerWeaponSystem.weakpointHitEnemyKnockbackMultiplier;
             else
                 this.damageForceMultiplier = 1f;
+            this.damageForceMultiplier *= ConsumeKnockbackScale();
 
             if (!leftKneeDamaged)
             {

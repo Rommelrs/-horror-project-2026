@@ -18,10 +18,12 @@ public class PlayerSound : MonoBehaviour
     [SerializeField] SurfaceFootstepSounds[] surfaceFootstepSounds;
     [SerializeField] LayerMask groundLayer;
     [SerializeField] float groundCheckDistance = 1.5f;
+    [Tooltip("Volume of a normal footstep.")]
+    [SerializeField] [Range(0f, 1f)] float footstepVolume = 0.3f;
 
     [Header("Backwards Footsteps")]
-    [Tooltip("Volume of a backwards step. Normal footsteps play at 0.4.")]
-    [SerializeField] [Range(0f, 1f)] float backFootstepVolume = 0.18f;
+    [Tooltip("Volume of a backwards step (normal footsteps: footstepVolume).")]
+    [SerializeField] [Range(0f, 1f)] float backFootstepVolume = 0.135f;
     [Tooltip("Pitch of a backwards step. Below 1 = deeper / softer.")]
     [SerializeField] [Range(0.5f, 1.2f)] float backFootstepPitch = 0.82f;
     [SerializeField] [Range(0f, 0.2f)] float backFootstepPitchVariation = 0.04f;
@@ -82,7 +84,7 @@ public class PlayerSound : MonoBehaviour
         if (clips != null && clips.Length > 0)
         {
             int randomIndex = Random.Range(0, clips.Length);
-            audioSource.PlayOneShot(clips[randomIndex], 0.4f);
+            audioSource.PlayOneShot(clips[randomIndex], footstepVolume);
         }
     }
 

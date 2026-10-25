@@ -1,6 +1,7 @@
 # Bakes the pauses in lines.tsv (last column, "where:seconds;...") into the coward's recordings, for every voice version:
 #   Voice Lines/CowardN.mp3            -> Voice Lines/Paced/Original/CowardN.wav
 #   Voice Lines/<Version>/CowardN.wav  -> Voice Lines/Paced/<Version>/CowardN.wav
+# (a recording in a subfolder, e.g. "Version B/Coward1.mp3", keeps it: Paced/<Version>/Version B/Coward1.wav)
 # Lines without pauses are copied as they are. A pause is filled with the recording's own room tone (grains of the quiet
 # around the cut), cross-faded in and out - pure digital silence made the background hiss drop out and come back, which
 # sounded like the audio stuttering/lagging rather than him hesitating. Each cut is moved to the quietest 10 ms within
@@ -81,7 +82,7 @@ def pace(x, pauses):
 def recordings():
     for line in open(os.path.join(os.path.dirname(__file__), "lines.tsv"), encoding="utf-8"):
         f = line.rstrip("\n").split("\t")
-        if line.startswith("#") or len(f) < 6 or not f[5].startswith("Coward"): continue
+        if line.startswith("#") or len(f) < 6 or not os.path.basename(f[5]).startswith("Coward"): continue   # (may be in a subfolder: Version B/...)
         pauses = [(float(a), float(b)) for a, b in (p.split(":") for p in f[7].split(";") if p)] if len(f) > 7 else []
         yield f[5], pauses
 

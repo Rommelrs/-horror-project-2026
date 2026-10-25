@@ -30,8 +30,15 @@ public class CutsceneSkipper : MonoBehaviour
     bool isSkipping = false;
     Coroutine hidePanelCR;
 
+    // The scene's skipper. Cutscenes that handle their own skipping (CowardMeetingCutscene) show this same prompt
+    // through ShowHint / SetHoldProgress / HideHint, so every cutscene's "Hold E to skip" looks the same.
+    public static CutsceneSkipper Instance { get; private set; }
+    public float HoldDuration => holdDuration;
+
     void Awake()
     {
+        Instance = this;
+
         if (skipPanel != null)
         {
             skipPanel.alpha = 0f;
@@ -43,6 +50,11 @@ public class CutsceneSkipper : MonoBehaviour
 
         if (skipHintText != null)
             skipHintText.text = "Hold " + skipKey.ToString() + " to skip";
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
     }
 
     PlayableDirector GetActiveDirector()
@@ -160,6 +172,23 @@ public class CutsceneSkipper : MonoBehaviour
         isSkipping = false;
         holdProgress = 0f;
         if (fillRing != null) fillRing.fillAmount = 0f;
+    }
+
+    public void ShowHint() => ShowSkipHint();
+
+    public void SetHoldProgress(float progress)
+    {
+        if (fillRing != null) fillRing.fillAmount = Mathf.Clamp01(progress);
+    }
+
+    public void HideHint()
+    {
+        if (hidePanelCR != null) StopCoroutine(hidePanelCR);
+        if (fillRing != null) fillRing.fillAmount = 0f;
+        if (skipPanel == null) return;
+        skipPanel.DOKill();
+        skipPanel.alpha = 0f;
+        skipPanel.gameObject.SetActive(false);
     }
 
     // Call this to enable/disable the skipper (e.g. disable during non-skippable cutscenes)

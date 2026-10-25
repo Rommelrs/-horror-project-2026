@@ -35,6 +35,16 @@ public class Enemy : MonoBehaviour, IPoolable
 
     [HideInInspector] public Vector3 damageDirection;
     [HideInInspector] public float damageForceMultiplier;
+    /// <summary>Extra push for the next hit only, set by the weapon just before it deals the damage (a shotgun blast shoves
+    /// harder the more of it landed). Read once by the knockback / death code, then back to 1.</summary>
+    [HideInInspector] public float pendingKnockbackScale = 1f;
+
+    protected float ConsumeKnockbackScale()
+    {
+        float scale = pendingKnockbackScale;
+        pendingKnockbackScale = 1f;
+        return scale;
+    }
     [HideInInspector] public bool chaseStartDelayEnabled = true;
     bool pauseEnemyState = false;
 
@@ -379,6 +389,7 @@ public class Enemy : MonoBehaviour, IPoolable
             this.damageForceMultiplier = Player.instance.playerWeaponSystem.weakpointHitEnemyKnockbackMultiplier * stats.weakpointKnockbackScale;
         else
             this.damageForceMultiplier = 1f;
+        this.damageForceMultiplier *= ConsumeKnockbackScale();
 
         // All enemy types now get knocked back
         stateMachine.ChangeState(enemyKnockbackState);
@@ -524,6 +535,7 @@ public class Enemy : MonoBehaviour, IPoolable
         {
             this.damageForceMultiplier = 1f;
         }
+        this.damageForceMultiplier *= ConsumeKnockbackScale();
 
         //Stop Playing Random SFX
         if (randomSFXCR != null)
