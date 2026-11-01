@@ -14,6 +14,10 @@ public class PlayerRoll : MonoBehaviour
     [SerializeField] float staminaCost = 10f;
 
     public bool IsRolling => isRolling;
+    [Tooltip("Start of the roll that enemy attacks pass through (s). Checked by attacks that honour it (the Questioner's grab and swipes).")]
+    [SerializeField] float invulnerableTime = 0.35f;
+    float rollStartTime = -99f;
+    public bool IsInvulnerable => isRolling && Time.time - rollStartTime < invulnerableTime;
     bool isRolling = false;
     Animator animator;
     CharacterController characterController;
@@ -72,7 +76,11 @@ public class PlayerRoll : MonoBehaviour
         if (EyePeakHandler.instance && EyePeakHandler.instance.IsEyePeakActivated())
             return;
 
-        if (Player.instance.isScared)
+        //No rolling while using a healing item (its upper-body animation is playing)
+        if (PlayerQuickHeal.Using)
+            return;
+
+        if (Player.instance.isScared || Player.instance.isGrabbed)
             return;
 
         //DO not alllow rolling if player is aiming or reloading
@@ -84,6 +92,7 @@ public class PlayerRoll : MonoBehaviour
         {
             // Perform the roll action
             isRolling = true;
+            rollStartTime = Time.time;
 
             //Set next roll ready time
             readyToRollTime = Time.time + rollDuration + rollCooldownPeriod;

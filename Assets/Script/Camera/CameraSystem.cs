@@ -601,7 +601,8 @@ public class CameraSystem : MonoBehaviour
 
         float angleDelta = Quaternion.Angle(m_CameraTransform.rotation, desiredRotation);
         debugAngleLag = angleDelta;
-        bool hasMoveInput = moveInput.magnitude > 0.1f;
+        // with the melee pipe raised he turns towards his target on his own, so the camera follows without input too
+        bool hasMoveInput = moveInput.magnitude > 0.1f || PlayerMeleeWeapon.Ready;
 
         if (hasMoveInput && angleDelta > rotationEngageAngle)
         {
@@ -634,6 +635,14 @@ public class CameraSystem : MonoBehaviour
     {
         bool hasAnyInput = moveInput.magnitude > 0.1f;
         if (!hasAnyInput) return;
+
+        // A/D strafe (not turn) while the melee pipe is raised
+        if (PlayerMeleeWeapon.Ready)
+        {
+            sustainedTurnAngle = 0f;
+            sustainedTurnDirection = 0f;
+            return;
+        }
 
         bool turningNow = Mathf.Abs(moveInput.x) > sustainedTurnInputThreshold;
 

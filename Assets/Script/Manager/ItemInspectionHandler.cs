@@ -113,10 +113,11 @@ public class ItemInspectionHandler : MonoBehaviour
             {
                 if (currentInspectableItem.itemToPickup != null)
                 {
-                    InspectItem(currentInspectableItem.itemToPickup);
+                    if (!currentInspectableItem.instantPickup)
+                        InspectItem(currentInspectableItem.itemToPickup);
 
                     //Add item to inventory
-                    Player.instance.inventory.AddItem(currentInspectableItem.itemToPickup, currentInspectableItem.itemQuantity);
+                    Player.instance.inventory.PickUp(currentInspectableItem.itemToPickup, currentInspectableItem.itemQuantity);
 
                     
                 }
@@ -137,6 +138,15 @@ public class ItemInspectionHandler : MonoBehaviour
                     {
                         saveablePickup.MarkAsPickedUp();
                     }
+                }
+
+                // Instant pickups skip their own "I got a ..." subtitle; the rest of OnInteracted (checkpoints etc.) still runs.
+                // Removing the component makes UnityEvent skip that persistent call.
+                if (currentInspectableItem.instantPickup)
+                {
+                    SubtitleTrigger ownSubtitle = currentInspectableItem.GetComponent<SubtitleTrigger>();
+                    if (ownSubtitle != null)
+                        DestroyImmediate(ownSubtitle);
                 }
 
                 //Interaction Success

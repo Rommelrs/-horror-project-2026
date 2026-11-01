@@ -8,6 +8,8 @@ public class PlayerWeaponEnabler : MonoBehaviour
     //[SerializeField] GameObject weaponUIPanel;
     [SerializeField] GameObject weaponObj;
 
+    public GameObject WeaponObject => weaponObj;
+
     PlayerWeaponSystem playerWeaponSystem;
     Inventory inventory;
 
@@ -42,7 +44,7 @@ public class PlayerWeaponEnabler : MonoBehaviour
 
             //weaponUIPanel.SetActive(false);
 
-            if(!playerWeaponSystem.isAiming)
+            if(!playerWeaponSystem.isAiming && !PlayerMeleeWeapon.Equipped)
                 weaponObj.SetActive(true);
         }
         else

@@ -300,6 +300,23 @@ public class PlayerWeaponSystem : MonoBehaviour
         if (!weaponIsEnabled)
             return;
 
+        //The melee pipe is out instead (PlayerMeleeWeapon owns Aim / Shoot then)
+        if (PlayerMeleeWeapon.Equipped)
+            return;
+
+        //Held by a Questioner: no aiming or shooting until he lets go
+        if (player.isGrabbed)
+        {
+            if (isAiming)
+            {
+                ExitOutOfAiming();
+                animator.SetBool("Aiming", false);
+                firstPersonAnimator.SetBool("Aiming", false);
+                if (aimCrosshairImage != null) { aimCrosshairImage.DOKill(); aimCrosshairImage.DOFade(0f, 0.15f); }
+            }
+            return;
+        }
+
         //Check if player is dead
         if (player.IsDead())
             return;
@@ -651,6 +668,11 @@ public class PlayerWeaponSystem : MonoBehaviour
         float spreadY = Random.Range(-bulletSpread, bulletSpread);
 
         // Apply spread to forward direction
+        // the Questioner's scream: the aim sways for a moment
+        Vector2 sway = PlayerCloseCombat.AimSway;
+        spreadX += sway.x;
+        spreadY += sway.y;
+
         Vector3 direction = gunEndTransform.forward + (gunEndTransform.right * spreadX) + (gunEndTransform.up * spreadY);
         return direction.normalized;
     }
@@ -658,7 +680,7 @@ public class PlayerWeaponSystem : MonoBehaviour
     void HandleReloading()
     {
         //Handle Reloading - prevent spamming by checking if reload is already in progress
-        if (reloadInput.action.WasPressedThisFrame() && !isReloading && currentAmmo < maxAmmoCapacity)
+        if (reloadInput.action.WasPressedThisFrame() && !isReloading && currentAmmo < maxAmmoCapacity && !PlayerQuickHeal.Using)
         {
             if (inventory.HasWeaponAmmo(weaponAmmoItem, out int ammoCount))
             {

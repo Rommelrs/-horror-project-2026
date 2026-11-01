@@ -69,6 +69,8 @@ public class Health : MonoBehaviour, IDamagable
     }
 
     public bool isDamageByWeakpointHit = false;
+    /// <summary>Optional: reshapes every incoming hit (sees isDamageByWeakpointHit), before i-frames and death.</summary>
+    public System.Func<int, int> damageFilter;
     Vector3 lastHitPoint = Vector3.zero;
     
     [Header("Invincibility Frames (Player Only)")]
@@ -90,11 +92,20 @@ public class Health : MonoBehaviour, IDamagable
     //Damage Behaviour
     public void Damage(int damage)
     {
+        Damage(damage, false);
+    }
+
+    /// <summary>ignoreIFrames: a combo's follow-up hit (the Questioner's second claw) still lands inside the i-frames the first opened.</summary>
+    public void Damage(int damage, bool ignoreIFrames)
+    {
         if (isInvincible)
             return;
 
+        // an owner can reshape a hit before it lands (the Questioner: a mouth shot staggers him instead of killing him)
+        if (damageFilter != null) damage = damageFilter(damage);
+
         // Check for i-frames (invincibility frames)
-        if (enableIFrames && Time.time - lastDamageTime < iFrameDuration)
+        if (!ignoreIFrames && enableIFrames && Time.time - lastDamageTime < iFrameDuration)
         {
             return; // Ignore damage during i-frames
         }
@@ -128,6 +139,23 @@ public class Health : MonoBehaviour, IDamagable
             if (showHealthBarCR != null) StopCoroutine(showHealthBarCR);
             showHealthBarCR = StartCoroutine(Co_ShowHealthBar());
         }
+    }
+
+    // Test benches only: change health directly (ignores invincibility and i-frames, never kills, fires no events)
+    // Test benches: give this a different health pool (full)
+    public void SetMaxHealth(int value)
+    {
+        maxHealth = Mathf.Max(1, value);
+        health = maxHealth;
+        if (healthBar != null) healthBar.SetHealth(health, maxHealth, false);
+    }
+
+    public void DebugChangeHealth(int delta)
+    {
+        if (IsDead) return;
+        health = Mathf.Clamp(health + delta, 1, maxHealth);
+        if (healthBar != null)
+            healthBar.SetHealth(health, maxHealth, delta < 0);
     }
 
     // Healing Behaviour

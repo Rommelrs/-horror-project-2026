@@ -19,6 +19,6 @@ public class ItemPickup : Interactable
 
         //Add item to inventory
         if (itemToPickup != null)
-            Player.instance.inventory.AddItem(itemToPickup, itemPickupQuantity);
+            Player.instance.inventory.PickUp(itemToPickup, itemPickupQuantity);
     }
 }

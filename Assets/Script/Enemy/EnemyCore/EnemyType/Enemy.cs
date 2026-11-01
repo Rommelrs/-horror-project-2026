@@ -38,6 +38,8 @@ public class Enemy : MonoBehaviour, IPoolable
     /// <summary>Extra push for the next hit only, set by the weapon just before it deals the damage (a shotgun blast shoves
     /// harder the more of it landed). Read once by the knockback / death code, then back to 1.</summary>
     [HideInInspector] public float pendingKnockbackScale = 1f;
+    /// <summary>Set by the melee weapon around its Damage() call: the hit is a melee strike (the Questioner gets shoved back by it).</summary>
+    [HideInInspector] public bool pendingMeleeHit;
 
     protected float ConsumeKnockbackScale()
     {
@@ -263,6 +265,10 @@ public class Enemy : MonoBehaviour, IPoolable
             anim.SetFloat("Speed", speed);
         }
     }
+
+    /// <summary>Helpless on the ground (a weakpoint knockdown): melee hits do their heavy "downed" damage. Enemies with their own
+    /// downed state (the Questioner's kneeling stagger) add it here.</summary>
+    public virtual bool IsDownedForMelee => stateMachine != null && stateMachine.CurrentState == enemyKnockbackState && enemyKnockbackState.IsDownedHeavy;
 
     public bool PlayerInRange(float range)
     {

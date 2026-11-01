@@ -83,8 +83,12 @@ public class EnemyKnockBackState : EnemyState
         // A pending wake-up must never fire after we have left this state (it would force a chase state change mid-something else)
         if (wakeUpCR != null) { enemy.StopCoroutine(wakeUpCR); wakeUpCR = null; }
 
-        enemy.rb.linearVelocity = Vector3.zero;
-        enemy.rb.angularVelocity = Vector3.zero;
+        // (a hit landing right after another re-enters before the push made the body dynamic - no velocity to clear then)
+        if (!enemy.rb.isKinematic)
+        {
+            enemy.rb.linearVelocity = Vector3.zero;
+            enemy.rb.angularVelocity = Vector3.zero;
+        }
         enemy.rb.useGravity = false;
         enemy.rb.isKinematic = true;
 
@@ -197,8 +201,12 @@ public class EnemyKnockBackState : EnemyState
         yield return new WaitForSeconds(0.2f);
         yield return new WaitUntil(() => enemy.rb.linearVelocity.magnitude < enemy.stats.stillThreshold);
 
-        enemy.rb.linearVelocity = Vector3.zero;
-        enemy.rb.angularVelocity = Vector3.zero;
+        // (a hit landing right after another re-enters before the push made the body dynamic - no velocity to clear then)
+        if (!enemy.rb.isKinematic)
+        {
+            enemy.rb.linearVelocity = Vector3.zero;
+            enemy.rb.angularVelocity = Vector3.zero;
+        }
         enemy.rb.useGravity = false;
         enemy.rb.isKinematic = true;
 

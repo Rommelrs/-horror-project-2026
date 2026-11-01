@@ -11,6 +11,8 @@ public class InspectableItemPickup : MonoBehaviour
     public int itemQuantity =1;
 
     public bool destroyOnInteract;
+    [Tooltip("Pick it straight up: no inspection screen and no 'I got a ...' subtitle from this pickup's own SubtitleTrigger.")]
+    public bool instantPickup;
     public UnityEvent OnInteracted;
     public AudioClip pckupClip;
 

@@ -406,7 +406,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 562982525688105676}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a7ebb9cbb7de9b548baf70429c3f294c, type: 3}
+  m_Script: {fileID: 11500000, guid: c05fdc3d669db3c4090de0ba9092f73f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   stats: {fileID: 2540446152838164944}
@@ -428,11 +428,101 @@ MonoBehaviour:
       m_Calls: []
   damageDirection: {x: 0, y: 0, z: 0}
   damageForceMultiplier: 0
+  pendingKnockbackScale: 1
+  pendingMeleeHit: 0
   chaseStartDelayEnabled: 1
   playerDetected: 0
   onPlayerDetected:
     m_PersistentCalls:
       m_Calls: []
+  specMoveset: 1
+  tuning:
+    walkSpeed: 1
+    strafeSpeed: 1.2
+    strafeSwitchMin: 0.8
+    strafeSwitchMax: 1.6
+    acceleration: 3.5
+    turnSpeed: 220
+    engageRange: 9
+    disengageRange: 12
+    circleMax: 6
+    circleMin: 4
+    circleTighten: 0.12
+    firstMoveDelay: 0.6
+    decisionInterval: 0.35
+    moveGapMin: 0.5
+    moveGapMax: 1.2
+    screamChance: 0.5
+    grabChance: 0.6
+    screamMin: 3
+    screamMax: 8
+    screamCooldown: 10
+    screamWindup: 0.8
+    screamActive: 1
+    screamRecovery: 0.6
+    screamRadius: 4
+    screamSlow: 0.3
+    screamEffectTime: 1
+    weakpointWindupScale: 1.7
+    grabMin: 4
+    grabMax: 6
+    grabCooldown: 8
+    grabWindup: 0.6
+    rushSpeed: 4
+    rushMaxDistance: 6
+    grabContact: 0.95
+    escapeWindow: 1.5
+    escapePresses: 6
+    biteDamage: 25
+    holdDistance: 0.62
+    stumbleTime: 1
+    grabMissRecovery: 0.9
+    swipeRange: 1.5
+    swipeWindup: 0.4
+    swipeGap: 0.3
+    swipeRecovery: 0.7
+    swipeDamage: 10
+    swipeReach: 1.85
+    swipeArc: 110
+    staggerTime: 4
+    staggerRecovery: 0.8
+    staggerShotDamage: 25
+    meleePushDistance: 0.45
+    hitRepositionMin: 1.2
+    hitRepositionMax: 2.2
+    hitRepositionDistMin: 3.2
+    hitRepositionDistMax: 4.6
+    afterHitRepositionMin: 1.8
+    afterHitRepositionMax: 2.8
+    swipePushPlayer: 0.55
+    bitePushPlayer: 0.9
+  jawBoneName: Jaw
+  jawAxis: {x: 1, y: 0, z: 0}
+  jawMaxAngle: 28
+  jawIdleOpen: 0.2
+  flinchAngle: 9
+  flinchStaggeredAngle: 14
+  flinchReturn: 9
+  inhaleSFX:
+  - {fileID: 8300000, guid: eed176696fb8dc44fbb8c8f90b49ccfb, type: 3}
+  screamSFX:
+  - {fileID: 8300000, guid: e4adc28a3ff9b0e47a05e09792ae85c8, type: 3}
+  grabCueSFX:
+  - {fileID: 8300000, guid: c088a098c9c964f4c8e85fdb762bed7e, type: 3}
+  hissSFX:
+  - {fileID: 8300000, guid: 299baea6bb23ed74eb09cbbc23de8414, type: 3}
+  whisperSFX:
+  - {fileID: 8300000, guid: 744d534cabcf2504c8cbe379ac3bfa6c, type: 3}
+  biteSFX:
+  - {fileID: 8300000, guid: de0dd31d44a439542bed39a515fecd11, type: 3}
+  swipeSFX:
+  - {fileID: 8300000, guid: 1e455086d9502ef41bff72d30a089ad2, type: 3}
+  - {fileID: 8300000, guid: 3389742e25f74da4191203d1751a7169, type: 3}
+  staggerSFX:
+  - {fileID: 8300000, guid: 60fe4f20a4294454b8da706f837e552e, type: 3}
+  - {fileID: 8300000, guid: 723d596111cc2514e96b1946f697411f, type: 3}
+  - {fileID: 8300000, guid: edf98542ccc2313419e88896fb6f1aa9, type: 3}
+  cueVolume: 1
 --- !u!114 &6987932637374981965
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1316,6 +1406,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 2516358904195036633}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 23d57fd2fd8f32e4396c379fb884e460,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6818013435175766225}
   m_SourcePrefab: {fileID: 100100000, guid: 23d57fd2fd8f32e4396c379fb884e460, type: 3}
 --- !u!4 &2400999317712241662 stripped
 Transform:
@@ -1347,6 +1441,18 @@ MonoBehaviour:
   customEventTwo:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &6818013435175766225
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2635930478809486615}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 95d048bd6f79db145a98113a0d715d97, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyAnimationEventForwarder
 --- !u!4 &3449586214219337645 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 23d57fd2fd8f32e4396c379fb884e460,

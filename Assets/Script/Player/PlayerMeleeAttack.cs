@@ -114,7 +114,7 @@ public class PlayerMeleeAttack : MonoBehaviour
         if (GameManager.IsPaused)
             return;
 
-        if (Player.instance.isRolling || Player.instance.isScared)
+        if (Player.instance.isRolling || Player.instance.isScared || PlayerQuickHeal.Using)
             return;
 
         //Check if input is pressed and player has enough stamina

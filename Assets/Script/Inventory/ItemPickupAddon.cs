@@ -14,6 +14,6 @@ public class ItemPickupAddon : MonoBehaviour
 
         //Add item to inventory
         if (itemToPickup != null)
-            Player.instance.inventory.AddItem(itemToPickup);
+            Player.instance.inventory.PickUp(itemToPickup);
     }
 }

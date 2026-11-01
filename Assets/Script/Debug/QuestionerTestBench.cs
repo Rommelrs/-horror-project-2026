@@ -44,6 +44,10 @@ public class QuestionerTestBench : MonoBehaviour
         [Range(0, 100)] public int startStability = 100;
         [Tooltip("Gives the pistol + a full magazine + reserve ammo when the scenario starts.")]
         public bool giveGun;
+        [Tooltip("Gives the steel pipe and takes it out (melee: hold Aim to raise, Shoot to swing).")]
+        public bool giveMelee;
+        [Tooltip("Health the spawned enemies get in this scenario (0 = the prefab's own).")]
+        public int enemyHealth;
         [Tooltip("Where the shootable pass/fail button floats, in the player spawn's local space (x = right, y = up, z = forward).")]
         public Vector3 buttonOffset = new Vector3(1.8f, 1.3f, 0f);
     }
@@ -61,6 +65,10 @@ public class QuestionerTestBench : MonoBehaviour
     public Item shotgunItem;
     public Item shellsItem;
     public int shellsToGive = 24;
+    public Item meleeItem;
+
+    [Tooltip("Scenario loaded automatically when Play starts (-1 = none, wait for a key). Home also loads the melee duel.")]
+    public int autoStartScenario = -1;
 
     [Header("Scenarios")]
     public List<Scenario> scenarios = new List<Scenario>();
@@ -123,6 +131,15 @@ public class QuestionerTestBench : MonoBehaviour
     readonly Dictionary<int, Result> results = new Dictionary<int, Result>();
 
     GUIStyle boxStyle, labelStyle, headerStyle, tagStyle;
+
+    System.Collections.IEnumerator Start()
+    {
+        if (autoStartScenario < 0 || autoStartScenario >= scenarios.Count) yield break;
+        // the player and the scene's managers finish their own Start first
+        yield return null;
+        yield return null;
+        LoadScenario(autoStartScenario);
+    }
 
     void Awake()
     {
@@ -251,6 +268,11 @@ public class QuestionerTestBench : MonoBehaviour
             if (kb.pageUpKey.wasPressedThisFrame) LoadScenario(pageList[pos <= 0 ? pageList.Count - 1 : pos - 1]);
         }
         if (kb.f5Key.wasPressedThisFrame && current >= 0) LoadScenario(current);
+        if (kb.homeKey.wasPressedThisFrame)
+        {
+            int duel = scenarios.FindIndex(x => x.giveMelee);
+            if (duel >= 0) LoadScenario(duel); else Toast("No melee scenario");
+        }
         if (kb.f11Key.wasPressedThisFrame) { ClearEnemies(); Toast("Enemies cleared"); }
         if (kb.deleteKey.wasPressedThisFrame) { results.Clear(); RefreshButton(); Toast("All scenario results cleared"); }
 
@@ -270,6 +292,13 @@ public class QuestionerTestBench : MonoBehaviour
             Toast("Infinite ammo " + (infiniteAmmo ? "ON" : "OFF"));
         }
         if (kb.f10Key.wasPressedThisFrame) { godMode = !godMode; Toast("Invincible mode " + (godMode ? "ON" : "OFF")); }
+        // F12 lower your health by 25 (works while invincible, never kills), Shift+F12 back to full - healing items / low-health vignette tests
+        if (kb.f12Key.wasPressedThisFrame && p.health != null)
+        {
+            if (shift) p.health.DebugChangeHealth(p.health.GetMaxHealthValue());
+            else p.health.DebugChangeHealth(-25);
+            Toast("HP " + p.health.GetHealthValue() + " / " + p.health.GetMaxHealthValue());
+        }
 
         // Enemy toggles (apply live to the spawned enemies and to the next spawns)
         if (kb.numpadDivideKey.wasPressedThisFrame) { noSidestep = !noSidestep; ApplyToggles(); Toast("Sidestep " + (noSidestep ? "DISABLED" : "enabled")); }
@@ -395,6 +424,7 @@ public class QuestionerTestBench : MonoBehaviour
         if (sc.playerSpawn != null) TeleportPlayer(p, sc.playerSpawn);
         if (p.playerStability != null) p.playerStability.stability = Mathf.Clamp(sc.startStability, 0, p.playerStability.maxStability);
         if (sc.giveGun) GiveGun();
+        if (sc.giveMelee) GiveMelee();
         PlaceButton(sc);
 
         // Enemies
@@ -417,6 +447,7 @@ public class QuestionerTestBench : MonoBehaviour
                 if (enemy == null) continue;
 
                 if (es.overrideType) enemy.stats.enemyType = es.type;
+                if (sc.enemyHealth > 0 && enemy.health != null) enemy.health.SetMaxHealth(sc.enemyHealth);
                 if (es.waypoints != null && es.waypoints.Length > 0) enemy.stats.waypoints = es.waypoints;
 
                 var l = new Live
@@ -511,6 +542,14 @@ public class QuestionerTestBench : MonoBehaviour
             w.weaponIsEnabled = true;
             w.currentAmmo = w.maxAmmoCapacity;
         }
+    }
+
+    void GiveMelee()
+    {
+        var p = Player.instance;
+        if (p == null || p.inventory == null || meleeItem == null) return;
+        if (!p.inventory.HasItem(meleeItem)) p.inventory.AddItem(meleeItem, 1);
+        if (PlayerMeleeWeapon.instance != null) PlayerMeleeWeapon.instance.Select();
     }
 
     void GiveShotgun()
@@ -686,7 +725,7 @@ public class QuestionerTestBench : MonoBehaviour
             sb.AppendLine(i == current ? "  <color=#ffd24a>> </color>" + mark + colored : "    " + mark + colored);
         }
         sb.AppendLine();
-        sb.AppendLine("<b>PLAYER</b>   F6 / F7 stability -10 / +10 (Shift = 50)  |  F8 give gun + ammo (Shift = shotgun + shells, 1 / 2 switch)  |  F9 infinite ammo  |  F10 invincible mode");
+        sb.AppendLine("<b>PLAYER</b>   F6 / F7 stability -10 / +10 (Shift = 50)  |  F8 give gun + ammo (Shift = shotgun + shells, 1 / 2 switch)  |  F9 infinite ammo  |  F10 invincible mode  |  F12 HP -25 (Shift = full)  |  Home melee duel (pipe: 3 take out, hold Aim raise, Shoot swing)");
         sb.AppendLine("<b>ENEMY</b>   Num/ sidestep  |  Num* offset pathfinding  |  Num- dynamic speed  |  Num. freeze AI  |  F3 running / no-running variant");
         sb.AppendLine("<b>MISC</b>   F1 hide panel  |  F2 hide other gym enemies  |  F4 slow-mo");
         sb.AppendLine();

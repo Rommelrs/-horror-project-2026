@@ -8,11 +8,14 @@ using UnityEngine.InputSystem;
 public class PlayerMovement : MonoBehaviour
 {
     [SerializeField] InputActionReference movementAction;
+    public InputAction MoveAction => movementAction != null ? movementAction.action : null;
     [SerializeField] InputActionReference sprintAction;
     [SerializeField] InputActionReference autoRotateAction;
 
     public float Speed = 5.0f;
     public float SprintSpeed = 10.0f;
+    [Tooltip("Walking speed while reloading (from the hip).")]
+    public float ReloadMoveSpeed = 0.9f;
     public float acceleration = 10.0f;
 
     public float sprintStaminaCost = 0.3f;
@@ -118,7 +121,7 @@ public class PlayerMovement : MonoBehaviour
         if (EyePeakHandler.instance && EyePeakHandler.instance.IsEyePeakActivated())
             return;
 
-        if (autoRotateAction.action.WasPressedThisFrame() && moveInput.y < -0.1f)
+        if (autoRotateAction.action.WasPressedThisFrame() && moveInput.y < -0.1f && !PlayerMeleeWeapon.Ready)
         {
             if (!playerWeaponSystem.isAiming)
             {
@@ -166,8 +169,8 @@ public class PlayerMovement : MonoBehaviour
             return;
         }
 
-        //Check if player is attacking or rolling
-        if (player.isAttacking || player.isRolling || player.isScared || playerWeaponSystem.isReloading)
+        //Check if player is attacking or rolling (reloading is allowed - he walks slowly, see below)
+        if (player.isAttacking || player.isRolling || player.isScared || player.isGrabbed)
             return;
 
         //Check if player is dead
@@ -185,6 +188,13 @@ public class PlayerMovement : MonoBehaviour
         //Movement Input
         moveInput = movementAction.action.ReadValue<Vector2>();
 
+        //Melee pipe raised: PlayerMeleeWeapon walks / strafes / turns him
+        if (PlayerMeleeWeapon.Ready)
+        {
+            currentSpeed = 0f;
+            return;
+        }
+
         float sprintInput = sprintAction.action.ReadValue<float>();
 
         // Only forward/back input translates - left/right rotates the character in place instead.
@@ -199,8 +209,8 @@ public class PlayerMovement : MonoBehaviour
             }
             else
             {
-                //Only allow playe to sprint in forward direction
-                if (sprintInput > 0.1f && moveInput.y > 0)
+                //Only allow playe to sprint in forward direction (never while using a healing item - he walks through the animation)
+                if (sprintInput > 0.1f && moveInput.y > 0 && !PlayerQuickHeal.Using)
                 {
                     if (playerStamina != null)
                     {
@@ -240,9 +250,16 @@ public class PlayerMovement : MonoBehaviour
         else
             targetSpeed = 0.0f;
 
-        //Check if player is Aiming or Reloading then disable locomotion control
-        if (playerWeaponSystem.isAiming || playerWeaponSystem.isReloading)
+        //Check if player is Aiming then disable locomotion control (an aimed reload is first person and stays put)
+        if (playerWeaponSystem.isAiming)
             return;
+
+        //Reloading from the hip: he can still walk, but slowly (no sprint)
+        if (playerWeaponSystem.isReloading)
+            targetSpeed = Mathf.Min(targetSpeed, ReloadMoveSpeed);
+
+        //The Questioner's scream slows him for a moment
+        targetSpeed *= PlayerCloseCombat.SpeedMultiplier;
 
         HandleTankMovement();
     }
@@ -323,7 +340,8 @@ public class PlayerMovement : MonoBehaviour
 
         // No strafing - pure left/right input rotates the character in place, which uses the
         // "turn in place" animation instead of a strafe blend.
-        bool pureTurnInPlace = Mathf.Abs(moveInput.y) < 0.1f && Mathf.Abs(moveInput.x) > 0.1f;
+        // (melee pipe raised: A/D strafe on the melee layer, not a turn)
+        bool pureTurnInPlace = Mathf.Abs(moveInput.y) < 0.1f && Mathf.Abs(moveInput.x) > 0.1f && !PlayerMeleeWeapon.Ready;
 
         //Set Animation
         if (pureTurnInPlace)
@@ -342,10 +360,8 @@ public class PlayerMovement : MonoBehaviour
             // x-axis input is steering, not lateral movement, so it never drives the strafe blend.
             player.animator.SetFloat("x", Mathf.MoveTowards(currentX, 0f, turningAnimationSmoothness * Time.deltaTime));
 
-            if (playerWeaponSystem.isReloading == false)
-                player.animator.SetFloat("y", Mathf.MoveTowards(currentY, moveInput.y, turningAnimationSmoothness * Time.deltaTime));
-            else
-                player.animator.SetFloat("y", Mathf.MoveTowards(currentY, 0, speed * Time.deltaTime));
+            // reloading walks too (slowly), so the legs keep the walk blend
+            player.animator.SetFloat("y", Mathf.MoveTowards(currentY, moveInput.y, turningAnimationSmoothness * Time.deltaTime));
         }
     }
 

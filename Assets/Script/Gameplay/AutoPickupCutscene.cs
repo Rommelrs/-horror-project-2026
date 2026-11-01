@@ -209,7 +209,7 @@ public class AutoPickupCutscene : MonoBehaviour
         if (ItemInspectionHandler.instance != null)
             ItemInspectionHandler.instance.InspectItem(targetPickup.itemToPickup);
 
-        Player.instance.inventory.AddItem(targetPickup.itemToPickup, targetPickup.itemQuantity);
+        Player.instance.inventory.PickUp(targetPickup.itemToPickup, targetPickup.itemQuantity);
 
         if (targetPickup.pckupClip != null)
         {

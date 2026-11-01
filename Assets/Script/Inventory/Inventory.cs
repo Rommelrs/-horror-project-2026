@@ -258,6 +258,34 @@ public class Inventory : MonoBehaviour
         return false;
     }
 
+    // The player picked something up in the world (not a save restore / debug add) - used by the pickup banner
+    public static event System.Action<Item, int, int> OnItemPickedUp; // item, count before, count after
+
+    public bool PickUp(Item item, int quantity = 1)
+    {
+        int before = CountOf(item);
+        bool added = AddItem(item, quantity);
+        if (added)
+            OnItemPickedUp?.Invoke(item, before, CountOf(item));
+        return added;
+    }
+
+    // Total quantity of this exact item across all stacks
+    public int CountOf(Item item)
+    {
+        int total = 0;
+        if (item == null)
+            return total;
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            if (items[i].item == item)
+                total += items[i].quantity;
+        }
+
+        return total;
+    }
+
     // Check if inventory has a specific item
     public bool HasItem(Item item)
     {

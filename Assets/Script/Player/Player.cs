@@ -28,6 +28,7 @@ public class Player : MonoBehaviour
     public bool isAttacking = false;
     public bool isRolling = false;
     public bool isScared = false;
+    public bool isGrabbed = false;      // held by a Questioner (PlayerCloseCombat)
     public bool fuseBoxInRange = false;
     public bool hasMap = false;
 
