@@ -22531,7 +22531,6 @@ GameObject:
   - component: {fileID: 1297627017077128468}
   - component: {fileID: 2386842303776306197}
   - component: {fileID: 7039651435670249681}
-  - component: {fileID: 167244129486922085}
   - component: {fileID: 4604256053285225081}
   - component: {fileID: 8979644548986736795}
   - component: {fileID: 902372944366994762}
@@ -22650,7 +22649,7 @@ MonoBehaviour:
   inventory: {fileID: 2386842303776306197}
   controller: {fileID: 5031915359852961710}
   playerStability: {fileID: 902372944366994762}
-  bloodEffectHandler: {fileID: 167244129486922085}
+  bloodEffectHandler: {fileID: 0}
   playerMovementLimiter: {fileID: 9196481454461096975}
   damageFillImage: {fileID: 0}
   damageEffectAlpha: 0.2
@@ -22869,11 +22868,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   maxInventorySize: 20
   defaultItems:
-  - item: {fileID: 11400000, guid: e965c561f50c5cd40a6943948f122c36, type: 2}
-    quantity: 4
   - item: {fileID: 11400000, guid: 46897cb10d7795e478b92dea27f106e5, type: 2}
-    quantity: 4
-  - item: {fileID: 11400000, guid: 4a9537ba458fad74a9678a7355bd0276, type: 2}
     quantity: 4
   - item: {fileID: 11400000, guid: 809e0cf284d3e4f44a29457a898de4a4, type: 2}
     quantity: 1
@@ -22921,31 +22916,6 @@ MonoBehaviour:
   doorUnlockClip: {fileID: 0}
   doorRemarkWindow: 4
   doorRemarkIgnoreSeconds: 0.35
---- !u!114 &167244129486922085
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5162133000745373567}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e10e3da373633834ca5fbda75025344f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  playerStability: {fileID: 902372944366994762}
-  bloodEffectPrefab1: {fileID: 5499105434448087937, guid: 9beec40b88a0bfe4883bbf227b11a08f,
-    type: 3}
-  bloodEffectPrefab2: {fileID: 8102787366579284460, guid: ac86a20b60d5b594d9bd5173cb8506fa,
-    type: 3}
-  bloodEffectPoints:
-  - {fileID: 9056964516854831557}
-  - {fileID: 443253954848050479}
-  - {fileID: 5102402699961382395}
-  - {fileID: 6452061852452858933}
-  playerHealth: {fileID: 4030614728100278281}
-  spawnFrequencyMin: 1.8
-  spawnFrequencyMax: 2
 --- !u!114 &4604256053285225081
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -23271,6 +23241,9 @@ MonoBehaviour:
   shakeDuration: 0.18
   sparkEffect: {fileID: 525993801279341955, guid: 3d6444224716ff74a95014a904bf3d91,
     type: 3}
+  projectileWindow: 0.06
+  projectileReach: 2.3
+  projectileMaxHeight: 2.8
   swingClips:
   - {fileID: 8300000, guid: c275e5f3d6c9ca340b958d2be963efc9, type: 3}
   - {fileID: 8300000, guid: a2b4a05573c71c340a6e382882d67f96, type: 3}

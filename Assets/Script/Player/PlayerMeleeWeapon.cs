@@ -123,6 +123,9 @@ public class PlayerMeleeWeapon : MonoBehaviour
     [Tooltip("Reach from his centre to a projectile, and how high it can be (m above his feet).")]
     [SerializeField] float projectileReach = 2.3f;
     [SerializeField] float projectileMaxHeight = 2.8f;
+    [Tooltip("Shootable padlocks within this reach break like a bullet breaks them (the Store's storage-room door: the pipe " +
+             "is the only weapon there).")]
+    [SerializeField] float lockReach = 1.8f;
 
     [Header("Audio")]
     [SerializeField] AudioClip[] swingClips;
@@ -604,7 +607,16 @@ public class PlayerMeleeWeapon : MonoBehaviour
             return;
         }
 
-        // nothing alive in reach: does the pipe meet a wall along its arc?
+        // nothing alive in reach: a padlock in front of him?
+        if (BreakLocks(origin))
+        {
+            Play2D(Pick(wallHitClips), wallVolume);
+            if (HitstopManager.instance != null) HitstopManager.instance.FreezeTime(hitstop * 0.6f);
+            Shake(shakeIntensity * 0.7f, shakeDuration);
+            return;
+        }
+
+        // does the pipe meet a wall along its arc?
         const float sweep = -1f;                  // the swing comes from his right
         for (int k = 0; k < 5; k++)
         {
@@ -620,6 +632,28 @@ public class PlayerMeleeWeapon : MonoBehaviour
         }
     }
 
+    /// <summary>Breaks shootable padlocks in the swing's arc, the same as a bullet (Lock.LockDamaged). Puzzle locks stay.</summary>
+    bool BreakLocks(Vector3 origin)
+    {
+        bool broke = false;
+        int n = Physics.OverlapSphereNonAlloc(origin + transform.forward * lockReach * 0.5f, lockReach, overlap, ~0, QueryTriggerInteraction.Collide);
+        for (int i = 0; i < n; i++)
+        {
+            var padlock = overlap[i].GetComponentInParent<Lock>();
+            if (padlock == null || !padlock.IsShootable || !padlock.isActiveAndEnabled) continue;
+            Vector3 to = padlock.transform.position - transform.position;
+            float height = to.y;
+            to.y = 0f;
+            if (to.magnitude > lockReach || height < 0.2f || height > 2.4f) continue;
+            if (to.magnitude > 0.5f && Vector3.Angle(transform.forward, to) > hitArc * 0.5f) continue;
+
+            if (sparkEffect != null) Destroy(Instantiate(sparkEffect, padlock.transform.position, Quaternion.LookRotation(-to.normalized)), 3f);
+            padlock.LockDamaged();
+            broke = true;
+        }
+        return broke;
+    }
+
     /// <summary>Knocks flying projectiles in the swing's arc out of the air - the same as shooting one (it bursts and drops
     /// its "shot by bullet" loot).</summary>
     void BatProjectiles()
@@ -630,6 +664,9 @@ public class PlayerMeleeWeapon : MonoBehaviour
         {
             var projectile = overlap[i].GetComponentInParent<Projectile>();
             if (projectile == null || !projectile.gameObject.activeInHierarchy) continue;
+            // a bag wedged in a door is a padlock first (Store storage room), like it is for bullets: BreakLocks opens the door
+            var asLock = projectile.GetComponentInParent<Lock>();
+            if (asLock != null && asLock.IsShootable) continue;
             Vector3 to = projectile.transform.position - transform.position;
             float height = to.y;
             to.y = 0f;

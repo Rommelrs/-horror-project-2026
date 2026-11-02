@@ -17,7 +17,6 @@ public class Player : MonoBehaviour
     public Inventory inventory;
     public CharacterController controller;
     public PlayerStability playerStability;
-    public BloodEffectHandler bloodEffectHandler;
     public PlayerMovementLimiter playerMovementLimiter;
 
     [SerializeField] Image damageFillImage;
@@ -75,9 +74,6 @@ public class Player : MonoBehaviour
         }
     }
 
-    float stabilityDecreaseCooldownPeriod = 40f;
-    float nextStabilityDecreaseTime = 0f;
-
     //On Player Take Damage
     void TakeDamage(int damage)
     {
@@ -87,18 +83,6 @@ public class Player : MonoBehaviour
 
         //Decrease player stability
         playerStability.DecreaseStability(15);
-
-        //Check if bleeding
-        if(bloodEffectHandler != null)
-        {
-            if (Time.time > nextStabilityDecreaseTime)
-            {
-                nextStabilityDecreaseTime = Time.time + stabilityDecreaseCooldownPeriod;
-
-                //Decrease Stability
-                playerStability.DecreaseStability(20);
-            }
-        }
     }
 
     // Coroutine to handle damage effect

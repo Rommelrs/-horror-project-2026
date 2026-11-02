@@ -14,13 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: Med Kit
   itemIcon: {fileID: 21300000, guid: 6a5242d14a54f324bbb67537ac297e94, type: 3}
-  description: +50 Health & +20 Stability
+  description: 'An old army medic kit. Everything inside is labeled in neat handwriting.
+
+    Restores
+    your vitality and steadies your mind.'
   isStackable: 1
   maxStackSize: 4
   itemType: 3
   showReadPrompt: 1
-  healingAmount: 50
-  stabilityIncreaseAmount: 20
+  healingAmount: 100
+  stabilityIncreaseAmount: 40
   energyDrinkDuration: 0
   calmingInhalerDuration: 0
   keyCode: 0

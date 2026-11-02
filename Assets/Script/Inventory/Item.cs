@@ -36,7 +36,7 @@ public enum ItemType
     EnergyDrink,
     Key,
     Ammo,
-    Bandage,
+    Bandage,            // unused: the bandage + bleeding were removed (kept so the saved item types keep their numbers)
     CalmingInhaler,
     Drill,
     DrillCharge,

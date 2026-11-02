@@ -31,7 +31,18 @@ public class InventoryDescriptionUI : MonoBehaviour
     [SerializeField] LocalizedString nameString;
     [SerializeField] LocalizedString stockString;
 
+    [Header("Nothing to heal (full health / stability)")]
+    [Tooltip("How long the \"already full\" message replaces the description")]
+    [SerializeField] float fullMessageTime = 2.2f;
+    [SerializeField] Color fullMessageColor = new Color(0.85f, 0.32f, 0.26f);
+    [Tooltip("The message pops in from this scale")]
+    [SerializeField] float fullMessagePop = 1.18f;
+    [SerializeField] AudioClip cantUseClip;
+
     Item currentItem;
+    Coroutine fullMessageCR;
+    Color descriptionColor;
+    string descriptionBeforeMessage;
     AudioSource audioSource;
 
     bool rotateItem = true;
@@ -39,6 +50,7 @@ public class InventoryDescriptionUI : MonoBehaviour
     private void Awake()
     {
         audioSource = GetComponent<AudioSource>();
+        if (descriptionTxt != null) descriptionColor = descriptionTxt.color;
     }
 
     private void Start()
@@ -66,6 +78,8 @@ public class InventoryDescriptionUI : MonoBehaviour
 
     public void ShowItemDescription(Item item, int itemStack)
     {
+        StopFullMessage();
+
         //Update Current Item
         currentItem = item;
 
@@ -192,7 +206,6 @@ public class InventoryDescriptionUI : MonoBehaviour
             || item.itemType == ItemType.EnergyDrink 
             || item.itemType == ItemType.AddStability
             || item.itemType == ItemType.HealingAndAddStability
-            || item.itemType == ItemType.Bandage
             || item.itemType == ItemType.CalmingInhaler
             || (item.itemType == ItemType.Fuse && Player.instance.fuseBoxInRange && (Player.instance.currentFuseboxInRange == null || !Player.instance.currentFuseboxInRange.useBlocked))
             || (item.itemType == ItemType.UVLight && ImageFadeInteractable.currentInRange != null && ImageFadeInteractable.currentInRange.SupportsUVLight())
@@ -243,8 +256,76 @@ public class InventoryDescriptionUI : MonoBehaviour
         itemRawImage.gameObject.SetActive(false);
     }
 
+    /// <summary>The GameUI key of the "already full" message when using this item would do nothing (it is then not used),
+    /// else null. Painkillers: health full. Medic kit: health AND stability full.</summary>
+    public static string FullMessageKey(Item item)
+    {
+        var player = Player.instance;
+        if (item == null || player == null || player.health == null) return null;
+
+        bool healthFull = player.health.GetHealthValue() >= player.health.GetMaxHealthValue();
+        bool stabilityFull = player.playerStability == null || player.playerStability.stability >= player.playerStability.maxStability;
+
+        if (item.itemType == ItemType.Healing && healthFull) return "Health Full";
+        if (item.itemType == ItemType.HealingAndAddStability && healthFull && stabilityFull) return "Health And Stability Full";
+        return null;
+    }
+
+    void ShowFullMessage(string key)
+    {
+        if (fullMessageCR == null) descriptionBeforeMessage = descriptionTxt.text;
+        else StopCoroutine(fullMessageCR);
+        fullMessageCR = StartCoroutine(Co_FullMessage(getLocalString("GameUI", key)));
+
+        if (cantUseClip != null) audioSource.PlayOneShot(cantUseClip);
+    }
+
+    IEnumerator Co_FullMessage(string message)
+    {
+        descriptionTxt.text = message;
+        descriptionTxt.color = fullMessageColor;
+        var rt = descriptionTxt.rectTransform;
+
+        // the inventory pauses the game: unscaled time
+        const float popTime = 0.16f;
+        for (float t = 0f; t < popTime; t += Time.unscaledDeltaTime)
+        {
+            float k = t / popTime;
+            rt.localScale = Vector3.one * Mathf.Lerp(fullMessagePop, 1f, 1f - (1f - k) * (1f - k));
+            yield return null;
+        }
+        rt.localScale = Vector3.one;
+
+        yield return new WaitForSecondsRealtime(fullMessageTime);
+        fullMessageCR = null;
+        RestoreDescription();
+    }
+
+    void StopFullMessage()
+    {
+        if (fullMessageCR == null) return;
+        StopCoroutine(fullMessageCR);
+        fullMessageCR = null;
+        RestoreDescription();
+    }
+
+    void RestoreDescription()
+    {
+        descriptionTxt.text = descriptionBeforeMessage;
+        descriptionTxt.color = descriptionColor;
+        descriptionTxt.rectTransform.localScale = Vector3.one;
+    }
+
     public void OnUseButtonClicked()
     {
+        // full health (and stability, for the medic kit): say so instead of wasting it
+        string fullKey = FullMessageKey(currentItem);
+        if (fullKey != null)
+        {
+            ShowFullMessage(fullKey);
+            return;
+        }
+
         if(currentItem != null && currentItem.itemType == ItemType.Healing)
         {
             //Heal Player
@@ -267,25 +348,6 @@ public class InventoryDescriptionUI : MonoBehaviour
 
             //Add Stability
             Player.instance.playerStability.IncreaseStability(currentItem.stabilityIncreaseAmount);
-
-            //Play SFX
-            audioSource.PlayOneShot(itemUseClip);
-
-            //Remove Item from inventory
-            Player.instance.inventory.RemoveItem(currentItem);
-
-            //Uupdate Inventory UI
-            InventoryUI.instance.EnableInventoryUI(true);
-        }
-
-        if (currentItem != null && currentItem.itemType == ItemType.Bandage)
-        {
-            //Heal Player
-            if(Player.instance.health.GetHealthValue() < 50)
-            {
-                int amountToHeal = 50 - Player.instance.health.GetHealthValue();
-                Player.instance.health.Heal(amountToHeal);
-            }
 
             //Play SFX
             audioSource.PlayOneShot(itemUseClip);

@@ -5,6 +5,9 @@ public class EnemyWeakpointHurtState : EnemyState
 {
     bool isFirstHit; // true = standing hurt, false = falling down hurt
     bool hasPlayedWakeup = false;
+
+    /// <summary>On the ground after the second knee hit, until he starts getting up (the pipe's finisher window).</summary>
+    public bool IsDowned => !isFirstHit && !hasPlayedWakeup;
     
     public EnemyWeakpointHurtState(Enemy enemy, EnemyStateMachine sm) : base(enemy, sm)
     {

@@ -116,6 +116,9 @@ public class RunnerEnemy : Enemy
         }
     }
 
+    // Knocked down by the second knee hit: the pipe does its heavy "downed" damage until he starts getting up
+    public override bool IsDownedForMelee => base.IsDownedForMelee || (stateMachine.CurrentState == weakpointHurtState && weakpointHurtState.IsDowned);
+
     public void DashAnimationStarted()
     {
         if (enemyWeakpoint != null)
@@ -242,7 +245,8 @@ public class RunnerEnemy : Enemy
         }
         else
         {
-            if(stateMachine.CurrentState == enemyDashAttackState)
+            // dashing, or staggered / down from a knee hit (a hit reaction over the fall made him pop up early): only the sound
+            if(stateMachine.CurrentState == enemyDashAttackState || stateMachine.CurrentState == weakpointHurtState)
             {
                 //Only Play SFX
                 PlaySoundEffect(stats.takeDamageSFX);

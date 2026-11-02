@@ -991,8 +991,8 @@ public static class HealingItemsBuilder
         var so = new SerializedObject(hud);
         var entries = so.FindProperty("entries");
         entries.arraySize = 2;
-        SetEntry(entries.GetArrayElementAtIndex(0), AssetDatabase.LoadAssetAtPath<Item>(PainkillerItemPath), "Painkiller", pkIcon);
-        SetEntry(entries.GetArrayElementAtIndex(1), AssetDatabase.LoadAssetAtPath<Item>(MedKitItemPath), "Med Kit", mkIcon);
+        SetEntry(entries.GetArrayElementAtIndex(0), AssetDatabase.LoadAssetAtPath<Item>(PainkillerItemPath), "Painkillers", pkIcon);
+        SetEntry(entries.GetArrayElementAtIndex(1), AssetDatabase.LoadAssetAtPath<Item>(MedKitItemPath), "Medic Kit", mkIcon);
         so.FindProperty("font").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Font>(FontPath);
         so.FindProperty("sandBand").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(SandBandPath);
         so.ApplyModifiedPropertiesWithoutUndo();

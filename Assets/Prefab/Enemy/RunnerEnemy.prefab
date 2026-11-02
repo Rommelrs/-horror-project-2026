@@ -163,8 +163,8 @@ MonoBehaviour:
   sideStepLookRotation: 30
   sideStepAccelaration: 6
   sideStepSpeed: 0.3
-  sideStepDurationMin: 3
-  sideStepDurationMax: 7
+  sideStepDurationMin: 1.5
+  sideStepDurationMax: 3.5
   sideStepCooldown: 3
   sideStepChance: 100
   sideStepOnlyWhenAimedAt: 0
@@ -191,8 +191,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   IsDead: 0
-  health: 700
-  maxHealth: 300
+  health: 500
+  maxHealth: 500
   hitBoxCenter: {x: 0, y: 0, z: 0}
   healthBar: {fileID: 0}
   healthUIBehaviour: 0

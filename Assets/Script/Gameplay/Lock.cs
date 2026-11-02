@@ -66,6 +66,9 @@ public class Lock : MonoBehaviour
         if (destroyParticleEffect != null)
         {
             GameObject particle = destroyParticleEffect.Reuse(transform.position, Quaternion.identity);
+            // a bag lock bursts into the Bag Bearer's mud splash - the player broke it, so it mustn't hurt or slow him
+            foreach (var hurt in particle.GetComponentsInChildren<DamageOnTrigger>())
+                hurt.Disarm();
             ParticleSystem ps = particle.GetComponent<ParticleSystem>();
             if (ps != null)
             {

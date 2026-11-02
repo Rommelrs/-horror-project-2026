@@ -114,8 +114,9 @@ public class PlayerQuickHeal : MonoBehaviour
 
         if (player.inventory.CountOf(item) <= 0) { Say(noneLeftMessage); return; }
 
-        var health = player.health;
-        if (health.GetHealthValue() >= health.GetMaxHealthValue()) { Say("Health is already full"); return; }
+        // same rule as the inventory: the medic kit still works at full health while stability is not full
+        string fullKey = InventoryDescriptionUI.FullMessageKey(item);
+        if (fullKey != null) { Say(fullKey == "Health Full" ? "Health is already full" : "Health and stability are already full"); return; }
 
         StartCoroutine(Co_Use(player, item));
     }

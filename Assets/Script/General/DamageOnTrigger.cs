@@ -52,6 +52,12 @@ public class DamageOnTrigger : MonoBehaviour, IPoolable
         damageWindowActive = true;
     }
 
+    /// <summary>This spawn is just the look (a bag the player broke): no damage, no slow. Reset on the next spawn.</summary>
+    public void Disarm()
+    {
+        damageWindowActive = false;
+    }
+
     private void OnTriggerStay(Collider other)
     {
         // Only check player

@@ -2,13 +2,22 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.Playables;
 
-// One-off weapon hints shown after picking up the pistol: "Press [RMB] to Aim" until the player
-// aims, then "Press [LMB] to Shoot" while aiming, until the first shot is fired. Hook StartTutorial()
-// to the pistol pickup's OnInteracted event. Both prompts are InteractPromptUI copies with
-// "Register As Instance" turned off, so they don't interfere with the normal interact prompt.
+// One-off weapon hints shown after picking up the first weapon. Hook StartTutorial() to the pickup's OnInteracted event.
+//  Gun:   "Press [RMB] to Aim" until the player aims, then "Press [LMB] to Shoot" while aiming, until the first shot.
+//  Melee: "Hold [RMB] to Prepare your attack" until the pipe is raised, then "Press [LMB] to attack" while it is
+//         raised, until the first swing (the Store's steel pipe).
+// Both prompts are InteractPromptUI copies with "Register As Instance" turned off, so they don't interfere with the
+// normal interact prompt.
 public class GunTutorialPrompts : MonoBehaviour
 {
+    public enum WeaponKind { Gun, Melee }
+
+    [Tooltip("Gun: aim / shoot with the pistol. Melee: raise / swing the steel pipe.")]
+    [SerializeField] WeaponKind kind = WeaponKind.Gun;
+
+    [Tooltip("First prompt (aim / raise the pipe)")]
     [SerializeField] InteractPromptUI aimPrompt;
+    [Tooltip("Second prompt (shoot / swing)")]
     [SerializeField] InteractPromptUI shootPrompt;
 
     [Tooltip("Cutscene that plays after the pickup. The prompts wait until it has finished before showing.")]
@@ -17,7 +26,7 @@ public class GunTutorialPrompts : MonoBehaviour
     [Tooltip("Safety: if the cutscene hasn't started this many seconds after the pickup subtitle ended, show the prompts anyway.")]
     [SerializeField] float cutsceneStartTimeout = 8f;
 
-    [Tooltip("How long the shoot prompt stays after the first shot before fading out.")]
+    [Tooltip("How long the second prompt stays after the first shot / swing before fading out.")]
     [SerializeField] float hideDelayAfterShot = 0.5f;
 
     enum State { None, Aim, Shoot }
@@ -54,7 +63,8 @@ public class GunTutorialPrompts : MonoBehaviour
             yield return null;
 
         weapon = Player.instance.playerWeaponSystem;
-        weapon.OnShotFired += OnShotFired;
+        if (kind == WeaponKind.Gun)
+            weapon.OnShotFired += OnShotFired;
 
         if (waitForCutscene != null)
             yield return Co_WaitForCutscene();
@@ -63,10 +73,17 @@ public class GunTutorialPrompts : MonoBehaviour
 
         while (!shotFired)
         {
+            // the first swing counts as the "shot"
+            if (kind == WeaponKind.Melee && PlayerMeleeWeapon.Attacking)
+            {
+                shotFired = true;
+                break;
+            }
+
             State wanted = State.None;
 
             if (CanShowPrompts())
-                wanted = weapon.isAiming ? State.Shoot : State.Aim;
+                wanted = IsAiming() ? State.Shoot : State.Aim;
 
             if (wanted != shown)
             {
@@ -84,6 +101,11 @@ public class GunTutorialPrompts : MonoBehaviour
 
         weapon.OnShotFired -= OnShotFired;
         routine = null;
+    }
+
+    bool IsAiming()
+    {
+        return kind == WeaponKind.Melee ? PlayerMeleeWeapon.Ready : weapon.isAiming;
     }
 
     // The cutscene starts after the pickup subtitle ends (plus its own short delay), so first wait
@@ -109,7 +131,7 @@ public class GunTutorialPrompts : MonoBehaviour
 
     bool CanShowPrompts()
     {
-        if (!weapon.weaponIsEnabled) return false;
+        if (kind == WeaponKind.Melee ? !PlayerMeleeWeapon.Equipped : !weapon.weaponIsEnabled) return false;
         if (Player.instance.IsDead()) return false;
         if (GameManager.IsPaused) return false;
         if (SubtitleManager.instance != null && SubtitleManager.instance.IsSubtitleBusy()) return false;

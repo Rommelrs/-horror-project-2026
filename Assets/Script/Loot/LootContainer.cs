@@ -5,10 +5,14 @@ using ToolBox.Pools;
 
 public class LootContainer : Interactable
 {
-    [Header("Loot Settings")]
-    [Tooltip("The loot table to use for this container")]
-    [SerializeField] private LootTable lootTable;
-    
+    [Header("Contents")]
+    [Tooltip("Exactly what this container gives, nothing random: one pickup prefab per entry (add the same one twice for two). " +
+             "Empty = an empty drawer. Tools > Loot Containers lists every container in the open scene.")]
+    [SerializeField] private List<GameObject> contents = new List<GameObject>();
+
+    public List<GameObject> Contents => contents;
+    public bool HasBeenLooted => hasBeenLooted;
+
     [Header("Spawn Settings")]
     [Tooltip("Where items will spawn")]
     [SerializeField] private Transform spawnPoint;
@@ -111,7 +115,7 @@ public class LootContainer : Interactable
             visualFeedbackObject.SetActive(false);
         }
         
-        // Roll loot and spawn items
+        // Spawn what this container holds
         SpawnLoot();
         
         // Trigger interaction event
@@ -207,23 +211,9 @@ public class LootContainer : Interactable
     
     private void SpawnLoot()
     {
-        if (lootTable == null)
+        foreach (var prefab in contents)
         {
-            return;
-        }
-        
-        // Roll the loot table
-        List<PrefabDrop> drops = lootTable.RollLoot();
-        
-        if (drops.Count == 0)
-        {
-            return;
-        }
-        
-        // Spawn each prefab
-        foreach (var drop in drops)
-        {
-            SpawnPrefab(drop.prefab);
+            SpawnPrefab(prefab);
         }
     }
     

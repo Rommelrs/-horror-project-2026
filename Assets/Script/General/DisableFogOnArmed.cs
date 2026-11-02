@@ -23,8 +23,9 @@ public class DisableFogOnArmed : MonoBehaviour
             return;
         }
 
+        // the gun, or the Store's steel pipe
         Player player = Player.instance;
-        if (player != null && player.playerWeaponSystem != null && player.playerWeaponSystem.weaponIsEnabled)
+        if (player != null && ((player.playerWeaponSystem != null && player.playerWeaponSystem.weaponIsEnabled) || PlayerMeleeWeapon.Equipped))
             DisableFog();
     }
 
