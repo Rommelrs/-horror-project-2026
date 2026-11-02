@@ -3,18 +3,25 @@ using UnityEngine;
 /// <summary>
 /// The Questioner's fight (spec moveset). One state with its own phases, driven by timers (spec numbers in QuestionerTuning):
 ///  Free     - token holder: walks at Khalid while strafing left / right (direction every 0.8-1.6 s); others circle at 6 -> 4 m.
-///  Scream   - wind-up 0.8 (inhale, mouth splits, weak point bigger) / active 1.0 (within 4 m: Khalid slowed 30% + aim sway
-///             1 s) / recovery 0.6.
-///  Grab     - wind-up 0.6 (hunch, arms up) / rush 4 m/s straight, max 6 m (a roll's i-frames slip it, a shove stops it) /
-///             hold 1.5 s (mash Shove to push him off: he stumbles 1 s) / bite 25 and release.
+///  Scream   - wind-up 0.8 (inhale, mouth splits, weak point bigger) / active 1.0 / recovery 0.6. Within 4 m Khalid is slowed
+///             30% for 1 s; within 4 m - or 12 m while he aims down the sights - his screen blurs and echoes, his aim sways
+///             and his ears ring for 6 s. Khalid aiming at him is the scream's cue: he answers it first (85%).
+///  Grab     - wind-up 0.6 (hunch, arms up) / rush 4 m/s straight, max 6 m. Caught (no escape): holds him 0.35 s, screams
+///             into his face (the full scream effects), slowly leans in and bites his neck (25), gnaws, and Khalid shoves him
+///             off - all on the over-the-shoulder grab camera. A pipe strike landing in the lunge (the last 0.3 s of the
+///             wind-up or the rush) counters it: he's knocked back and stumbles.
 ///  Swipe    - wind-up 0.4 / two claw swipes 0.3 s apart, 10 each / recovery 0.7.
-///  Stagger  - mouth hit: knees, hands over the mouth 3 s, stands up 0.8. Melee does double, a second mouth hit kills.
+///  Hurt     - a pipe strike between moves: a short recoil (0.45 s), then one of two answers (never the scream):
+///             the feint - backs off and drifts left or right to a random distance, for a random time, then the grab (a test
+///             of patience); or straight back in with the claws. Strikes during any other move only hurt him (damage +
+///             flinch); the move carries on.
+///  Stagger  - mouth hit: knees, hands over the mouth 4 s, stands up 0.8. Melee does double, a second mouth hit kills.
 /// Movement uses NavMeshAgent.Move (stays on the navmesh, no path), he always faces Khalid; the animator gets the local
 /// velocity (MoveX / MoveZ) for the Q_Locomotion blend tree and plays the move states by name.
 /// </summary>
 public class QuestionerCombatState : EnemyState
 {
-    enum Phase { Free, Pushed, ScreamWindup, ScreamActive, ScreamRecover, GrabWindup, GrabRush, GrabHold, Bite, Release, Stumble, Swipe, StaggerDown, StaggerLoop, StaggerUp }
+    enum Phase { Free, Hurt, ScreamWindup, ScreamActive, ScreamRecover, GrabWindup, GrabRush, GrabHold, GrabScream, Bite, Release, Stumble, Swipe, StaggerDown, StaggerLoop, StaggerUp }
 
     readonly QuestionerEnemy q;
     QuestionerTuning T => q.tuning;
@@ -29,19 +36,19 @@ public class QuestionerCombatState : EnemyState
     float noSightTime;
     Vector3 rushDir, rushStart;
     float blockedTime;
-    bool rushDodged;
     int swipeHits;
     bool landedFirst;
-    bool holdingPlayer, escaped, bitten;
+    bool holdingPlayer, bitten, screamed;
     float stumbleBack;
-    Vector3 pushVel;
-    float pushDecay;
     float repositionUntil, repositionDist;
-    bool repositionAttacks;
     bool hurtPlayer;
+    float feintUntil, feintDist;
+    bool Feinting => feintUntil > 0f;
 
     public bool IsStaggered => phase == Phase.StaggerDown || phase == Phase.StaggerLoop || phase == Phase.StaggerUp;
-    public bool IsGrabbing => phase == Phase.GrabHold || phase == Phase.Bite;
+    public bool IsGrabbing => phase == Phase.GrabHold || phase == Phase.GrabScream || phase == Phase.Bite;
+    /// <summary>The grab lunge: a pipe strike landing now knocks him back (the end of the wind-up and the rush).</summary>
+    public bool IsCounterable => phase == Phase.GrabRush || (phase == Phase.GrabWindup && phaseT >= T.grabWindup - T.counterWindow);
     public string PhaseName => phase.ToString();
 
     static readonly int MoveX = Animator.StringToHash("MoveX");
@@ -53,6 +60,7 @@ public class QuestionerCombatState : EnemyState
     }
 
     Transform PlayerT => Player.instance != null ? Player.instance.transform : null;
+    static bool PlayerAiming => Player.instance != null && Player.instance.playerWeaponSystem != null && Player.instance.playerWeaponSystem.isAiming;
 
     Vector3 ToPlayerFlat()
     {
@@ -129,29 +137,18 @@ public class QuestionerCombatState : EnemyState
         float d = toP.magnitude;
         Vector3 dir = d > 0.01f ? toP / d : q.transform.forward;
 
-        // a pipe strike's shove, whatever he's doing (not while holding Khalid or down on his knees)
-        if (pushVel.sqrMagnitude > 0.0001f)
-        {
-            if (!IsGrabbing && !IsStaggered) MoveAgent(pushVel * dt);
-            pushVel = Vector3.MoveTowards(pushVel, Vector3.zero, pushDecay * dt);
-        }
-
         switch (phase)
         {
             case Phase.Free: UpdateFree(dt, d, dir); break;
 
-            case Phase.Pushed:
-                // knocked back a step, still facing Khalid - then he backs off and circles instead of walking straight back in
-                vel = Vector3.zero;
-                Face(dir, 200f);
-                SendLocomotion(pushVel);
-                if (phaseT >= 0.35f)
+            case Phase.Hurt:
+                // recoils where he stands, still turning to Khalid - and comes straight back with another move
+                Brake(dt); Face(dir, 120f);
+                if (phaseT >= T.hurtTime)
                 {
-                    // if he'd just hurt Khalid, the "let him recover" backing off wins (no attacks)
-                    bool calm = hurtPlayer;
-                    hurtPlayer = false;
-                    if (calm) BeginReposition(false, Random.Range(T.afterHitRepositionMin, T.afterHitRepositionMax), Random.Range(3.0f, 4.0f));
-                    else BeginReposition(true, Random.Range(T.hitRepositionMin, T.hitRepositionMax), Random.Range(T.hitRepositionDistMin, T.hitRepositionDistMax));
+                    // the claws if Khalid is still within reach (and the dice say so), otherwise the feint into a grab
+                    if (d <= T.swipeReach && Random.value >= T.hurtFeintChance) StartSwipe();
+                    else BeginFeint();
                 }
                 break;
 
@@ -161,15 +158,20 @@ public class QuestionerCombatState : EnemyState
                 {
                     SetPhase(Phase.ScreamActive, "Q_Scream", 0.1f);
                     q.SetMouth(1.15f, 0.25f);
-                    q.PlayCue(q.screamSFX, 1.2f);
-                    if (d <= T.screamRadius && q.HasLineOfSightToPlayer() && PlayerCloseCombat.instance != null)
-                        PlayerCloseCombat.instance.ApplyScream(T.screamSlow, T.screamEffectTime);
+                    q.PlayScream(1.2f);
+                    q.EmitScreamWave();
+                    // close: the full blast (slowed too); aiming down the sights: it reaches him much further out
+                    bool close = d <= T.screamRadius;
+                    if ((close || (PlayerAiming && d <= T.screamAimRange)) && q.HasLineOfSightToPlayer() && PlayerCloseCombat.instance != null)
+                        PlayerCloseCombat.instance.ApplyScream(T.screamSlow, close ? T.screamSlowTime : 0f, T.screamEffectTime,
+                                                               close ? 1f - 0.3f * Mathf.Clamp01(d / T.screamRadius) : 0.8f);
                     q.SetWeakpointScale(1f);
                 }
                 break;
 
             case Phase.ScreamActive:
                 Brake(dt);
+                if (phaseT < T.screamActive * 0.85f) q.EmitScreamWave();
                 if (phaseT >= T.screamActive)
                 {
                     SetPhase(Phase.ScreamRecover, "Q_ScreamRecover", 0.2f);
@@ -189,7 +191,6 @@ public class QuestionerCombatState : EnemyState
                     rushDir = dir;
                     rushStart = q.transform.position;
                     blockedTime = 0f;
-                    rushDodged = false;
                     vel = rushDir * T.rushSpeed * 0.6f;
                     SetPhase(Phase.GrabRush, "Q_GrabRush", 0.08f);
                     q.SetMouth(0.7f);
@@ -199,39 +200,60 @@ public class QuestionerCombatState : EnemyState
             case Phase.GrabRush: UpdateRush(dt, d, dir); break;
 
             case Phase.GrabHold:
+                // caught: a breath, face to face
                 HoldPlayer();
-                if (PlayerCloseCombat.instance != null && PlayerCloseCombat.instance.EscapeComplete)
+                if (phaseT >= T.grabHoldPause)
                 {
-                    escaped = true;
-                    ReleasePlayer(true);
-                    BeginStumble(1.0f);
-                }
-                else if (phaseT >= T.escapeWindow)
-                {
-                    SetPhase(Phase.Bite, "Q_Bite", 0.1f);
-                    q.SetMouth(1.2f);
-                    bitten = false;
+                    SetPhase(Phase.GrabScream, "Q_GrabScream", 0.12f);
+                    q.PlayCue(q.inhaleSFX);
+                    q.SetMouth(1f);
+                    screamed = false;
                 }
                 break;
 
-            case Phase.Bite:
+            case Phase.GrabScream:
+            {
+                // The Question, right into his face
                 HoldPlayer();
-                if (!bitten && phaseT >= 0.22f)
+                var pc = PlayerCloseCombat.instance;
+                if (!screamed && phaseT >= T.grabScreamAt)
+                {
+                    screamed = true;
+                    q.SetMouth(1.15f, 0.25f);
+                    q.PlayScream(1.2f);
+                    if (pc != null)
+                    {
+                        pc.ApplyScream(T.screamSlow, T.screamSlowTime, T.screamEffectTime, 1f);
+                        pc.Shake(0.7f, T.grabScreamTime - T.grabScreamAt - 0.1f);
+                    }
+                }
+                if (screamed && phaseT < T.grabScreamTime - 0.15f) q.EmitScreamWave();
+                if (phaseT >= T.grabScreamTime)
+                {
+                    SetPhase(Phase.Bite, "Q_BiteSlow", 0.15f);
+                    q.SetMouth(0.55f);
+                    bitten = false;
+                }
+                break;
+            }
+
+            case Phase.Bite:
+                // leans in slowly, the bite lands, he gnaws - then Khalid shoves him off
+                HoldPlayer();
+                if (!bitten) q.SetMouth(Mathf.Lerp(0.55f, 1.1f, phaseT / T.biteLandTime));
+                if (!bitten && phaseT >= T.biteLandTime)
                 {
                     bitten = true;
                     q.PlayCue(q.biteSFX, 1.1f);
                     if (PlayerCloseCombat.instance != null) PlayerCloseCombat.instance.OnBitten();
-                    Player.instance.health.Damage(T.biteDamage);
+                    Player.instance.health.Damage(T.biteDamage, true);
                     hurtPlayer = true;
-                    q.SetMouth(0.3f);
+                    q.SetMouth(0.45f, 0.4f);
                 }
-                if (phaseT >= 0.6f)
+                if (phaseT >= T.biteHoldTime)
                 {
-                    ReleasePlayer(false);
-                    // lets go with a shove: Khalid staggers back out of his reach
-                    if (PlayerCloseCombat.instance != null) PlayerCloseCombat.instance.Knockback(q.transform.forward, T.bitePushPlayer, 0.3f);
-                    SetPhase(Phase.Release, "Q_Locomotion", 0.3f);
-                    q.ResetMouth();
+                    ReleasePlayer(true);
+                    BeginStumble(T.pushOffDistance);
                 }
                 break;
 
@@ -309,9 +331,21 @@ public class QuestionerCombatState : EnemyState
         Vector3 desired;
         bool token = q.TryTakeToken();
         bool repositioning = Time.time < repositionUntil;
-        if (token && repositioning)
+        if (token && Feinting)
         {
-            // backing off to his distance and circling (after a pipe strike, or after he hurt Khalid)
+            // shook off a pipe strike: backs off and drifts to one side, making Khalid wait for the grab
+            strafeTimer -= dt;
+            if (strafeTimer <= 0f)
+            {
+                strafeDir = -strafeDir;
+                strafeTimer = Random.Range(T.strafeSwitchMin, T.strafeSwitchMax) * 1.5f;
+            }
+            float radial = Mathf.Clamp((d - feintDist) * 1.5f, -T.walkSpeed * 1.4f, T.walkSpeed * 0.6f);
+            desired = dir * radial + right * (strafeDir * T.strafeSpeed);
+        }
+        else if (token && repositioning)
+        {
+            // he got Khalid: backs off to his distance and circles, giving him time to recover
             strafeTimer -= dt;
             if (strafeTimer <= 0f)
             {
@@ -353,29 +387,55 @@ public class QuestionerCombatState : EnemyState
         if (!token || Time.time < nextDecision) return;
         nextDecision = Time.time + T.decisionInterval;
         bool sight = q.HasLineOfSightToPlayer();
-        // letting Khalid recover after hurting him: no attacks at all; after a pipe strike: only the grab / scream, from range
-        if (repositioning && !repositionAttacks) return;
-        float grabMin = repositioning ? Mathf.Min(T.grabMin, 3.0f) : T.grabMin;
 
-        if (d <= T.swipeRange && !repositioning)
+        // the feint after a pipe strike always ends in the grab (no scream, whatever Khalid does meanwhile)
+        if (Feinting)
+        {
+            if (Time.time >= feintUntil && sight) { feintUntil = 0f; StartGrab(); }
+            else if (Time.time >= feintUntil + 2f) feintUntil = 0f;      // lost sight of him: give up the feint
+            return;
+        }
+
+        // Khalid aims down the sights at him: he answers with The Question (even while backing off - it doesn't hurt)
+        if (PlayerAiming && sight && Time.time >= nextScream && d <= T.screamAimRange && Random.value < T.adsScreamChance)
+        {
+            StartScream();
+            return;
+        }
+        // letting Khalid recover after hurting him: no attacks at all
+        if (repositioning) return;
+
+        if (d <= T.swipeRange)
         {
             StartSwipe();
         }
-        else if (sight && Time.time >= nextGrab && d >= grabMin && d <= T.grabMax && Random.value < T.grabChance)
+        else if (sight && Time.time >= nextGrab && d >= T.grabMin && d <= T.grabMax && Random.value < T.grabChance)
         {
-            nextGrab = Time.time + T.grabCooldown;
-            SetPhase(Phase.GrabWindup, "Q_GrabWindup", 0.15f);
-            q.PlayCue(q.grabCueSFX);
-            q.SetMouth(0.45f);
+            StartGrab();
         }
         else if (sight && Time.time >= nextScream && d >= T.screamMin && d <= T.screamMax && Random.value < T.screamChance)
         {
-            nextScream = Time.time + T.screamCooldown;
-            SetPhase(Phase.ScreamWindup, "Q_ScreamWindup", 0.15f);
-            q.PlayCue(q.inhaleSFX);
-            q.SetMouth(1f);
-            q.SetWeakpointScale(T.weakpointWindupScale);
+            StartScream();
         }
+    }
+
+    void StartGrab()
+    {
+        feintUntil = 0f;
+        nextGrab = Time.time + T.grabCooldown;
+        SetPhase(Phase.GrabWindup, "Q_GrabWindup", 0.15f);
+        q.PlayCue(q.grabCueSFX);
+        q.SetMouth(0.45f);
+    }
+
+    void StartScream()
+    {
+        feintUntil = 0f;
+        nextScream = Time.time + T.screamCooldown;
+        SetPhase(Phase.ScreamWindup, "Q_ScreamWindup", 0.15f);
+        q.PlayCue(q.inhaleSFX);
+        q.SetMouth(1f);
+        q.SetWeakpointScale(T.weakpointWindupScale);
     }
 
     Vector3 Separation()
@@ -401,43 +461,57 @@ public class QuestionerCombatState : EnemyState
         {
             // he got Khalid: give him room to recover and get ready again
             hurtPlayer = false;
-            BeginReposition(false, Random.Range(T.afterHitRepositionMin, T.afterHitRepositionMax), Random.Range(3.0f, 4.0f));
+            BeginReposition(Random.Range(T.afterHitRepositionMin, T.afterHitRepositionMax), Random.Range(3.0f, 4.0f));
             return;
         }
         SetPhase(Phase.Free, "Q_Locomotion", 0.25f);
         nextDecision = Time.time + Random.Range(T.moveGapMin, T.moveGapMax);
     }
 
-    void BeginReposition(bool attacksAllowed, float seconds, float distance)
+    /// <summary>After a pipe strike: back off and drift left or right for a random time, to a random distance (sometimes a
+    /// step, sometimes well back), then the grab.</summary>
+    void BeginFeint()
     {
+        feintUntil = Time.time + Random.Range(T.feintTimeMin, T.feintTimeMax);
+        feintDist = Random.Range(T.feintDistMin, T.feintDistMax);
+        strafeDir = Random.value < 0.5f ? 1 : -1;
+        strafeTimer = Random.Range(T.strafeSwitchMin, T.strafeSwitchMax) * 1.5f;
+        SetPhase(Phase.Free, "Q_Locomotion", 0.15f);
+        nextDecision = Time.time;
+    }
+
+    void BeginReposition(float seconds, float distance)
+    {
+        feintUntil = 0f;
         repositionUntil = Time.time + seconds;
         repositionDist = distance;
-        repositionAttacks = attacksAllowed;
         strafeDir = Random.value < 0.5f ? 1 : -1;
         strafeTimer = Random.Range(T.strafeSwitchMin, T.strafeSwitchMax);
         SetPhase(Phase.Free, "Q_Locomotion", 0.2f);
         nextDecision = Time.time + 0.5f;
     }
 
-    /// <summary>A pipe strike: shoves him back a step. Between moves (or in a swipe's recovery) it also stops him and he backs
-    /// off to circle - grab / scream allowed, no walking straight back in. Wind-ups and the rush keep going (pushed only).</summary>
-    public void OnMeleeHit(Vector3 away)
+    /// <summary>A pipe strike (the damage + flinch are already done). Timed into the grab lunge it counters the grab: he's
+    /// knocked back and stumbles. Between moves he recoils (Hurt) and comes straight back with another move. During any other
+    /// move it only hurts him: the move carries on.</summary>
+    public void OnMeleeHit()
     {
         if (IsStaggered || IsGrabbing) return;
-        away.y = 0f;
-        if (away.sqrMagnitude < 0.0001f) away = -q.transform.forward;
-        away.Normalize();
-        const float pushTime = 0.3f;
-        float v0 = 2f * T.meleePushDistance / pushTime;
-        pushVel = away * v0;
-        pushDecay = v0 / pushTime;
-        bool between = phase == Phase.Free || phase == Phase.Release || phase == Phase.ScreamRecover || phase == Phase.Stumble
-                       || phase == Phase.Pushed || (phase == Phase.Swipe && swipeHits >= 2);
-        if (!between) return;
+        if (IsCounterable)
+        {
+            q.PlayCue(q.staggerSFX, 0.9f);
+            BeginStumble(T.counterPushDistance);
+            return;
+        }
+        if (phase != Phase.Free && phase != Phase.Release) return;
+        // he'd just hurt Khalid and was backing off - Khalid is back at him, so no more waiting
+        hurtPlayer = false;
+        repositionUntil = 0f;
+        feintUntil = 0f;
         q.SetWeakpointScale(1f);
         q.ResetMouth();
         vel = Vector3.zero;
-        SetPhase(Phase.Pushed, "Q_Locomotion", 0.1f);
+        SetPhase(Phase.Hurt, "Q_Hurt", 0.06f);
     }
 
     // ---------------- grab ----------------
@@ -455,26 +529,14 @@ public class QuestionerCombatState : EnemyState
         Vector3 toP = PlayerT.position - q.transform.position;
         toP.y = 0f;
         var pc = PlayerCloseCombat.instance;
-        bool dodging = pc != null && pc.IsInvulnerable;
-        // dodged as he arrived: this rush is spent, he carries on past and skids
-        if (dodging && toP.magnitude <= 2.5f) rushDodged = true;
-        if (rushDodged && toP.magnitude < 0.95f)
-        {
-            // ran into where Khalid was: skids to a stop against him
-            SetPhase(Phase.Release, "Q_Locomotion", 0.2f);
-            q.ResetMouth();
-            phaseT = 0.8f - T.grabMissRecovery;
-            vel = Vector3.zero;
-            return;
-        }
-        if (!dodging && !rushDodged && toP.magnitude <= T.grabContact && Vector3.Angle(q.transform.forward, toP) < 75f && pc != null && pc.CanBeGrabbed)
+        if (toP.magnitude <= T.grabContact && Vector3.Angle(q.transform.forward, toP) < 75f && pc != null && pc.CanBeGrabbed)
         {
             holdingPlayer = true;
-            escaped = false;
-            pc.BeginGrab(q, T.escapeWindow, T.escapePresses);
+            bitten = screamed = false;
+            pc.BeginGrab(q);
             SetPhase(Phase.GrabHold, "Q_GrabHold", 0.08f);
-            q.SetMouth(0.85f, 0.15f);
-            q.PlayCue(q.whisperSFX, 1.1f);
+            q.SetMouth(0.6f);
+            q.PlayCue(q.whisperSFX, 0.8f);
             vel = Vector3.zero;
             return;
         }
@@ -516,23 +578,11 @@ public class QuestionerCombatState : EnemyState
         q.SetWeakpointScale(1f);
     }
 
-    /// <summary>Khalid's shove: stops a grab wind-up / rush (he stumbles back, a small melee opening), otherwise a nudge.</summary>
-    public bool OnShoved()
-    {
-        if (phase == Phase.GrabWindup || phase == Phase.GrabRush)
-        {
-            BeginStumble(0.6f);
-            return true;
-        }
-        q.Flinch(12f);
-        if (phase == Phase.Free) MoveAgent(-q.transform.forward * 0.25f);
-        return false;
-    }
-
     // ---------------- swipe ----------------
 
     void StartSwipe()
     {
+        feintUntil = 0f;
         swipeHits = 0;
         landedFirst = false;
         SetPhase(Phase.Swipe, "Q_Swipe", 0.1f);
@@ -566,7 +616,6 @@ public class QuestionerCombatState : EnemyState
     void TrySwipeHit()
     {
         var pc = PlayerCloseCombat.instance;
-        if (pc != null && pc.IsInvulnerable) { landedFirst = false; return; }
         Vector3 toP = PlayerT.position - q.transform.position;
         toP.y = 0f;
         if (toP.magnitude > T.swipeReach) return;
@@ -588,6 +637,7 @@ public class QuestionerCombatState : EnemyState
 
     public void BeginStagger()
     {
+        feintUntil = 0f;
         ForceReleasePlayer();
         q.ReleaseToken();
         q.SetWeakpointScale(1f);

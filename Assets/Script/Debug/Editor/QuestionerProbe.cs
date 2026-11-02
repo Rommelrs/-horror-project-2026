@@ -6,10 +6,12 @@ using UnityEngine.InputSystem.LowLevel;
 
 /// <summary>
 /// Play-mode test harness for the Questioner spec moveset (bench duel). QuestionerProbe.Run(test, dir) from a RunCommand:
-///   "far"     - Khalid stands 5 m in front, no input, 25 s: grab / scream / swipe flow (grabs end in a bite)
-///   "mash"    - like far, but mashes Shove (V) whenever grabbed: escape -> stumble
-///   "shove"   - presses Shove as soon as a grab wind-up starts (stands 1.2 m from the start of the rush)
-///   "roll"    - rolls (Ctrl) when the rush is 1.6 m away: the i-frames should slip the grab
+///   "far"     - Khalid stands 7 m in front, no input, 25 s: grab (instant bite) / scream / swipe flow
+///   "counter" - pipe raised (fake right mouse); swings (left click) timed so the hit lands in the grab rush: he stumbles back
+///   "late"    - like counter, but the swing is too late: he bites
+///   "hurt"    - pipe raised, swings whenever he's in reach between moves: recoil -> the feint into a grab, or the claws
+///   "ads"     - gun out (key 1), aiming down the sights from 8 m: he should answer with the scream; captures the ADS view
+///   "scream"  - stays 3.3-4 m away; grabs the player's view (screen echo) and a side view (sound-wave shells) in the scream
 ///   "stagger" - mouth hit -> kneel; melee-style body hit (downed damage check); second mouth hit -> kneeling death
 /// Logs "QPROBE <test>" + every phase change (time, distance, Khalid HP, grabbed, speed multiplier) to Editor.log, and
 /// captures 3 views (front / side / Khalid's shoulder) every `every` frames into dir (0 = no captures).
@@ -20,6 +22,11 @@ public static class QuestionerProbe
     static int every;
     static QuestionerEnemy q;
     static Keyboard kb;
+    static Mouse mouse;
+    static bool aimHeld, clickThisFrame;
+    static float contactDelay;
+    static int counters, bites, hurts, swings;
+    static float screamAt; static int adsShots;
     static float t0, until;
     static string last;
     static System.Text.StringBuilder sb;
@@ -27,6 +34,7 @@ public static class QuestionerProbe
     static Camera cam;
     static RenderTexture rt;
     static InputSettings.BackgroundBehavior oldBg;
+    static InputSettings.EditorInputBehaviorInPlayMode oldEditorInput;
     static int step;
     static float stepT;
     static bool pressedThisFrame;
@@ -60,11 +68,30 @@ public static class QuestionerProbe
         jaw = null; qHead = null; maxJawStep = 0f; sumJawStep = 0f; jawN = 0; camShot = false; holdFrames = 0; lastMeleeT = -99f;
         foreach (var t in q.GetComponentsInChildren<Transform>()) { if (t.name == "Jaw") jaw = t; if (t.name == "Head") qHead = t; }
         if (jaw != null) lastJaw = Quaternion.Inverse(qHead.rotation) * jaw.rotation;
-        Place(test == "stagger" || test == "gunstagger" ? 2.5f : test == "melee" ? 1.6f : test == "scream" ? 3.7f : 7.0f);
+        Place(test == "stagger" || test == "gunstagger" ? 2.5f : test == "melee" || test == "hurt" ? 1.6f : test == "scream" ? 3.7f : test == "ads" ? 8f : 7.0f);
+        screamAt = -99f; adsShots = 0;
+        counters = bites = hurts = swings = 0;
 
         oldBg = InputSystem.settings.backgroundBehavior;
         InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+        // the fake devices only reach the game while the Game view has focus otherwise
+        oldEditorInput = InputSystem.settings.editorInputBehaviorInPlayMode;
+        InputSystem.settings.editorInputBehaviorInPlayMode = InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
         kb = InputSystem.AddDevice<Keyboard>("QPK" + Random.Range(0, 99999));
+        mouse = InputSystem.AddDevice<Mouse>("QPM" + Random.Range(0, 99999));
+        aimHeld = test == "counter" || test == "late" || test == "hurt";
+        clickThisFrame = false;
+        // swing press -> contact frame (s)
+        var mw = PlayerMeleeWeapon.instance;
+        contactDelay = 0.2f;
+        if (mw != null)
+        {
+            var bf = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+            var clip = typeof(PlayerMeleeWeapon).GetField("attackClip", bf)?.GetValue(mw) as AnimationClip;
+            float speed = (float)(typeof(PlayerMeleeWeapon).GetField("attackSpeed", bf)?.GetValue(mw) ?? 1.7f);
+            float at = (float)(typeof(PlayerMeleeWeapon).GetField("contactAt", bf)?.GetValue(mw) ?? 0.175f);
+            if (clip != null) contactDelay = at * clip.length / speed;
+        }
         if (every > 0)
         {
             var go = new GameObject("QProbeCam");
@@ -106,6 +133,23 @@ public static class QuestionerProbe
         InputSystem.QueueStateEvent(kb, new KeyboardState());
     }
 
+    /// <summary>The fake mouse: right held = pipe raised, a left click for one frame = a swing.</summary>
+    static void MouseTick()
+    {
+        var ms = new MouseState();
+        if (aimHeld) ms = ms.WithButton(MouseButton.Right);
+        if (clickThisFrame) ms = ms.WithButton(MouseButton.Left);
+        clickThisFrame = false;
+        InputSystem.QueueStateEvent(mouse, ms);
+    }
+
+    static void Swing(string why)
+    {
+        clickThisFrame = true;
+        swings++;
+        sb.AppendFormat("  swing ({0})" + NL, why);
+    }
+
     static void Tick()
     {
         if (!EditorApplication.isPlaying || q == null) { Finish(); return; }
@@ -118,16 +162,58 @@ public static class QuestionerProbe
         minSpeedMul = Mathf.Min(minSpeedMul, PlayerCloseCombat.SpeedMultiplier < 0.01f ? 1f : PlayerCloseCombat.SpeedMultiplier);
         stepT += Time.deltaTime;
 
+        if (phase != last)
+        {
+            if (phase == "Stumble") counters++;
+            if (phase == "Bite") bites++;
+            if (phase == "Hurt") hurts++;
+        }
+        bool ready = PlayerMeleeWeapon.Ready && !PlayerMeleeWeapon.Attacking;
+        // the pipe tests: take the pipe out (key 3) if a gun is in his hands
+        if (aimHeld && !PlayerMeleeWeapon.Equipped && frame % 20 == 5) InputSystem.QueueStateEvent(kb, new KeyboardState(Key.Digit3));
+        else if (aimHeld && frame % 20 == 9) Release();
         switch (test)
         {
-            case "mash":
-                if (p.isGrabbed && frame % 4 == 0) Press(Key.V);
+            case "counter":
+            case "late":
+            {
+                // the hit should land as he's ~1.9 m out (counter) / when he's already on Khalid (late)
+                float landAt = test == "counter" ? 1.9f : 0.6f;
+                if (phase == "GrabRush" && ready && step == 0 && d - q.tuning.rushSpeed * contactDelay <= landAt)
+                {
+                    step = 1;
+                    Swing(string.Format("rush at d={0:F2}, lands ~{1:F2}", d, d - q.tuning.rushSpeed * contactDelay));
+                }
+                if (phase != "GrabRush" && phase != "GrabWindup") step = 0;
                 break;
-            case "shove":
-                if (phase == "GrabRush" && step == 0 && d < 1.6f) { step = 1; Press(Key.V); sb.AppendFormat("  shove pressed at d={0:F2}\n", d); }
+            }
+            case "ads":
+            {
+                var ws = p.playerWeaponSystem;
+                // key 1 (the pistol) held a few frames, a moment after the fake keyboard appeared
+                if (step == 0 && stepT > 0.3f) { InputSystem.QueueStateEvent(kb, new KeyboardState(Key.Digit1)); step = 1; stepT = 0f; }
+                else if (step == 1 && stepT > 0.15f) { Release(); step = 2; stepT = 0f; }
+                else if (step == 2 && stepT > 0.8f) { ws.aimingOverrideForTesting = true; step = 3; sb.AppendFormat("  ADS on, pipe equipped={0}" + NL, PlayerMeleeWeapon.Equipped); }
+                if (phase == "ScreamActive" && screamAt < 0f) screamAt = Time.time;
+                // Khalid stands his ground: keep the distance if he walks in
+                if (d < 6f && phase == "Free") Place(8f);
+                if (screamAt > 0f && every > 0)
+                {
+                    float[] at = { 0.3f, 1.5f, 3.0f, 4.5f, 6.2f };
+                    if (adsShots < at.Length && Time.time - screamAt >= at[adsShots])
+                    {
+                        ShotMain(string.Format("ads_{0:0.0}s_aiming{1}", at[adsShots], ws.isAiming));
+                        adsShots++;
+                    }
+                }
                 break;
-            case "roll":
-                if (phase == "GrabRush" && step == 0 && d < 1.7f) { step = 1; Press(Key.LeftCtrl); sb.AppendFormat("  roll pressed at d={0:F2}\n", d); }
+            }
+            case "hurt":
+                if (ready && d < 1.9f && (phase == "Free" || phase == "Release") && Time.time - lastMeleeT > 0.4f)
+                {
+                    lastMeleeT = Time.time;
+                    Swing(string.Format("d={0:F2} phase={1}", d, phase));
+                }
                 break;
             case "scream":
                 // keep him inside scream range (3-4 m): Khalid backs off when it closes in
@@ -187,17 +273,21 @@ public static class QuestionerProbe
             lastJaw = j;
             if (frame > 2) { maxJawStep = Mathf.Max(maxJawStep, step_); sumJawStep += step_; jawN++; }
         }
-        if (phase == "GrabHold" && !camShot && every > 0 && ++holdFrames > 30)
+        if (test == "scream" && phase == "ScreamActive" && every > 0 && holdFrames++ == 12)
         {
-            camShot = true;
-            ShotMain("grabcam_" + frame.ToString("0000"));
+            ShotMain("screamview_" + frame.ToString("0000"));
+            Snap("screamside_" + frame.ToString("0000"));
         }
+        // the grab sequence through the player's camera (hold -> scream -> bite -> push-off)
+        bool grabSeq = phase == "GrabHold" || phase == "GrabScream" || phase == "Bite" || (phase == "Stumble" && p.GetComponent<PlayerCloseCombat>().IsPushingOff);
+        if (grabSeq && every > 0 && ++holdFrames % 9 == 0) ShotMain("grabcam_" + frame.ToString("0000") + "_" + phase);
         if (phase != last)
         {
             sb.AppendFormat("  {0,6:F2}s {1,-20} d={2:F2} hp={3} grabbed={4} speedMul={5:F2} jaw-open\n", Time.time - t0, phase, d, p.health.GetHealthValue(), p.isGrabbed, PlayerCloseCombat.SpeedMultiplier);
             last = phase;
         }
         if (every > 0 && frame % every == 0) Snap(phase + "_" + frame.ToString("0000"));
+        MouseTick();
         if (Time.time >= until) Finish();
     }
 
@@ -248,9 +338,12 @@ public static class QuestionerProbe
     {
         EditorApplication.update -= Tick;
         if (kb != null) { Release(); InputSystem.RemoveDevice(kb); kb = null; }
+        if (mouse != null) { InputSystem.RemoveDevice(mouse); mouse = null; }
+        if (Player.instance != null && Player.instance.playerWeaponSystem != null) Player.instance.playerWeaponSystem.aimingOverrideForTesting = false;
         InputSystem.settings.backgroundBehavior = oldBg;
+        InputSystem.settings.editorInputBehaviorInPlayMode = oldEditorInput;
         if (bench != null) bench.godMode = oldGod;
         if (cam != null) { Object.DestroyImmediate(cam.gameObject); rt.Release(); cam = null; }
-        Debug.Log("QPROBE " + test + " minSpeedMul=" + minSpeedMul.ToString("F2") + " jawStep max=" + maxJawStep.ToString("F2") + " mean=" + (jawN > 0 ? sumJawStep / jawN : 0f).ToString("F3") + " deg/frame\n" + sb);
+        Debug.Log("QPROBE " + test + " swings=" + swings + " counters=" + counters + " bites=" + bites + " hurts=" + hurts + " contactDelay=" + contactDelay.ToString("F2") + " minSpeedMul=" + minSpeedMul.ToString("F2") + " jawStep max=" + maxJawStep.ToString("F2") + " mean=" + (jawN > 0 ? sumJawStep / jawN : 0f).ToString("F3") + " deg/frame\n" + sb);
     }
 }

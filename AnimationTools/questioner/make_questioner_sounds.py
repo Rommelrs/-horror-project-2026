@@ -7,8 +7,9 @@
 #   Q_GrabCue         - the grab wind-up: cloth rustle + a low grunt (Zombie_4 vocal pitched down)
 #   Q_Muffled_1..3    - stagger: his cry through the hands clamped over his mouth (zombie vocals, low-passed)
 #   Q_Whisper         - the hold: 2 s cut of Wall Whisper.mp3 (placeholder until the real "وين أبوك؟" line is recorded)
-#   python AnimationTools/questioner/make_questioner_sounds.py      (needs ffmpeg on PATH)
-import numpy as np, wave, os, subprocess, tempfile
+#   Q_ScreamRing      - the scream in Khalid's ears: a high ringing (tinnitus) that swells in, holds and dies away over ~6.5 s
+#   python AnimationTools/questioner/make_questioner_sounds.py [name name ...]     (needs ffmpeg on PATH; no names = all)
+import numpy as np, wave, os, subprocess, tempfile, sys
 
 ROOT = "D:/Unity Stuff/NEWHorrorProject/-horror-project-2026/"
 OUT = ROOT + "Assets/Audio/Enemies/Questioner/Moves/"
@@ -17,7 +18,11 @@ SR = 44100
 os.makedirs(OUT, exist_ok=True)
 
 
+ONLY = set(sys.argv[1:])
+
+
 def save(name, x, peak):
+    if ONLY and name not in ONLY: return
     x = x / (np.max(np.abs(x)) + 1e-9) * peak
     with wave.open(OUT + name + ".wav", "wb") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR)
@@ -138,6 +143,20 @@ def muffled(i):
     return fade(v, 0.01, 0.08)
 
 
+def ring(seed=5, dur=6.6):
+    """tinnitus: two close high tones beating against each other, a slow wobble, a breath of hiss under it"""
+    rng = np.random.default_rng(seed)
+    t = t_axis(dur)
+    wob = 1 + 0.0025 * np.sin(2 * np.pi * 3.1 * t)
+    ph1 = 2 * np.pi * np.cumsum(6650.0 * wob) / SR
+    ph2 = 2 * np.pi * np.cumsum(6712.0 * wob) / SR
+    tone = np.sin(ph1) + 0.7 * np.sin(ph2) + 0.12 * np.sin(2 * np.pi * 3325.0 * t)
+    hiss = bandpass_tv(rng.standard_normal(len(t)), np.full(len(t), 6000.0), 1.5) * 0.15
+    env = np.minimum(t / 0.12, 1.0) * np.exp(-np.maximum(t - 0.5, 0) / 3.2) * (0.75 + 0.25 * np.exp(-t / 0.6))
+    return fade((tone + hiss) * env, 0.005, 0.4)
+
+
+save("Q_ScreamRing", ring(), 0.55)
 save("Q_Inhale", inhale(), 0.85)
 save("Q_Hiss", hiss(), 0.7)
 save("Q_Claw_1", claw(11), 0.7)

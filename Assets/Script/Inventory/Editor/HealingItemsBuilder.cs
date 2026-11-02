@@ -646,9 +646,21 @@ public static class HealingItemsBuilder
         fill.type = LightType.Directional; fill.intensity = 0.45f; fill.color = new Color(0.75f, 0.8f, 1f);
         fill.transform.rotation = Quaternion.Euler(20f, 140f, 0f);
 
+        // the open scene's fog / ambient still apply to the preview render (the Game scene's dense sandstorm fog turned the
+        // icons black): neutral settings while it renders, restored after
+        bool fog = RenderSettings.fog;
+        var ambientMode = RenderSettings.ambientMode;
+        Color ambient = RenderSettings.ambientLight;
+        RenderSettings.fog = false;
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = new Color(0.36f, 0.36f, 0.38f);
+
         var rt = RenderTexture.GetTemporary(Big, Big, 24, RenderTextureFormat.ARGB32);
         cam.targetTexture = rt;
         cam.Render();
+        RenderSettings.fog = fog;
+        RenderSettings.ambientMode = ambientMode;
+        RenderSettings.ambientLight = ambient;
         var prev = RenderTexture.active;
         RenderTexture.active = rt;
         var big = new Texture2D(Big, Big, TextureFormat.RGBA32, false);

@@ -30,6 +30,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
     /// <summary>Enemy hits / wall clangs so far (test benches read these).</summary>
     public int EnemyHits { get; private set; }
     public int WallHits { get; private set; }
+    public int ProjectileHits { get; private set; }
     public Enemy Target => target;
     public bool Swinging => attacking;
 
@@ -81,7 +82,6 @@ public class PlayerMeleeWeapon : MonoBehaviour
     [Tooltip("The attack hands back to the stance here (blended).")]
     [SerializeField] float attackEnd = 0.93f;
     [SerializeField] float returnBlend = 0.4f;
-    [SerializeField] float staminaCost = 10f;
 
     [Header("Movement while raised")]
     [SerializeField] float forwardSpeed = 1.25f;
@@ -117,6 +117,12 @@ public class PlayerMeleeWeapon : MonoBehaviour
     [SerializeField] float shakeIntensity = 1.2f;
     [SerializeField] float shakeDuration = 0.18f;
     [SerializeField] GameObject sparkEffect;
+    [Tooltip("Flying projectiles (the Bag Bearer's bags) the swing meets are knocked out of the air, as a bullet does: " +
+             "checked every frame from the strike until this long (normalized clip time) after contact.")]
+    [SerializeField] float projectileWindow = 0.06f;
+    [Tooltip("Reach from his centre to a projectile, and how high it can be (m above his feet).")]
+    [SerializeField] float projectileReach = 2.3f;
+    [SerializeField] float projectileMaxHeight = 2.8f;
 
     [Header("Audio")]
     [SerializeField] AudioClip[] swingClips;
@@ -132,10 +138,9 @@ public class PlayerMeleeWeapon : MonoBehaviour
     PlayerWeaponSystem weapons;
     PlayerWeaponSwitcher switcher;
     PlayerWeaponEnabler enabler;
-    PlayerStamina stamina;
     CharacterController controller;
 
-    bool equipped, selected, ready, hiddenForUse;
+    bool equipped, selected, ready, hiddenForUse, hiddenForGrab;
     int moveLayer = -1, carryLayer = -1, upperLayer = -1;
     float carryWeight, upperWeight, raiseElapsed;
     bool raising;
@@ -172,6 +177,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
     static readonly int RaiseSpeedParam = Animator.StringToHash("MeleeRaiseSpeed");
     int enemyMask, worldMask;
     readonly Collider[] overlap = new Collider[32];
+    int projectileMask;
 
     void Awake()
     {
@@ -181,11 +187,11 @@ public class PlayerMeleeWeapon : MonoBehaviour
         weapons = GetComponent<PlayerWeaponSystem>();
         switcher = GetComponent<PlayerWeaponSwitcher>();
         enabler = GetComponent<PlayerWeaponEnabler>();
-        stamina = GetComponent<PlayerStamina>();
         controller = GetComponent<CharacterController>();
         if (animator == null) animator = GetComponentInChildren<Animator>();
         enemyMask = LayerMask.GetMask("Enemy");
         worldMask = ~LayerMask.GetMask("Enemy", "Player", "Ignore Raycast", "UI", "Projectile");
+        projectileMask = LayerMask.GetMask("Projectile");
         if (pipe != null)
         {
             pipe.SetActive(false);
@@ -338,6 +344,14 @@ public class PlayerMeleeWeapon : MonoBehaviour
         instance.RefreshPipe();
     }
 
+    /// <summary>Hides the pipe while a Questioner has hold of him (it pokes into the grab camera's shot).</summary>
+    public static void SetHiddenForGrab(bool hidden)
+    {
+        if (instance == null) return;
+        instance.hiddenForGrab = hidden;
+        instance.RefreshPipe();
+    }
+
     void Update()
     {
         if (moveLayer < 0 && animator != null)
@@ -422,7 +436,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
 
     void RefreshPipe()
     {
-        if (pipe != null) pipe.SetActive(equipped && !hiddenForUse);
+        if (pipe != null) pipe.SetActive(equipped && !hiddenForUse && !hiddenForGrab);
     }
 
     bool CanRaise()
@@ -513,9 +527,6 @@ public class PlayerMeleeWeapon : MonoBehaviour
 
     void StartAttack()
     {
-        if (stamina != null && stamina.Stamina < staminaCost) return;
-        if (stamina != null) stamina.UseStamina(staminaCost);
-
         attacking = true;
         raising = false;
         attackT = 0f;
@@ -539,6 +550,9 @@ public class PlayerMeleeWeapon : MonoBehaviour
             Play2D(Pick(swingClips), swingVolume);
         }
 
+        // bags in flight: the whole strike, not just the contact frame (they move a metre or more in that time)
+        if (strikeStarted && attackT <= contactAt + projectileWindow) BatProjectiles();
+
         if (!contactDone && attackT >= contactAt)
         {
             contactDone = true;
@@ -561,7 +575,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
     void DoHit()
     {
         Vector3 origin = transform.position + Vector3.up * 1.2f;
-        int n = Physics.OverlapSphereNonAlloc(transform.position + Vector3.up * 1f + transform.forward * reach * 0.5f, reach, overlap, enemyMask, QueryTriggerInteraction.Collide);
+        int n = Physics.OverlapSphereNonAlloc(transform.position + Vector3.up * 1f + transform.forward * reach * 0.5f, reach + 0.5f, overlap, enemyMask, QueryTriggerInteraction.Collide);
         bool hitAny = false;
         for (int i = 0; i < n; i++)
         {
@@ -569,7 +583,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
             if (enemy == null || hitThisSwing.Contains(enemy) || enemy.health == null || enemy.health.IsDead) continue;
             Vector3 to = enemy.transform.position - transform.position;
             to.y = 0f;
-            if (to.magnitude > reach) continue;
+            if (to.magnitude > reach + enemy.MeleeReachBonus) continue;
             if (to.magnitude > 0.6f && Vector3.Angle(transform.forward, to) > hitArc * 0.5f) continue;
             Vector3 chest = enemy.transform.position + Vector3.up * 1.2f;
             if (Physics.Linecast(origin, chest, worldMask, QueryTriggerInteraction.Ignore)) continue;
@@ -603,6 +617,29 @@ public class PlayerMeleeWeapon : MonoBehaviour
                 Shake(shakeIntensity * 0.5f, shakeDuration);
                 break;
             }
+        }
+    }
+
+    /// <summary>Knocks flying projectiles in the swing's arc out of the air - the same as shooting one (it bursts and drops
+    /// its "shot by bullet" loot).</summary>
+    void BatProjectiles()
+    {
+        Vector3 centre = transform.position + Vector3.up * 1.2f + transform.forward * projectileReach * 0.4f;
+        int n = Physics.OverlapSphereNonAlloc(centre, projectileReach, overlap, projectileMask, QueryTriggerInteraction.Collide);
+        for (int i = 0; i < n; i++)
+        {
+            var projectile = overlap[i].GetComponentInParent<Projectile>();
+            if (projectile == null || !projectile.gameObject.activeInHierarchy) continue;
+            Vector3 to = projectile.transform.position - transform.position;
+            float height = to.y;
+            to.y = 0f;
+            if (to.magnitude > projectileReach || height < -0.3f || height > projectileMaxHeight) continue;
+            if (to.magnitude > 0.6f && Vector3.Angle(transform.forward, to) > hitArc * 0.5f) continue;
+
+            ProjectileHits++;
+            projectile.DestoryProjectile(damage);         // its own burst sound, as when it's shot
+            if (HitstopManager.instance != null) HitstopManager.instance.FreezeTime(hitstop * 0.6f);
+            Shake(shakeIntensity * 0.6f, shakeDuration);
         }
     }
 
@@ -692,9 +729,9 @@ public class PlayerMeleeWeapon : MonoBehaviour
         if (attacking) input = Vector2.zero;
         Vector3 wish = (transform.right * input.x + transform.forward * input.y) * speed * PlayerCloseCombat.SpeedMultiplier;
         velocity = Vector3.MoveTowards(velocity, wish, acceleration * Time.deltaTime);
-        // a dodge carries him (and drives the strafe steps)
-        Vector3 dodge = PlayerCloseCombat.DodgeVelocity;
-        if (dodge.sqrMagnitude > 0.0001f) velocity = dodge;
+        // a Questioner's hit shoves him back (and drives the strafe steps)
+        Vector3 knock = PlayerCloseCombat.KnockVelocity;
+        if (knock.sqrMagnitude > 0.0001f) velocity = knock;
 
         if (controller != null && controller.enabled) controller.Move(velocity * Time.deltaTime);
 

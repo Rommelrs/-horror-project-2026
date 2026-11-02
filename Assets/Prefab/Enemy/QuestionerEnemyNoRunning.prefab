@@ -462,7 +462,10 @@ MonoBehaviour:
     screamRecovery: 0.6
     screamRadius: 4
     screamSlow: 0.3
-    screamEffectTime: 1
+    screamSlowTime: 1
+    screamEffectTime: 6
+    screamAimRange: 12
+    adsScreamChance: 0.85
     weakpointWindupScale: 1.7
     grabMin: 4
     grabMax: 6
@@ -471,12 +474,19 @@ MonoBehaviour:
     rushSpeed: 4
     rushMaxDistance: 6
     grabContact: 0.95
-    escapeWindow: 1.5
-    escapePresses: 6
     biteDamage: 25
+    grabHoldPause: 0.35
+    grabScreamAt: 0.45
+    grabScreamTime: 1.45
+    biteLandTime: 0.7
+    biteHoldTime: 1.45
+    pushOffDistance: 1.4
     holdDistance: 0.62
     stumbleTime: 1
     grabMissRecovery: 0.9
+    counterWindow: 0.3
+    counterPushDistance: 1.3
+    counterReachBonus: 0.35
     swipeRange: 1.5
     swipeWindup: 0.4
     swipeGap: 0.3
@@ -487,15 +497,15 @@ MonoBehaviour:
     staggerTime: 4
     staggerRecovery: 0.8
     staggerShotDamage: 25
-    meleePushDistance: 0.45
-    hitRepositionMin: 1.2
-    hitRepositionMax: 2.2
-    hitRepositionDistMin: 3.2
-    hitRepositionDistMax: 4.6
+    hurtTime: 0.45
+    hurtFeintChance: 0.5
+    feintTimeMin: 0.8
+    feintTimeMax: 2.4
+    feintDistMin: 2.2
+    feintDistMax: 4.8
     afterHitRepositionMin: 1.8
     afterHitRepositionMax: 2.8
     swipePushPlayer: 0.55
-    bitePushPlayer: 0.9
   jawBoneName: Jaw
   jawAxis: {x: 1, y: 0, z: 0}
   jawMaxAngle: 28
@@ -523,6 +533,10 @@ MonoBehaviour:
   - {fileID: 8300000, guid: 723d596111cc2514e96b1946f697411f, type: 3}
   - {fileID: 8300000, guid: edf98542ccc2313419e88896fb6f1aa9, type: 3}
   cueVolume: 1
+  screamWaveMaterial: {fileID: 2100000, guid: cf21128dfc5872b45929e8bef82ac755, type: 2}
+  screamEchoDelay: 230
+  screamEchoDecay: 0.45
+  screamEchoWet: 0.6
 --- !u!114 &6987932637374981965
 MonoBehaviour:
   m_ObjectHideFlags: 0

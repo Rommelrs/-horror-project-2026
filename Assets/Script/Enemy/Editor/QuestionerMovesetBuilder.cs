@@ -3,7 +3,6 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 /// <summary>
 /// Tools > Questioner > Build Spec Moveset: wires the Questioner spec moveset into the project.
@@ -11,8 +10,8 @@ using UnityEngine.InputSystem;
 ///  - TheQuestionerAnimCon: MoveX / MoveZ params, Q_Locomotion 2D blend (idle / walk / sidewalk), the move states played by
 ///    name from QuestionerCombatState, AnyState -> Q_DeathKneel (Dead + DeadIndex 2).
 ///  - QuestionerEnemyNoRunning.prefab (QuestionerEnemy.prefab is its variant): HeadshotEnemy -> QuestionerEnemy (same fields,
-///    script swapped in place), move audio cues.
-///  - Player.prefab: PlayerCloseCombat (Shove = V / right stick press) with its sounds.
+///    script swapped in place), move audio cues, the scream's sound-wave material.
+///  - Player.prefab: PlayerCloseCombat (grab camera, scream screen echo + ringing, knockback) with its shader / sounds.
 /// Re-runnable: replaces what it made before.
 /// </summary>
 public static class QuestionerMovesetBuilder
@@ -22,8 +21,10 @@ public static class QuestionerMovesetBuilder
     const string ControllerPath = "Assets/Animations/EnemyAnimCon/TheQuestionerAnimCon.controller";
     const string PrefabPath = "Assets/Prefab/Enemy/QuestionerEnemyNoRunning.prefab";
     const string PlayerPrefabPath = "Assets/Prefab/Player/Player.prefab";
-    const string InputPath = "Assets/HorrorInput.inputactions";
     const string MovesAudio = "Assets/Audio/Enemies/Questioner/Moves/";
+    const string WaveShaderPath = "Assets/Shaders/QuestionerScreamWave.shader";
+    const string WaveMaterialPath = "Assets/Models/TheQuestioner/QuestionerScreamWave.mat";
+    const string EchoShaderPath = "Assets/Shaders/QuestionerScreamEcho.shader";
 
     static readonly string[] LoopClips = { "Q_GrabRush", "Q_GrabHold", "Q_StaggerLoop" };
 
@@ -34,7 +35,8 @@ public static class QuestionerMovesetBuilder
         ("Q_GrabWindup", "Q_GrabWindup", 1f), ("Q_GrabRush", "Q_GrabRush", 1.9f), ("Q_GrabHold", "Q_GrabHold", 1f),
         ("Q_Bite", "Q_Bite", 1f), ("Q_PushedOff", "Q_PushedOff", 1f), ("Q_Swipe", "Q_Swipe", 1f),
         ("Q_StaggerDown", "Q_StaggerDown", 1f), ("Q_StaggerLoop", "Q_StaggerLoop", 1f), ("Q_StaggerUp", "Q_StaggerUp", 1f),
-        ("Q_DeathKneel", "Q_DeathKneel", 1f),
+        ("Q_DeathKneel", "Q_DeathKneel", 1f), ("Q_Hurt", "Q_Hurt", 1f),
+        ("Q_GrabScream", "Q_GrabScream", 1f), ("Q_BiteSlow", "Q_BiteSlow", 1f),
     };
 
     [MenuItem("Tools/Questioner/Build Spec Moveset")]
@@ -186,22 +188,37 @@ public static class QuestionerMovesetBuilder
         // the recorded "وينه؟" line (loudest mix of the store-room takes)
         q.screamSFX = Clips("Assets/Audio/StoreRoomSFX/Weenah, close up of the monster.mp3");
         q.tuning.staggerTime = 4f;
+        q.tuning.biteHoldTime = 1.45f;          // the slow bite (was 1.0 for the old instant one)
+        q.tuning.screamEffectTime = 6f;         // the blur / echo, sway and ringing (was 1.0)
         q.grabCueSFX = Clips(MovesAudio + "Q_GrabCue.wav");
         q.hissSFX = Clips(MovesAudio + "Q_Hiss.wav");
         q.whisperSFX = Clips(MovesAudio + "Q_Whisper.wav");
         q.biteSFX = Clips(MovesAudio + "Q_Bite.wav");
         q.swipeSFX = Clips(MovesAudio + "Q_Claw_1.wav", MovesAudio + "Q_Claw_2.wav");
         q.staggerSFX = Clips(MovesAudio + "Q_Muffled_1.wav", MovesAudio + "Q_Muffled_2.wav", MovesAudio + "Q_Muffled_5.wav");
+        q.screamWaveMaterial = WaveMaterial();
         PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
         PrefabUtility.UnloadPrefabContents(root);
+    }
+
+    static Material WaveMaterial()
+    {
+        var mat = AssetDatabase.LoadAssetAtPath<Material>(WaveMaterialPath);
+        if (mat != null) return mat;
+        var sh = AssetDatabase.LoadAssetAtPath<Shader>(WaveShaderPath);
+        if (sh == null) { Debug.LogError("[QuestionerMovesetBuilder] missing " + WaveShaderPath); return null; }
+        mat = new Material(sh) { name = "QuestionerScreamWave" };
+        AssetDatabase.CreateAsset(mat, WaveMaterialPath);
+        return mat;
     }
 
     // ---------------- Khalid's reactions ----------------
 
     const string KhalidController = "Assets/MainCharacter/MainCharacterAnim.controller";
 
-    /// <summary>Full-body override layer on top of everything, weighted by PlayerCloseCombat: Shove / Grabbed (loop) /
-    /// BreakFree / Bitten (AnimationTools/questioner/khalid_cc_build.py -> KhalidClipImporter).</summary>
+    /// <summary>Full-body override layer on top of everything, weighted by PlayerCloseCombat: Grabbed (loop) / Bitten /
+    /// BittenHold (held, ends bitten) / PushOff (shoves him off from the bitten pose)
+    /// (AnimationTools/questioner/khalid_cc_build.py -> KhalidClipImporter).</summary>
     static void BuildKhalidLayer()
     {
         var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(KhalidController);
@@ -217,7 +234,7 @@ public static class QuestionerMovesetBuilder
         var empty = sm.AddState("Empty", new Vector3(300, 0, 0));
         sm.defaultState = empty;
         int i2 = 0;
-        foreach (var (state, clip) in new[] { ("Shove", "Khalid_CC_Shove"), ("Grabbed", "Khalid_CC_Grabbed"), ("BreakFree", "Khalid_CC_BreakFree"), ("Bitten", "Khalid_CC_Bitten") })
+        foreach (var (state, clip) in new[] { ("Grabbed", "Khalid_CC_Grabbed"), ("Bitten", "Khalid_CC_Bitten"), ("BittenHold", "Khalid_CC_BittenHold"), ("PushOff", "Khalid_CC_PushOff") })
         {
             var c = AssetDatabase.LoadAssetAtPath<AnimationClip>("Assets/MainCharacter/" + clip + ".anim");
             if (c == null) { Debug.LogWarning("[QuestionerMovesetBuilder] Khalid clip missing: " + clip + " (run khalid_cc_build.py + KhalidClipImporter)"); continue; }
@@ -236,22 +253,19 @@ public static class QuestionerMovesetBuilder
         var root = PrefabUtility.LoadPrefabContents(PlayerPrefabPath);
         var cc = root.GetComponent<PlayerCloseCombat>();
         if (cc == null) cc = root.AddComponent<PlayerCloseCombat>();
-        var so = new SerializedObject(cc);
-        InputActionReference shove = null, dodge = null;
-        foreach (var o in AssetDatabase.LoadAllAssetsAtPath(InputPath))
-        {
-            if (o is InputActionReference r && r.action != null && r.action.name == "Shove") shove = r;
-            if (o is InputActionReference r2 && r2.action != null && r2.action.name == "Roll" && r2.action.actionMap.name == "Player") dodge = r2;
-        }
-        if (shove == null) Debug.LogError("[QuestionerMovesetBuilder] no Player/Shove input action reference in " + InputPath);
-        so.FindProperty("shoveAction").objectReferenceValue = shove;
-        so.FindProperty("dodgeAction").objectReferenceValue = dodge;
-        so.ApplyModifiedPropertiesWithoutUndo();
-        const string effort = "Assets/Audio/NPC or Player/Effort Sounds/";
-        cc.shoveSFX = Clips(effort + "01. Effort Grunt (Male).wav", effort + "03. Effort Grunt (Male).wav");
-        cc.struggleSFX = Clips(effort + "02. Effort Grunt (Male).wav", effort + "04. Effort Grunt (Male).wav");
-        cc.breakFreeSFX = Clips(effort + "03. Effort Grunt (Male).wav");
+        cc.screamEchoShader = AssetDatabase.LoadAssetAtPath<Shader>(EchoShaderPath);
+        if (cc.screamEchoShader == null) Debug.LogError("[QuestionerMovesetBuilder] missing " + EchoShaderPath);
+        var ring = Clips(MovesAudio + "Q_ScreamRing.wav");
+        cc.ringingSFX = ring.Length > 0 ? ring[0] : null;
         cc.bittenSFX = new AudioClip[0];          // Health's own hurt sound plays on the damage
+        const string effort = "Assets/Audio/NPC or Player/Effort Sounds/";
+        cc.pushOffSFX = Clips(effort + "01. Effort Grunt (Male).wav", effort + "03. Effort Grunt (Male).wav");
+        // the grab camera: beside his left shoulder, a three-quarter view of the Questioner's face at his neck
+        var so = new SerializedObject(cc);
+        so.FindProperty("grabCamBack").floatValue = 0.28f;
+        so.FindProperty("grabCamSide").floatValue = -0.8f;
+        so.FindProperty("grabCamUp").floatValue = 0.14f;
+        so.ApplyModifiedPropertiesWithoutUndo();
         PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
         PrefabUtility.UnloadPrefabContents(root);
     }

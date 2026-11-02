@@ -8,7 +8,8 @@
 #   Q_ScreamWindup 24 f (0.8 s) | Q_Scream 30 f (1.0) | Q_ScreamRecover 18 f (0.6)
 #   Q_GrabWindup 18 f (0.6) | Q_GrabRush loop (Walk1 legs, leaning, arms out) | Q_GrabHold loop 45 f | Q_Bite 18 f | Q_PushedOff 30 f
 #   Q_Swipe 42 f: wind-up to 12 (0.4 s), right claw hits at 12, left at 21 (0.7 s), recovered by 42 (1.4 s)
-#   Q_StaggerDown 15 f | Q_StaggerLoop 45 f | Q_StaggerUp 24 f | Q_DeathKneel 36 f
+#   Q_StaggerDown 15 f | Q_StaggerLoop 45 f | Q_StaggerUp 24 f | Q_DeathKneel 36 f | Q_Hurt 15 f (0.5 s)
+#   Q_GrabScream 44 f: inhale to 11, screams into his face 14-40 | Q_BiteSlow 44 f: leans in, bite lands at 21 (0.7 s), gnaws
 import bpy, math, sys, os, random
 from mathutils import Vector, Matrix, Quaternion
 
@@ -347,6 +348,32 @@ def grab_clips():
             rot(s + "Arm", Y, 12 * side_x(s)); rot(s + "Arm", X, -10)
     build("Q_Bite", [(0, IDLE, hold), (4, IDLE, lambda: bite(1.0)), (8, IDLE, lambda: bite(0.9)), (18, IDLE, release)])
 
+    # the grab sequence: screams into Khalid's face while holding him, then slowly leans in and bites his neck (his left side
+    # = the Questioner's right), gnawing
+    def grab_scream(k, back=0.0, tremble=0.0):
+        hold(0.0, 1.0)
+        rot("Spine2", X, -6 * back); rot("Neck", X, -12 * back); rot("Head", X, -18 * back)
+        rot("Spine2", X, 6 * k); rot("Neck", X, 8 * k); rot("Head", X, -10 * k)
+        if tremble:
+            for n in ("Spine2", "Neck", "Head"):
+                rot(n, X, rng.uniform(-1, 1) * tremble)
+                rot(n, Z, rng.uniform(-1, 1) * tremble * 0.7)
+    gs = [(0, IDLE, hold), (6, IDLE, lambda: grab_scream(0.0, 0.7)), (11, IDLE, lambda: grab_scream(0.0, 1.0)), (14, IDLE, lambda: grab_scream(1.0))]
+    for f in range(16, 41, 2):
+        gs.append((f, IDLE, (lambda: grab_scream(1.0, 0.0, 1.8))))
+    gs.append((44, IDLE, lambda: grab_scream(0.4)))
+    build("Q_GrabScream", gs)
+
+    def neck_bite(k, gnaw=0.0):
+        hold(0.05 * k, 1.0 + 0.3 * k)
+        rot("Spine1", Z, -5 * k); rot("Spine2", X, 7 * k); rot("Spine2", Z, -6 * k)
+        rot("Neck", X, 16 * k); rot("Neck", Z, -12 * k)
+        rot("Head", Z, -10 * k + gnaw * 5); rot("Head", Y, -18 * k); rot("Head", X, 4 * k + abs(gnaw) * 3)
+    build("Q_BiteSlow", [(0, IDLE, lambda: grab_scream(0.4)), (8, IDLE, lambda: neck_bite(0.3)), (16, IDLE, lambda: neck_bite(0.65)),
+                         (19, IDLE, lambda: neck_bite(0.75)), (21, IDLE, lambda: neck_bite(1.15)), (24, IDLE, lambda: neck_bite(1.0)),
+                         (28, IDLE, lambda: neck_bite(1.0, 1)), (32, IDLE, lambda: neck_bite(1.0, -1)), (36, IDLE, lambda: neck_bite(1.0, 1)),
+                         (40, IDLE, lambda: neck_bite(1.0, -0.5)), (44, IDLE, lambda: neck_bite(1.0))])
+
     def thrown(k, arms=1.0):
         rot("Spine", X, -10 * k); rot("Spine1", X, -10 * k); rot("Spine2", X, -6 * k)
         rot("Neck", X, -6 * k); rot("Head", X, -10 * k)
@@ -445,6 +472,19 @@ def stagger_clips():
                            (26, IDLE, lambda: fall(1.03)), (30, IDLE, lambda: fall(0.98)), (36, IDLE, lambda: fall(1.0))])
 
 
+def hurt_clip():
+    # a pipe strike lands (from Khalid's right): upper body and head knocked back and turned away, arms jerk up, catches
+    # himself quickly - short, so he can go straight into his next move
+    def hit(k, twist=1.0):
+        rot("Spine", X, -6 * k); rot("Spine1", X, -9 * k); rot("Spine2", X, -7 * k)
+        rot("Spine1", Z, 9 * k * twist); rot("Spine2", Z, 7 * k * twist)
+        rot("Neck", X, -8 * k); rot("Head", X, -12 * k); rot("Head", Z, 16 * k * twist)
+        rot("Head", Y, -7 * k * twist)
+        arms_to(0.55 * k, (0.40, -0.10, 1.25), (-0.30, -0.22, 1.32), (0.4, -0.3, 0.6), (-0.2, -0.5, 0.7), (-0.6, -0.6, 0), (0.6, -0.6, 0))
+    build("Q_Hurt", [(0, IDLE, None), (2, IDLE, lambda: hit(1.0)), (5, IDLE, lambda: hit(0.85)), (9, IDLE, lambda: hit(0.35, 0.6)),
+                     (15, IDLE, lambda: rot("Spine1", X, 2))])
+
+
 def kneel_fix_legs():
     # after tipping the hips about the knees, put the shins / feet back on the ground behind
     for s in ("Left", "Right"):
@@ -457,10 +497,11 @@ scream_clips()
 grab_clips()
 swipe_clips()
 stagger_clips()
+hurt_clip()
 apply(IDLE)
 
 NAMES = ["Q_ScreamWindup", "Q_Scream", "Q_ScreamRecover", "Q_GrabWindup", "Q_GrabRush", "Q_GrabHold", "Q_Bite", "Q_PushedOff",
-         "Q_Swipe", "Q_StaggerDown", "Q_StaggerLoop", "Q_StaggerUp", "Q_DeathKneel"]
+         "Q_Swipe", "Q_StaggerDown", "Q_StaggerLoop", "Q_StaggerUp", "Q_DeathKneel", "Q_Hurt", "Q_GrabScream", "Q_BiteSlow"]
 
 
 # ---------------- preview (workbench renders: front + side, a few frames per clip) ----------------

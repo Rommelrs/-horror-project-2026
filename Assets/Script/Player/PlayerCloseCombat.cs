@@ -1,113 +1,92 @@
 using Cinemachine;
-using TMPro;
 using UnityEngine;
-using UnityEngine.InputSystem;
-using UnityEngine.UI;
 
 /// <summary>
-/// Khalid's side of the Questioner fight (Questioner spec, player melee basics):
-///  - Shove (short range, cooldown 2 s): stops a Questioner's grab wind-up / rush; while held it's the escape button (mash).
-///  - Grabbed: locked facing the Questioner, mash Shove inside the window to push him off, otherwise he bites.
-///  - The Question (scream): slows him 30% and sways his aim for a moment.
-///  - Dodge (Roll key): a quick dash (back by default, or the held direction) whose first ~0.3 s attacks that honour
-///    i-frames pass through (the Questioner's grab and swipes).
-/// Khalid's reaction states (Grabbed / BreakFree / Bitten / Shove) play on the "CloseCombat" animator layer when it has them.
+/// Khalid's side of the Questioner fight:
+///  - Grabbed: the Questioner holds him, screams into his face, slowly bites his neck, and Khalid shoves him off - all on a
+///    close over-the-shoulder camera that shakes with the scream and the bite. The only way out is a pipe strike timed into
+///    the grab lunge (QuestionerCombatState).
+///  - The Question (scream): slows him 30% for a moment; for ~6 s his aim sways (bullet spread + the rendered camera, so
+///    the ADS view too), the screen blurs and smears like an echo and a high ringing fills his ears.
+///  - Knockback: the Questioner's hits shove him back a step.
+/// Khalid's reaction states (Grabbed / Bitten) play on the "CloseCombat" animator layer when it has them.
 /// </summary>
 public class PlayerCloseCombat : MonoBehaviour
 {
     public static PlayerCloseCombat instance;
 
-    [SerializeField] InputActionReference shoveAction;
-    [SerializeField] float shoveRange = 1.7f;
-    [SerializeField] float shoveArc = 100f;
-    [SerializeField] float shoveCooldown = 2f;
-    [Tooltip("Seconds the shove locks his movement (the push itself).")]
-    [SerializeField] float shoveTime = 0.45f;
-
-    [Header("Dodge (Roll key)")]
-    [SerializeField] InputActionReference dodgeAction;
-    [SerializeField] float dodgeDistance = 1.7f;
-    [SerializeField] float dodgeTime = 0.32f;
-    [Tooltip("Invulnerable from the start of the dodge for this long (spec: about 0.3 s).")]
-    [SerializeField] float dodgeIFrames = 0.3f;
-    [SerializeField] float dodgeCooldown = 0.7f;
-    [SerializeField] float dodgeStamina = 12f;
-
-    [Header("Grab camera (side-on close shot of the two faces while he holds Khalid)")]
-    [SerializeField] float grabCamDistance = 1.9f;
-    [SerializeField] float grabCamPushIn = 0.3f;
-    [SerializeField] float grabCamFov = 42f;
-    [SerializeField] float grabCamBlend = 0.35f;
+    [Header("Grab camera (close over Khalid's shoulder, the Questioner's face beyond it)")]
+    [Tooltip("Behind his head (m), out to the side (m, + = his right shoulder), above his head (m).")]
+    [SerializeField] float grabCamBack = 0.28f;
+    [SerializeField] float grabCamSide = -0.8f;
+    [SerializeField] float grabCamUp = 0.14f;
+    [Tooltip("How far it creeps in while he's held (m).")]
+    [SerializeField] float grabCamPushIn = 0.14f;
+    [SerializeField] float grabCamFov = 50f;
+    [SerializeField] float grabCamBlend = 0.3f;
+    [Tooltip("Shake at full strength: degrees of rotation, metres of position.")]
+    [SerializeField] float shakeDegrees = 2.2f;
+    [SerializeField] float shakeMetres = 0.025f;
+    [Tooltip("The shove that ends the grab: his movement is held and the camera stays this long (s).")]
+    [SerializeField] float pushOffTime = 0.6f;
 
     [Header("Scream sway")]
     [Tooltip("Aim sway amplitude while shaken, in bullet-spread units (~0.08 = 4.5 deg).")]
     [SerializeField] float swayAmount = 0.08f;
     [SerializeField] float swayCameraDegrees = 2.5f;
 
+    [Header("Scream blur / echo (screen) + ringing")]
+    public Shader screamEchoShader;
+    public AudioClip ringingSFX;
+    [Range(0f, 1f)] [SerializeField] float ringingVolume = 0.35f;
+
     [Header("Animator (CloseCombat layer)")]
     [SerializeField] string layerName = "CloseCombat";
     [SerializeField] float layerBlend = 0.12f;
 
     [Header("Audio")]
-    public AudioClip[] shoveSFX;
-    public AudioClip[] struggleSFX;
-    public AudioClip[] breakFreeSFX;
     public AudioClip[] bittenSFX;
+    public AudioClip[] pushOffSFX;
 
     public static float SpeedMultiplier => instance != null ? instance.CurrentSpeedMultiplier : 1f;
     /// <summary>Weight of the CloseCombat reaction layer (full body): the melee pipe's arm re-attach steps aside under it.</summary>
     public static float LayerWeight => instance != null ? instance.layerWeight : 0f;
     public static Vector2 AimSway => instance != null ? instance.currentSway : Vector2.zero;
-    /// <summary>The dodge's velocity while it's on (PlayerMeleeWeapon moves him with it when the pipe is up, so the strafe
-    /// steps play); zero otherwise.</summary>
-    public static Vector3 DodgeVelocity => instance != null ? instance.dodgeVelocity + instance.knockVelocity : Vector3.zero;
+    /// <summary>A Questioner hit's shove while it's on (PlayerMeleeWeapon moves him with it when the pipe is up); zero otherwise.</summary>
+    public static Vector3 KnockVelocity => instance != null ? instance.knockVelocity : Vector3.zero;
 
     public bool IsGrabbed => grabber != null;
-    public bool EscapeComplete => grabber != null && presses >= pressesNeeded;
-    public bool IsInvulnerable => (roll != null && roll.IsInvulnerable) || Time.time - dodgeStart < dodgeIFrames;
-    public bool IsDodging => Time.time < dodgeEnd;
     public bool IsKnockedBack => Time.time < knockEnd;
+    public bool IsPushingOff => Time.time < pushOffEnd;
     public bool CanBeGrabbed => player != null && !player.IsDead() && grabber == null && !player.isScared;
-    public bool IsShoving => Time.time < shoveEnd;
 
     Player player;
-    PlayerRoll roll;
     Animator animator;
     int layer = -1;
-    float layerWeight, layerTarget;
+    float layerWeight, layerTarget, reactionEnd;
     float slowUntil, slowAmount;
     float swayUntil, swayStart;
     Vector2 currentSway;
-    Transform vcam;
-    Quaternion vcamRest;
-    bool swayingCam;
-    float nextShove, shoveEnd;
-    float dodgeStart = -99f, dodgeEnd, nextDodge;
-    Vector3 dodgeDir, dodgeVelocity;
     Vector3 knockDir, knockVelocity;
     float knockStart, knockEnd, knockDist;
     CinemachineVirtualCamera grabCam;
     CinemachineBrain brain;
     CinemachineBlendDefinition savedBlend;
     bool blendSaved, grabCamOn;
-    float grabCamSide = 1f, grabCamStart, restoreBlendAt = -1f;
+    float grabCamStart, restoreBlendAt = -1f, stopCamAt = -1f;
     Transform khalidHead, grabberHead;
-    PlayerStamina stamina;
-    InputAction moveAction;
-
-    QuestionerEnemy grabber;
-    int presses, pressesNeeded;
-    float grabStart, grabWindow;
-
-    GameObject promptRoot;
-    TextMeshProUGUI promptText;
-    Image promptFill;
+    QuestionerEnemy grabber, camTarget;
+    float pushOffEnd;
+    float shakeLevel, shakeUntil, shakeKick;
+    ScreamEchoEffect echo;
+    AudioSource ringSource;
+    float ringStart, ringEnd;
 
     float CurrentSpeedMultiplier
     {
         get
         {
-            if (IsGrabbed || IsShoving || IsDodging || IsKnockedBack) return 0f;
+            if (IsGrabbed || IsKnockedBack || IsPushingOff) return 0f;
             return Time.time < slowUntil ? 1f - slowAmount : 1f;
         }
     }
@@ -116,15 +95,17 @@ public class PlayerCloseCombat : MonoBehaviour
     {
         instance = this;
         player = GetComponent<Player>();
-        roll = GetComponent<PlayerRoll>();
-        stamina = GetComponent<PlayerStamina>();
         animator = player != null ? player.animator : GetComponentInChildren<Animator>();
     }
 
     void OnEnable()
     {
-        if (shoveAction != null) shoveAction.action.Enable();
-        if (dodgeAction != null) dodgeAction.action.Enable();
+        CinemachineCore.CameraUpdatedEvent.AddListener(OnCameraUpdated);
+    }
+
+    void OnDisable()
+    {
+        CinemachineCore.CameraUpdatedEvent.RemoveListener(OnCameraUpdated);
     }
 
     void OnDestroy()
@@ -138,58 +119,21 @@ public class PlayerCloseCombat : MonoBehaviour
         if (player == null) return;
 
         if (player.IsDead() && IsGrabbed) EndGrab(false);
-
-        bool pressed = shoveAction != null && shoveAction.action.WasPressedThisFrame() && !GameManager.IsPaused;
-        if (IsGrabbed)
-        {
-            if (pressed)
-            {
-                presses++;
-                if (presses % 2 == 1) Play(struggleSFX, 0.7f);
-            }
-            UpdatePrompt();
-        }
-        else if (pressed) TryShove();
-
-        if (dodgeAction != null && dodgeAction.action.WasPressedThisFrame() && !GameManager.IsPaused) TryDodge();
-        UpdateDodge();
+        UpdateKnockback();
         UpdateSway();
+        UpdateRinging();
 
         if (layer >= 0)
         {
             layerWeight = Mathf.MoveTowards(layerWeight, layerTarget, Time.deltaTime / Mathf.Max(0.01f, layerBlend));
             animator.SetLayerWeight(layer, layerWeight);
-            if (layerTarget > 0f && !IsGrabbed && Time.time > shoveEnd && Time.time > reactionEnd) layerTarget = 0f;
+            if (layerTarget > 0f && !IsGrabbed && Time.time > reactionEnd) layerTarget = 0f;
         }
     }
 
-    float reactionEnd;
+    // ---------------- knockback ----------------
 
-    // ---------------- dodge ----------------
-
-    void TryDodge()
-    {
-        if (Time.time < nextDodge || IsGrabbed || IsShoving || IsDodging) return;
-        if (player.IsDead() || player.isScared || player.pauseMovement || player.isAttacking || PlayerQuickHeal.Using) return;
-        if (PlayerMeleeWeapon.Attacking) return;
-        if (player.playerWeaponSystem != null && player.playerWeaponSystem.isReloading) return;
-        if (stamina != null && stamina.Stamina < dodgeStamina) return;
-        if (stamina != null) stamina.UseStamina(dodgeStamina);
-
-        if (moveAction == null && player.playerMovement != null) moveAction = player.playerMovement.MoveAction;
-        Vector2 input = moveAction != null ? moveAction.ReadValue<Vector2>() : Vector2.zero;
-        // tank controls: with the pipe up he strafes, so sideways input dodges sideways; otherwise forward / back only
-        Vector3 dir = input.sqrMagnitude < 0.04f ? -transform.forward
-            : (PlayerMeleeWeapon.Ready ? transform.right * input.x + transform.forward * input.y : transform.forward * Mathf.Sign(input.y == 0 ? -1 : input.y));
-        dir.y = 0f;
-        dodgeDir = dir.normalized;
-        dodgeStart = Time.time;
-        dodgeEnd = Time.time + dodgeTime;
-        nextDodge = dodgeEnd + dodgeCooldown;
-        Play(shoveSFX, 0.35f);
-    }
-
-    void UpdateDodge()
+    void UpdateKnockback()
     {
         // a Questioner's hit shoving him back (decelerating over knockTime)
         if (IsKnockedBack)
@@ -200,14 +144,6 @@ public class PlayerCloseCombat : MonoBehaviour
                 player.controller.Move(knockVelocity * Time.deltaTime);
         }
         else knockVelocity = Vector3.zero;
-
-        if (!IsDodging) { dodgeVelocity = Vector3.zero; return; }
-        // fast out, easing off (distance = dodgeDistance)
-        float t = Mathf.Clamp01((Time.time - dodgeStart) / dodgeTime);
-        float speed = dodgeDistance / dodgeTime * 2f * (1f - t);
-        dodgeVelocity = dodgeDir * speed;
-        if (!PlayerMeleeWeapon.Ready && player.controller != null && player.controller.enabled)
-            player.controller.Move(dodgeVelocity * Time.deltaTime);
     }
 
     /// <summary>An enemy hit shoves him back `distance` m over `time` s (his own movement is held meanwhile).</summary>
@@ -222,42 +158,15 @@ public class PlayerCloseCombat : MonoBehaviour
         knockEnd = Time.time + Mathf.Max(0.05f, time);
     }
 
-    // ---------------- shove ----------------
-
-    void TryShove()
-    {
-        if (Time.time < nextShove) return;
-        if (player.IsDead() || player.isRolling || player.isScared || player.pauseMovement || PlayerQuickHeal.Using) return;
-        if (PlayerMeleeWeapon.instance != null && PlayerMeleeWeapon.Ready) return;      // the pipe is up: swing instead
-        nextShove = Time.time + shoveCooldown;
-        shoveEnd = Time.time + shoveTime;
-        PlayReaction("Shove", shoveTime);
-        Play(shoveSFX, 0.8f);
-
-        foreach (var q in Object.FindObjectsByType<QuestionerEnemy>(FindObjectsSortMode.None))
-        {
-            if (q.health == null || q.health.IsDead || q.stateMachine.CurrentState != q.combatState) continue;
-            Vector3 to = q.transform.position - transform.position;
-            to.y = 0f;
-            if (to.magnitude > shoveRange) continue;
-            if (to.magnitude > 0.5f && Vector3.Angle(transform.forward, to) > shoveArc * 0.5f) continue;
-            q.combatState.OnShoved();
-        }
-    }
-
     // ---------------- grabbed ----------------
 
-    public void BeginGrab(QuestionerEnemy q, float window, int needed)
+    public void BeginGrab(QuestionerEnemy q)
     {
         grabber = q;
-        presses = 0;
-        pressesNeeded = Mathf.Max(1, needed);
-        grabStart = Time.time;
-        grabWindow = window;
         player.isGrabbed = true;
         if (player.controller != null) player.controller.Move(Vector3.zero);
         PlayReaction("Grabbed", 99f);
-        ShowPrompt(true);
+        PlayerMeleeWeapon.SetHiddenForGrab(true);
         StartGrabCam(q);
     }
 
@@ -276,26 +185,42 @@ public class PlayerCloseCombat : MonoBehaviour
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(face), 720f * Time.deltaTime);
     }
 
+    /// <summary>Let go. pushedOff = Khalid shoves him away: the shove plays and the camera holds on it a moment.</summary>
     public void EndGrab(bool pushedOff)
     {
         if (grabber == null) return;
         grabber = null;
         player.isGrabbed = false;
-        ShowPrompt(false);
-        StopGrabCam();
-        if (pushedOff)
+        if (pushedOff && !player.IsDead())
         {
-            Play(breakFreeSFX, 0.9f);
-            PlayReaction("BreakFree", 0.6f);
+            pushOffEnd = Time.time + pushOffTime;
+            PlayReaction("PushOff", pushOffTime + 0.15f);
+            Play(pushOffSFX, 0.9f);
+            Shake(0.5f, 0.25f);
+            stopCamAt = pushOffEnd - 0.1f;
         }
-        else if (Time.time > reactionEnd) layerTarget = 0f;
+        else
+        {
+            StopGrabCam();
+            PlayerMeleeWeapon.SetHiddenForGrab(false);
+            if (Time.time > reactionEnd) layerTarget = 0f;
+        }
         if (player.playerWeaponSystem != null) player.playerWeaponSystem.SyncCameraYaw();
     }
 
     public void OnBitten()
     {
         Play(bittenSFX, 1f);
-        PlayReaction("Bitten", 0.9f);
+        PlayReaction("BittenHold", 99f);
+        shakeKick = 1f;
+        Shake(0.45f, 0.9f);
+    }
+
+    /// <summary>Grab camera shake: `amount` (0..1) for `seconds`, easing out at the end.</summary>
+    public void Shake(float amount, float seconds)
+    {
+        if (amount >= shakeLevel || Time.time >= shakeUntil) shakeLevel = amount;
+        shakeUntil = Mathf.Max(shakeUntil, Time.time + seconds);
     }
 
     // ---------------- grab camera ----------------
@@ -325,8 +250,8 @@ public class PlayerCloseCombat : MonoBehaviour
         grabCam.m_Lens = lens;
         if (khalidHead == null) khalidHead = FindBone(transform, "head.x", "Head");
         grabberHead = FindBone(q.transform, "Head");
-        // on the side his grabbed struggle turns his face to (away from the mouth): his face, not the back of his head
-        grabCamSide = -1f;
+        camTarget = q;
+        stopCamAt = -1f;
         if (!blendSaved) { savedBlend = brain.m_DefaultBlend; blendSaved = true; }
         brain.m_DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Style.EaseInOut, grabCamBlend);
         restoreBlendAt = -1f;
@@ -339,6 +264,7 @@ public class PlayerCloseCombat : MonoBehaviour
 
     void StopGrabCam()
     {
+        stopCamAt = -1f;
         if (!grabCamOn) return;
         grabCamOn = false;
         if (grabCam != null) grabCam.Priority = -100;
@@ -347,23 +273,40 @@ public class PlayerCloseCombat : MonoBehaviour
 
     void PlaceGrabCam()
     {
-        if (grabCam == null || grabber == null) return;
+        if (grabCam == null || camTarget == null) return;
+        // over his shoulder (in his own frame, so the head's struggle doesn't swing it about), looking past his head at the
+        // Questioner's face
         Vector3 a = khalidHead != null ? khalidHead.position : transform.position + Vector3.up * 1.65f;
-        Vector3 b = grabberHead != null ? grabberHead.position : grabber.transform.position + Vector3.up * 1.8f;
-        Vector3 mid = (a + b) * 0.5f;
-        Vector3 axis = b - a; axis.y = 0f;
-        if (axis.sqrMagnitude < 0.0001f) axis = transform.forward;
-        axis.Normalize();
-        Vector3 side = Vector3.Cross(Vector3.up, axis) * grabCamSide;
-        // creeps in on them while he holds on
-        float push = Mathf.Clamp01((Time.time - grabCamStart) / 1.8f) * grabCamPushIn;
-        Vector3 pos = mid + side * (grabCamDistance - push) + axis * 0.15f + Vector3.up * 0.05f;      // near profile, nudged toward the Questioner so Khalid's face turns to camera
-        grabCam.transform.position = pos;
-        grabCam.transform.rotation = Quaternion.LookRotation(mid + Vector3.down * 0.04f - pos, Vector3.up);
+        Vector3 b = grabberHead != null ? grabberHead.position : camTarget.transform.position + Vector3.up * 1.8f;
+        Vector3 fwd = transform.forward; fwd.y = 0f; fwd.Normalize();
+        Vector3 right = Vector3.Cross(Vector3.up, fwd);
+        Vector3 headBase = new Vector3(transform.position.x, a.y, transform.position.z);
+        float push = Mathf.Clamp01((Time.time - grabCamStart) / 2.5f) * grabCamPushIn;
+        Vector3 pos = headBase - fwd * (grabCamBack - push) + right * grabCamSide + Vector3.up * grabCamUp;
+        Vector3 look = Vector3.Lerp(a, b, 0.72f) + Vector3.down * 0.06f;
+        Quaternion rot = Quaternion.LookRotation(look - pos, Vector3.up);
+
+        // shake: a level that eases out at the end, plus a kick that dies quickly (the bite)
+        shakeKick = Mathf.MoveTowards(shakeKick, 0f, Time.deltaTime * 4f);
+        float lvl = (Time.time < shakeUntil ? shakeLevel * Mathf.Clamp01((shakeUntil - Time.time) / 0.25f) : 0f) + shakeKick * shakeKick;
+        if (lvl > 0.001f)
+        {
+            float t = Time.time * 23f;
+            Vector3 n = new Vector3(Mathf.PerlinNoise(t, 0.1f), Mathf.PerlinNoise(0.4f, t), Mathf.PerlinNoise(t, 0.8f)) - Vector3.one * 0.5f;
+            rot = rot * Quaternion.Euler(n.x * 2f * shakeDegrees * lvl, n.y * 2f * shakeDegrees * lvl, n.z * shakeDegrees * lvl);
+            pos += (right * n.y + Vector3.up * n.x) * 2f * shakeMetres * lvl;
+        }
+        grabCam.transform.SetPositionAndRotation(pos, rot);
     }
 
     void LateUpdate()
     {
+        if (stopCamAt > 0f && Time.time >= stopCamAt)
+        {
+            StopGrabCam();
+            PlayerMeleeWeapon.SetHiddenForGrab(false);
+            if (Time.time > reactionEnd) layerTarget = 0f;
+        }
         if (grabCamOn) PlaceGrabCam();
         if (restoreBlendAt > 0f && Time.time >= restoreBlendAt)
         {
@@ -376,12 +319,55 @@ public class PlayerCloseCombat : MonoBehaviour
 
     // ---------------- scream ----------------
 
-    public void ApplyScream(float slow, float duration)
+    /// <summary>The Question hit him: slowed by `slow` for `slowTime` (0 = not slowed), and for `effectTime` the aim sway, the
+    /// screen blur / echo and the ringing. `strength` (0..1) scales the blur / ringing (how close he was).</summary>
+    public void ApplyScream(float slow, float slowTime, float effectTime, float strength = 1f)
     {
-        slowAmount = slow;
-        slowUntil = Time.time + duration;
+        if (slowTime > 0f)
+        {
+            slowAmount = slow;
+            slowUntil = Time.time + slowTime;
+        }
         swayStart = Time.time;
-        swayUntil = Time.time + duration;
+        swayUntil = Time.time + effectTime;
+
+        float length = effectTime;
+        var cam = Camera.main;
+        if (cam != null && screamEchoShader != null)
+        {
+            if (echo == null || echo.gameObject != cam.gameObject)
+            {
+                echo = cam.GetComponent<ScreamEchoEffect>();
+                if (echo == null) { echo = cam.gameObject.AddComponent<ScreamEchoEffect>(); echo.shader = screamEchoShader; }
+            }
+            echo.Trigger(length, Mathf.Lerp(0.55f, 1f, strength));
+        }
+
+        if (ringingSFX != null)
+        {
+            if (ringSource == null)
+            {
+                ringSource = gameObject.AddComponent<AudioSource>();
+                ringSource.playOnAwake = false;
+                ringSource.spatialBlend = 0f;
+                ringSource.loop = false;
+                ringSource.ignoreListenerPause = false;
+                var main = SoundEffectManager.instance != null ? SoundEffectManager.instance.GetComponent<AudioSource>() : null;
+                if (main != null) ringSource.outputAudioMixerGroup = main.outputAudioMixerGroup;
+            }
+            ringSource.clip = ringingSFX;
+            ringSource.volume = ringingVolume * Mathf.Lerp(0.6f, 1f, strength) * (SoundEffectManager.instance != null ? SoundEffectManager.instance.masterVolume : 1f);
+            ringSource.Play();
+            ringStart = Time.time;
+            ringEnd = Time.time + Mathf.Min(length + 0.4f, ringingSFX.length);
+        }
+    }
+
+    void UpdateRinging()
+    {
+        if (ringSource == null || !ringSource.isPlaying) return;
+        // fades under its own clip, but cut it short (and quiet) once he's on the ground or paused
+        if (GameManager.IsPaused || player.IsDead() || Time.time > ringEnd) ringSource.Stop();
     }
 
     void UpdateSway()
@@ -389,29 +375,22 @@ public class PlayerCloseCombat : MonoBehaviour
         float left = swayUntil - Time.time;
         if (left > 0f)
         {
-            float env = Mathf.Clamp01(left / 0.3f) * Mathf.Clamp01((Time.time - swayStart) / 0.1f);
+            // full for most of it, easing off over the last 1.5 s
+            float env = Mathf.Clamp01(left / 1.5f) * Mathf.Clamp01((Time.time - swayStart) / 0.1f);
             float t = Time.time * 2.3f;
             currentSway = new Vector2(Mathf.PerlinNoise(t, 0.3f) - 0.5f, Mathf.PerlinNoise(0.7f, t) - 0.5f) * 2f * swayAmount * env;
         }
         else currentSway = Vector2.zero;
+    }
 
-        if (vcam == null && CameraSystem.Instance != null)
-        {
-            var v = CameraSystem.Instance.GetComponentInChildren<CinemachineVirtualCamera>(true);
-            if (v != null) vcam = v.transform;
-        }
-        if (vcam == null) return;
-        if (currentSway != Vector2.zero)
-        {
-            if (!swayingCam) { vcamRest = vcam.localRotation; swayingCam = true; }
-            float k = swayCameraDegrees / Mathf.Max(0.001f, swayAmount);
-            vcam.localRotation = vcamRest * Quaternion.Euler(-currentSway.y * k, currentSway.x * k, currentSway.x * k * 0.5f);
-        }
-        else if (swayingCam)
-        {
-            vcam.localRotation = vcamRest;
-            swayingCam = false;
-        }
+    /// <summary>After the Cinemachine brain has placed the camera (whichever virtual camera is live - the normal follow, the
+    /// ADS aim cam or the grab cam): tilt it by the sway. The brain sets it fresh every frame, so this never accumulates.</summary>
+    void OnCameraUpdated(CinemachineBrain brain)
+    {
+        if (currentSway == Vector2.zero || brain == null || brain.OutputCamera == null) return;
+        float k = swayCameraDegrees / Mathf.Max(0.001f, swayAmount);
+        var t = brain.OutputCamera.transform;
+        t.rotation = t.rotation * Quaternion.Euler(-currentSway.y * k, currentSway.x * k, currentSway.x * k * 0.5f);
     }
 
     // ---------------- animation / audio ----------------
@@ -431,69 +410,5 @@ public class PlayerCloseCombat : MonoBehaviour
         if (clips == null || clips.Length == 0) return;
         var c = clips[Random.Range(0, clips.Length)];
         if (c != null && SoundEffectManager.instance != null) SoundEffectManager.instance.PlaySFX(c, volume, true);
-    }
-
-    // ---------------- escape prompt ----------------
-
-    void ShowPrompt(bool on)
-    {
-        if (on && promptRoot == null) BuildPrompt();
-        if (promptRoot != null) promptRoot.SetActive(on);
-        if (on) UpdatePrompt();
-    }
-
-    void UpdatePrompt()
-    {
-        if (promptRoot == null) return;
-        string key = shoveAction != null ? shoveAction.action.GetBindingDisplayString(0) : "V";
-        float pulse = 1f + 0.12f * Mathf.Sin(Time.time * 22f);
-        promptText.text = "PUSH HIM OFF  [" + key + "]";
-        promptText.transform.localScale = Vector3.one * pulse;
-        promptFill.fillAmount = Mathf.Clamp01((float)presses / pressesNeeded);
-        float timeLeft = 1f - Mathf.Clamp01((Time.time - grabStart) / Mathf.Max(0.01f, grabWindow));
-        promptFill.color = Color.Lerp(new Color(0.8f, 0.1f, 0.05f, 0.9f), new Color(0.95f, 0.9f, 0.8f, 0.9f), timeLeft);
-    }
-
-    void BuildPrompt()
-    {
-        promptRoot = new GameObject("GrabPrompt", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
-        var canvas = promptRoot.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 500;
-        var scaler = promptRoot.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
-        promptRoot.transform.SetParent(transform, false);
-
-        var textGo = new GameObject("Text", typeof(RectTransform));
-        textGo.transform.SetParent(promptRoot.transform, false);
-        promptText = textGo.AddComponent<TextMeshProUGUI>();
-        promptText.alignment = TextAlignmentOptions.Center;
-        promptText.fontSize = 46;
-        promptText.color = new Color(0.95f, 0.92f, 0.85f);
-        promptText.outlineWidth = 0.25f;
-        var rt = (RectTransform)textGo.transform;
-        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.27f);
-        rt.sizeDelta = new Vector2(900, 80);
-
-        var barBg = new GameObject("BarBg", typeof(RectTransform), typeof(Image));
-        barBg.transform.SetParent(promptRoot.transform, false);
-        barBg.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.6f);
-        var bt = (RectTransform)barBg.transform;
-        bt.anchorMin = bt.anchorMax = new Vector2(0.5f, 0.22f);
-        bt.sizeDelta = new Vector2(420, 16);
-
-        var fill = new GameObject("Fill", typeof(RectTransform), typeof(Image));
-        fill.transform.SetParent(barBg.transform, false);
-        promptFill = fill.GetComponent<Image>();
-        promptFill.type = Image.Type.Filled;
-        promptFill.fillMethod = Image.FillMethod.Horizontal;
-        promptFill.sprite = Sprite.Create(Texture2D.whiteTexture, new Rect(0, 0, 4, 4), Vector2.one * 0.5f);
-        var ft = (RectTransform)fill.transform;
-        ft.anchorMin = Vector2.zero;
-        ft.anchorMax = Vector2.one;
-        ft.offsetMin = new Vector2(2, 2);
-        ft.offsetMax = new Vector2(-2, -2);
-        promptRoot.SetActive(false);
     }
 }

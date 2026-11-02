@@ -268,6 +268,9 @@ public class Enemy : MonoBehaviour, IPoolable
 
     /// <summary>Helpless on the ground (a weakpoint knockdown): melee hits do their heavy "downed" damage. Enemies with their own
     /// downed state (the Questioner's kneeling stagger) add it here.</summary>
+    /// <summary>Extra reach (m) the melee pipe gets on this enemy right now (e.g. it's lunging into the swing).</summary>
+    public virtual float MeleeReachBonus => 0f;
+
     public virtual bool IsDownedForMelee => stateMachine != null && stateMachine.CurrentState == enemyKnockbackState && enemyKnockbackState.IsDownedHeavy;
 
     public bool PlayerInRange(float range)

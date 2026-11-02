@@ -2,8 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// The Questioner with the spec moveset (Questioner spec, 2026-11): strafe approach, The Question (scream), the grab
-/// (interrogation hold + bite), the double claw swipe, the kneeling stagger on a mouth hit, and one attacker at a time
+/// The Questioner with the spec moveset (Questioner spec, 2026-11): strafe approach, The Question (scream, with its echoing
+/// sound-wave shells), the grab (an instant bite, countered by a pipe strike timed into the lunge), the double claw swipe,
+/// a quick recoil from pipe strikes between moves, the kneeling stagger on a mouth hit, and one attacker at a time
 /// (attack token, the rest circle). The fight itself lives in QuestionerCombatState; this class owns the damage rules,
 /// the token, the procedural mouth (jaw) and body flinch, and the mouth weak point (the gun destroys it on a hit).
 /// specMoveset off = the old HeadshotEnemy behaviour.
@@ -38,6 +39,13 @@ public class QuestionerEnemy : HeadshotEnemy
     public AudioClip[] staggerSFX;
     [Range(0f, 2f)] public float cueVolume = 1f;
 
+    [Header("Scream: echo + sound-wave shells")]
+    [Tooltip("Custom/QuestionerScreamWave material for the shells rolling out from his mouth.")]
+    public Material screamWaveMaterial;
+    [SerializeField] float screamEchoDelay = 230f;
+    [Range(0f, 1f)] [SerializeField] float screamEchoDecay = 0.45f;
+    [Range(0f, 1f)] [SerializeField] float screamEchoWet = 0.6f;
+
     public QuestionerCombatState combatState;
 
     // ---- attack token: one Questioner attacks, the others circle ----
@@ -55,7 +63,8 @@ public class QuestionerEnemy : HeadshotEnemy
     GameObject weakpointTemplate;
     float weakpointBaseRadius = -1f;
     bool killedWhileStaggered;
-    AudioSource cueSource;
+    AudioSource cueSource, screamSource;
+    ScreamWaveEmitter waves;
 
     public override void Awake()
     {
@@ -95,6 +104,27 @@ public class QuestionerEnemy : HeadshotEnemy
         cueSource.maxDistance = 30f;
         var main = GetComponent<AudioSource>();
         if (main != null) cueSource.outputAudioMixerGroup = main.outputAudioMixerGroup;
+
+        // the scream has its own source: it rings on in an echo (the other cues stay dry)
+        var sg = new GameObject("ScreamVoice");
+        sg.transform.SetParent(jaw != null ? jaw : transform, false);
+        screamSource = sg.AddComponent<AudioSource>();
+        screamSource.playOnAwake = false;
+        screamSource.spatialBlend = 1f;
+        screamSource.rolloffMode = AudioRolloffMode.Logarithmic;
+        screamSource.minDistance = 3f;
+        screamSource.maxDistance = 40f;
+        screamSource.outputAudioMixerGroup = cueSource.outputAudioMixerGroup;
+        var echo = sg.AddComponent<AudioEchoFilter>();
+        echo.delay = screamEchoDelay;
+        echo.decayRatio = screamEchoDecay;
+        echo.wetMix = screamEchoWet;
+        echo.dryMix = 1f;
+
+        waves = gameObject.AddComponent<ScreamWaveEmitter>();
+        waves.material = screamWaveMaterial;
+        waves.origin = jaw;
+        waves.maxRadius = tuning.screamRadius + 0.5f;
     }
 
     public override void OnDestroy()
@@ -170,6 +200,9 @@ public class QuestionerEnemy : HeadshotEnemy
         base.CheckLeaveCondition(currentState);
     }
 
+    /// <summary>Running into the swing: the pipe reaches him a little further out during the grab lunge (the counter window).</summary>
+    public override float MeleeReachBonus => specMoveset && stateMachine.CurrentState == combatState && combatState.IsCounterable ? tuning.counterReachBonus : 0f;
+
     public override bool IsDownedForMelee => base.IsDownedForMelee || (specMoveset && stateMachine.CurrentState == combatState && combatState.IsStaggered);
 
     /// <summary>The first mouth shot staggers him rather than killing him: it does a body shot's damage at most and always
@@ -209,12 +242,12 @@ public class QuestionerEnemy : HeadshotEnemy
             return;
         }
 
-        // body hit: a flinch, he keeps coming; a pipe strike shoves him back and he backs off to circle
-        Flinch(staggered ? flinchStaggeredAngle : flinchAngle);
+        // body hit: a flinch, he keeps coming; a pipe strike hurts him (a recoil between moves, a counter in the grab lunge)
+        Flinch(staggered ? flinchStaggeredAngle : (melee ? flinchAngle * 1.6f : flinchAngle));
         if (melee && Player.instance != null)
         {
             if (stateMachine.CurrentState != combatState && !staggered) stateMachine.ChangeState(combatState);
-            if (stateMachine.CurrentState == combatState) combatState.OnMeleeHit(transform.position - Player.instance.transform.position);
+            if (stateMachine.CurrentState == combatState) combatState.OnMeleeHit();
             return;
         }
         if (stateMachine.CurrentState == idleState || stateMachine.CurrentState == enemyWanderState || stateMachine.CurrentState == investigateState)
@@ -323,6 +356,20 @@ public class QuestionerEnemy : HeadshotEnemy
     public void StopCues()
     {
         if (cueSource != null) cueSource.Stop();
+        if (screamSource != null) screamSource.Stop();
+    }
+
+    public void PlayScream(float volume = 1f)
+    {
+        if (screamSFX == null || screamSFX.Length == 0 || screamSource == null) return;
+        var c = screamSFX[Random.Range(0, screamSFX.Length)];
+        if (c != null) screamSource.PlayOneShot(c, volume * cueVolume);
+    }
+
+    /// <summary>Called every frame while he screams: a shell of rippling air rolls out from his mouth every so often.</summary>
+    public void EmitScreamWave()
+    {
+        if (waves != null) waves.Emit();
     }
 }
 
@@ -351,18 +398,31 @@ public class QuestionerTuning
     public float screamWindup = 0.8f, screamActive = 1.0f, screamRecovery = 0.6f;
     public float screamRadius = 4f;
     [Range(0f, 1f)] public float screamSlow = 0.3f;
-    public float screamEffectTime = 1.0f;
+    [Tooltip("The slow lasts this long (s); the blur / echo, aim sway and ringing last screamEffectTime.")]
+    public float screamSlowTime = 1.0f;
+    public float screamEffectTime = 6.0f;
+    [Tooltip("While Khalid aims down the sights the scream reaches him this far out (m), and it's his first answer to it.")]
+    public float screamAimRange = 12f;
+    [Range(0f, 1f)] public float adsScreamChance = 0.85f;
     public float weakpointWindupScale = 1.7f;
 
     [Header("Grab")]
     public float grabMin = 4f, grabMax = 6f, grabCooldown = 8f;
     public float grabWindup = 0.6f, rushSpeed = 4f, rushMaxDistance = 6f;
     public float grabContact = 0.95f;
-    public float escapeWindow = 1.5f;
-    public int escapePresses = 6;
     public int biteDamage = 25;
+    [Tooltip("Caught: holds him (s), then screams into his face (the scream lands at grabScreamAt, the clip runs grabScreamTime).")]
+    public float grabHoldPause = 0.35f;
+    public float grabScreamAt = 0.45f, grabScreamTime = 1.45f;
+    [Tooltip("The slow bite: lands at biteLandTime (s), gnaws until biteHoldTime, then Khalid shoves him back pushOffDistance (m).")]
+    public float biteLandTime = 0.7f, biteHoldTime = 1.45f;
+    public float pushOffDistance = 1.4f;
     public float holdDistance = 0.62f;
     public float stumbleTime = 1.0f, grabMissRecovery = 0.9f;
+    [Tooltip("The counter: a pipe strike landing in the last part of the wind-up (s) or in the rush knocks him back this far (m).")]
+    public float counterWindow = 0.3f, counterPushDistance = 1.3f;
+    [Tooltip("He runs into the swing: extra pipe reach (m) while the counter window is open.")]
+    public float counterReachBonus = 0.35f;
 
     [Header("Swipe")]
     public float swipeRange = 1.5f;
@@ -375,14 +435,17 @@ public class QuestionerTuning
     [Tooltip("Damage of the mouth shot that staggers him (spec: no extra damage; a body shot is 25). Never kills.")]
     public int staggerShotDamage = 25;
 
-    [Header("Pushback + backing off")]
-    [Tooltip("A pipe strike shoves him this far back (m).")]
-    public float meleePushDistance = 0.45f;
-    [Tooltip("After a pipe strike he circles away for this long (s) at this distance (m) - grab / scream allowed, no rushing back in.")]
-    public float hitRepositionMin = 1.2f, hitRepositionMax = 2.2f;
-    public float hitRepositionDistMin = 3.2f, hitRepositionDistMax = 4.6f;
+    [Header("Hurt (a pipe strike between moves)")]
+    [Tooltip("The recoil (s), then the feint (this chance; always when Khalid is out of claw reach) or the claws.")]
+    public float hurtTime = 0.45f;
+    [Range(0f, 1f)] public float hurtFeintChance = 0.5f;
+    [Tooltip("The feint: backs off and drifts sideways for a random time (s) to a random distance (m), then grabs.")]
+    public float feintTimeMin = 0.8f, feintTimeMax = 2.4f;
+    public float feintDistMin = 2.2f, feintDistMax = 4.8f;
+
+    [Header("Backing off")]
     [Tooltip("After hurting Khalid he circles without attacking for this long (s): time to recover and get ready.")]
     public float afterHitRepositionMin = 1.8f, afterHitRepositionMax = 2.8f;
-    [Tooltip("His hits shove Khalid back: swipe / bite distance (m).")]
-    public float swipePushPlayer = 0.55f, bitePushPlayer = 0.9f;
+    [Tooltip("His swipe shoves Khalid back (m).")]
+    public float swipePushPlayer = 0.55f;
 }

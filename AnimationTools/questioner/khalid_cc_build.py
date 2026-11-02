@@ -174,6 +174,9 @@ CLIPS = {
     "Khalid_CC_Grabbed": [(0, k_grabbed()), (9, k_grabbed(7, 0.04, 22)), (18, k_grabbed(0, -0.02, 32)), (27, k_grabbed(-7, 0.04, 24)), (36, k_grabbed())],
     "Khalid_CC_BreakFree": [(0, k_grabbed()), (3, k_chest(-6)), (6, k_push(0.66, 14)), (10, k_push(0.62, 10)), (18, IDLE)],
     "Khalid_CC_Bitten": [(0, k_grabbed()), (4, k_bitten(1.1)), (8, k_bitten(1.0)), (18, k_bitten(0.85)), (27, IDLE)],
+    # the grab sequence: bitten and still held (ends in the bitten pose), then he shoves the Questioner off
+    "Khalid_CC_BittenHold": [(0, k_grabbed()), (4, k_bitten(1.15)), (8, k_bitten(1.0)), (14, k_bitten(0.92)), (20, k_bitten(1.05)), (26, k_bitten(1.0))],
+    "Khalid_CC_PushOff": [(0, k_bitten(1.0)), (4, k_chest(-8)), (7, k_push(0.70, 15)), (11, k_push(0.64, 10)), (22, IDLE)],
 }
 only = ARGS[2].split(",") if len(ARGS) > 2 else None
 import traceback
