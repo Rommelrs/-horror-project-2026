@@ -194,6 +194,15 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "SwitchWeapon",
+                    "type": "Value",
+                    "id": "edea3ddc-2f23-48fd-8013-1fcb12d3e2fd",
+                    "expectedControlType": "Axis",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": true
                 }
             ],
             "bindings": [
@@ -860,7 +869,7 @@
                 {
                     "name": "",
                     "id": "2392062c-d9b2-4510-b606-64a57ffc7563",
-                    "path": "<Keyboard>/1",
+                    "path": "<Keyboard>/2",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",
@@ -882,7 +891,7 @@
                 {
                     "name": "",
                     "id": "e8ae00dd-5361-4ae5-914f-cc796d2f91f5",
-                    "path": "<Keyboard>/2",
+                    "path": "<Keyboard>/3",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",
@@ -904,7 +913,7 @@
                 {
                     "name": "",
                     "id": "8d2e4b17-0f3a-4c65-a1d9-6b3e7c2f5a81",
-                    "path": "<Keyboard>/3",
+                    "path": "<Keyboard>/1",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",
@@ -920,6 +929,17 @@
                     "processors": "",
                     "groups": "Gamepad",
                     "action": "Weapon3",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "05f325e1-4bd1-4a65-bf4f-a48718b80fe8",
+                    "path": "<Mouse>/scroll/y",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "Keyboard&Mouse",
+                    "action": "SwitchWeapon",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

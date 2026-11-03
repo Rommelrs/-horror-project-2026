@@ -55,15 +55,20 @@ public class CowardMeetingCutscene : MonoBehaviour
         public Vector2[] ambience = new Vector2[0];
         [Tooltip("x = time, y = 0..1 of gunDipAngle: Khalid lowering his aimed gun a little (straight lines between keys).")]
         public Vector2[] gunDip = new Vector2[0];
+        [Tooltip("Open without a gun: x = time, y = 1 the pipe raised at him, 0 carried.")]
+        public Vector2[] pipeRaised = new Vector2[0];
     }
 
     [Header("Timelines")]
     public PlayableDirector open;
+    [Tooltip("The Open when he has no gun, only the pipe: no \"Don't shoot!\", and no Khalid track - his own Animator "
+           + "Controller walks him in and raises / lowers the pipe as in play (phase pipeRaised).")]
+    public PlayableDirector openPipe;
     public PlayableDirector versionA;
     public PlayableDirector versionB;
     public PlayableDirector end;
-    [Tooltip("0 Open, 1 A, 2 B, 3 End")]
-    public Phase[] phases = new Phase[4];
+    [Tooltip("0 Open, 1 A, 2 B, 3 End, 4 Open (pipe)")]
+    public Phase[] phases = new Phase[5];
     [Tooltip("Off: always plays version A. On: plays version B instead when Alley 2 has already been visited.")]
     public bool versionBEnabled;
     [Tooltip("Muted source the other version's tracks are bound to at the start (tracks named \"... [A]\" / \"... [B]\" in "
@@ -72,6 +77,9 @@ public class CowardMeetingCutscene : MonoBehaviour
 
     [Header("Conditions")]
     public Item knifeHandle;
+    [Tooltip("Handle + blade combine into this the moment both are in the inventory (Inventory.CheckKnifeCombining), so "
+           + "picking the handle up with the blade already on him leaves no handle: it counts too.")]
+    public Item combinedKnife;
 
     [Header("Actors")]
     public GameObject coward;
@@ -124,6 +132,8 @@ public class CowardMeetingCutscene : MonoBehaviour
     [Range(0f, 1f)] public float surrender = 0.9f;
     [Tooltip("Open timeline times: his hands are fully up by surrenderUp and start coming down at surrenderDown; the builder sets them.")]
     public float surrenderUp = 7.1f, surrenderDown = 26.2f;
+    [Tooltip("The same in the pipe Open.")]
+    public float pipeSurrenderUp = 7.1f, pipeSurrenderDown = 24f;
     [Tooltip("Where his wrists go with his hands up: from each shoulder joint, in his space (x outward, y up, z forward).")]
     public Vector3 handsUpOffset = new Vector3(0.16f, 0.16f, 0.32f);
 
@@ -145,6 +155,10 @@ public class CowardMeetingCutscene : MonoBehaviour
     readonly List<Behaviour> disabledPlayerBehaviours = new List<Behaviour>();
     PlayableDirector current;
     int currentPhase = -1;
+    // no gun on him: the pipe Open, and the pipe in his hand through the rest
+    bool withPipe;
+    PlayableDirector OpenPlaying => withPipe && openPipe != null ? openPipe : open;
+    const int OpenPipePhase = 4;
     bool running, skipping, gameplayCameraSnapped;
     float skipHeld;
     Vector3 startPos; float startYaw;
@@ -185,7 +199,7 @@ public class CowardMeetingCutscene : MonoBehaviour
             tippedChairPivot.SetLocalPositionAndRotation(tippedChairLocalPosition, Quaternion.Euler(tippedChairLocalEuler));
     }
 
-    IEnumerable<PlayableDirector> Directors() { yield return open; yield return versionA; yield return versionB; yield return end; }
+    IEnumerable<PlayableDirector> Directors() { yield return open; yield return openPipe; yield return versionA; yield return versionB; yield return end; }
 
     void OnTriggerEnter(Collider other)
     {
@@ -198,7 +212,8 @@ public class CowardMeetingCutscene : MonoBehaviour
     {
         if (Player.instance == null || Player.instance.inventory == null) return false;
         foreach (var stack in Player.instance.inventory.GetItems())
-            if (stack.item != null && (stack.item == knifeHandle || (knifeHandle == null && stack.item.name == "Knife Handle"))) return true;
+            if (stack.item != null && (stack.item == knifeHandle || (knifeHandle == null && stack.item.name == "Knife Handle")
+                                       || stack.item == combinedKnife || (combinedKnife == null && stack.item.name == "Knife"))) return true;
         return false;
     }
 
@@ -211,7 +226,10 @@ public class CowardMeetingCutscene : MonoBehaviour
         running = true; IsPlaying = true;
         if (trigger != null) trigger.enabled = false;
 
-        // gun away (the cutscene raises it itself), no input, no damage
+        // gun away (the cutscene raises it itself), no input, no damage. No gun on him: he threatens the coward with the
+        // pipe instead (the pipe Open); with a gun the pipe is put away, even if it was the one in his hand
+        withPipe = player.inventory == null || !player.inventory.HasWeapon();
+        PlayerMeleeWeapon.SetCutscene(withPipe ? PlayerMeleeWeapon.CutsceneHold.Carry : PlayerMeleeWeapon.CutsceneHold.Away);
         if (player.playerWeaponSystem != null) player.playerWeaponSystem.ExitOutOfAiming();
         DisableBehaviour(player.GetComponent<PlayerMovement>());
         DisableBehaviour(player.playerWeaponSystem);
@@ -425,7 +443,7 @@ public class CowardMeetingCutscene : MonoBehaviour
     {
         var order = new List<(PlayableDirector d, int phase)>
         {
-            (open, 0),
+            (OpenPlaying, OpenPlaying == openPipe ? OpenPipePhase : 0),
             PlaysB ? (versionB, 2) : (versionA, 1),
             (end, 3),
         };
@@ -445,6 +463,8 @@ public class CowardMeetingCutscene : MonoBehaviour
         {
             if (d == null) continue;
             current = d; currentPhase = phase;
+            // from A / B on the timelines pose him (the pipe hangs at his side)
+            if (withPipe && phase != OpenPipePhase) PlayerMeleeWeapon.SetCutscene(PlayerMeleeWeapon.CutsceneHold.Timeline);
             d.time = 0; d.Play(); d.Evaluate();
             if (previous != null) previous.Stop();     // after the next one has posed everything, so nothing pops for a frame
             else if (fade != null && startFade > 0f) fade.FadeIn(startFade * 1.6f);
@@ -479,6 +499,7 @@ public class CowardMeetingCutscene : MonoBehaviour
         }
         foreach (var b in disabledPlayerBehaviours) if (b != null) b.enabled = true;
         disabledPlayerBehaviours.Clear();
+        PlayerMeleeWeapon.SetCutscene(PlayerMeleeWeapon.CutsceneHold.None);
         if (headLook != null) { headLook.targetWeight = 0f; headLook.weight = 0f; }
         if (cowardHeadLook != null) { cowardHeadLook.targetWeight = 0f; cowardHeadLook.weight = 0f; }
         if (cowardGrab != null) { cowardGrab.targetWeight = 0f; cowardGrab.weight = 0f; }
@@ -555,6 +576,7 @@ public class CowardMeetingCutscene : MonoBehaviour
             if ((now - was).sqrMagnitude > 1f && camerasRoot != null)
                 foreach (var vc in camerasRoot.GetComponentsInChildren<CinemachineVirtualCameraBase>())
                     vc.PreviousStateIsValid = false;
+            if (currentPhase == OpenPipePhase) PipeOpenAnimation(now - was, t, phase);
         }
         if (headLook != null && phase.headLook != null && phase.headLook.Length > 0)
             headLook.targetWeight = Step(phase.headLook, t);
@@ -588,6 +610,21 @@ public class CowardMeetingCutscene : MonoBehaviour
         }
 
         HandleSkip();
+    }
+
+    // The pipe Open has no Khalid track: his Animator Controller plays, fed what PlayerMovement would feed it (it is off) -
+    // the walk at the speed the keys move him - and the pipe carried / raised at the coward as in play
+    void PipeOpenAnimation(Vector3 moved, float t, Phase phase)
+    {
+        bool raised = phase.pipeRaised != null && phase.pipeRaised.Length > 0 && Step(phase.pipeRaised, t) > 0.5f;
+        PlayerMeleeWeapon.SetCutscene(raised ? PlayerMeleeWeapon.CutsceneHold.Raised : PlayerMeleeWeapon.CutsceneHold.Carry);
+        if (khalidAnim == null) return;
+        float dt = Mathf.Max(Time.deltaTime, 1e-4f);
+        float speed = new Vector2(moved.x, moved.z).magnitude / dt;
+        khalidAnim.SetFloat("Velocity", Mathf.MoveTowards(khalidAnim.GetFloat("Velocity"), speed, 5f * dt));
+        khalidAnim.SetFloat("y", Mathf.MoveTowards(khalidAnim.GetFloat("y"), speed > 0.2f ? 1f : 0f, 5f * dt));
+        khalidAnim.SetFloat("x", 0f);
+        khalidAnim.SetBool("Turning", false);
     }
 
     // The coward's mover is placed after the timeline has evaluated this frame (Update only sees last frame's time: on
@@ -653,10 +690,12 @@ public class CowardMeetingCutscene : MonoBehaviour
 
     void PoseLayers()
     {
-        if (!running || cPose == null || coward == null || !coward.activeInHierarchy || current != open || open == null) { HandsUp(0f); return; }
-        float t = (float)open.time;
+        var openNow = OpenPlaying;
+        if (!running || cPose == null || coward == null || !coward.activeInHierarchy || current != openNow || openNow == null) { HandsUp(0f); return; }
+        float t = (float)openNow.time;
+        float up = withPipe ? pipeSurrenderUp : surrenderUp, down = withPipe ? pipeSurrenderDown : surrenderDown;
         float scared = scaredWalk * (1f - Ramp(t, scaredWalkEnd - 0.6f, scaredWalkEnd));
-        float hands = surrender * Ramp(t, surrenderUp - 0.6f, surrenderUp) * (1f - Ramp(t, surrenderDown, surrenderDown + 0.8f));
+        float hands = surrender * Ramp(t, up - 0.6f, up) * (1f - Ramp(t, down, down + 0.8f));
         HandsUp(hands);
         if (scared <= 0f && hands <= 0f) return;
         scaredMuscles ??= MuscleIndices(ScaredPose);

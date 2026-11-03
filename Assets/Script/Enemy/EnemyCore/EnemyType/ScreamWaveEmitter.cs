@@ -14,7 +14,14 @@ public class ScreamWaveEmitter : MonoBehaviour
     public float lifetime = 0.85f;
     public float interval = 0.22f;
 
-    class Shell { public Transform t; public Material m; public float born; public Vector3 at; }
+    [Tooltip("The horde's chorus (EmitBig): bigger, slower, stronger shells with a dark edge (bending flat sandstorm fog shows "
+           + "nothing, the edge reads against it). Medium-sized on purpose: a shell bigger than the gap to the camera swallows it "
+           + "and can't be seen from inside.")]
+    public float bigRadius = 8f, bigLifetime = 1.6f, bigInterval = 0.18f, bigStrength = 0.2f;
+    [Tooltip("Rim colour of the chorus shells, added to the picture (negative = darkens); w = amount.")]
+    public Vector4 bigTint = new Vector4(-0.9f, -0.85f, -0.8f, 0.45f);
+
+    class Shell { public Transform t; public Material m; public float born; public Vector3 at; public float radius, life; }
     readonly List<Shell> shells = new List<Shell>();
     static Mesh sphere;
     float nextShell;
@@ -24,12 +31,20 @@ public class ScreamWaveEmitter : MonoBehaviour
     {
         if (material == null || Time.time < nextShell) return;
         nextShell = Time.time + interval;
-        Spawn();
+        Spawn(maxRadius, lifetime, material.GetFloat("_Strength"), material.GetVector("_Tint"));
+    }
+
+    /// <summary>The chorus: call every frame while he screams - a huge shell every `bigInterval`.</summary>
+    public void EmitBig()
+    {
+        if (material == null || Time.time < nextShell) return;
+        nextShell = Time.time + bigInterval;
+        Spawn(bigRadius, bigLifetime, bigStrength, bigTint);
     }
 
     Vector3 Mouth => origin != null ? origin.position + transform.forward * 0.12f : transform.position + Vector3.up * 1.75f + transform.forward * 0.25f;
 
-    void Spawn()
+    void Spawn(float radius, float life, float strength, Vector4 tint)
     {
         Shell s = null;
         foreach (var x in shells) if (!x.t.gameObject.activeSelf) { s = x; break; }
@@ -45,6 +60,10 @@ public class ScreamWaveEmitter : MonoBehaviour
             shells.Add(s);
         }
         s.born = Time.time;
+        s.radius = radius;
+        s.life = life;
+        s.m.SetFloat("_Strength", strength);
+        s.m.SetVector("_Tint", tint);           // as a vector: no gamma conversion of the negative (darkening) colour
         s.at = Mouth;
         s.t.position = s.at;
         s.t.localScale = Vector3.one * 0.2f;
@@ -56,11 +75,11 @@ public class ScreamWaveEmitter : MonoBehaviour
         foreach (var s in shells)
         {
             if (!s.t.gameObject.activeSelf) continue;
-            float u = (Time.time - s.born) / lifetime;
+            float u = (Time.time - s.born) / s.life;
             if (u >= 1f) { s.t.gameObject.SetActive(false); continue; }
             float e = 1f - (1f - u) * (1f - u);          // fast out, slowing
             s.t.position = s.at;
-            s.t.localScale = Vector3.one * Mathf.Lerp(0.2f, maxRadius * 2f, e);
+            s.t.localScale = Vector3.one * Mathf.Lerp(0.2f, s.radius * 2f, e);
             s.m.SetFloat("_Fade", Mathf.Pow(1f - u, 1.4f) * Mathf.Clamp01(u / 0.08f));
         }
     }

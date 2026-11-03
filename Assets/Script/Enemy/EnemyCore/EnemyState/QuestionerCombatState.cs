@@ -2,7 +2,12 @@ using UnityEngine;
 
 /// <summary>
 /// The Questioner's fight (spec moveset). One state with its own phases, driven by timers (spec numbers in QuestionerTuning):
+///  Horde    - hordeMode (the Alley 3 action sequence): no turns - walks in and screams on his own cooldown; when close,
+///             a few at a time grab (only the ones in front of Khalid) or run in and claw (the ones beside / behind him),
+///             each with a horde-wide break after it. A missed grab goes straight back to screaming (UpdateHorde).
 ///  Free     - token holder: walks at Khalid while strafing left / right (direction every 0.8-1.6 s); others circle at 6 -> 4 m.
+///             Turns: after each attack the token passes to the one that has waited longest; hitting one out of turn makes
+///             him take it at once (QuestionerEnemy.Provoke).
 ///  Scream   - wind-up 0.8 (inhale, mouth splits, weak point bigger) / active 1.0 / recovery 0.6. Within 4 m Khalid is slowed
 ///             30% for 1 s; within 4 m - or 12 m while he aims down the sights - his screen blurs and echoes, his aim sways
 ///             and his ears ring for 6 s. Khalid aiming at him is the scream's cue: he answers it first (85%).
@@ -11,10 +16,9 @@ using UnityEngine;
 ///             off - all on the over-the-shoulder grab camera. A pipe strike landing in the lunge (the last 0.3 s of the
 ///             wind-up or the rush) counters it: he's knocked back and stumbles.
 ///  Swipe    - wind-up 0.4 / two claw swipes 0.3 s apart, 10 each / recovery 0.7.
-///  Hurt     - a pipe strike between moves: a short recoil (0.45 s), then one of two answers (never the scream):
-///             the feint - backs off and drifts left or right to a random distance, for a random time, then the grab (a test
-///             of patience); or straight back in with the claws. Strikes during any other move only hurt him (damage +
-///             flinch); the move carries on.
+///  Hurt     - a pipe strike between moves or during the claws: a short recoil (0.45 s), then always the feint (never the
+///             scream or the claws) - backs off and drifts left or right to a random distance, for a random time, then the
+///             grab (a test of patience). Strikes during the scream only hurt him (damage + flinch); it carries on.
 ///  Stagger  - mouth hit: knees, hands over the mouth 4 s, stands up 0.8. Melee does double, a second mouth hit kills.
 /// Movement uses NavMeshAgent.Move (stays on the navmesh, no path), he always faces Khalid; the animator gets the local
 /// velocity (MoveX / MoveZ) for the Q_Locomotion blend tree and plays the move states by name.
@@ -44,9 +48,17 @@ public class QuestionerCombatState : EnemyState
     bool hurtPlayer;
     float feintUntil, feintDist;
     bool Feinting => feintUntil > 0f;
+    bool hadToken, wasInGrab, wasInClaw;
+    bool clawRun;
+    float clawRunT;
+    bool chorus, chorusLoud, chorusBig, chorusHitPending;
 
     public bool IsStaggered => phase == Phase.StaggerDown || phase == Phase.StaggerLoop || phase == Phase.StaggerUp;
     public bool IsGrabbing => phase == Phase.GrabHold || phase == Phase.GrabScream || phase == Phase.Bite;
+    /// <summary>Anywhere in the grab, wind-up to bite.</summary>
+    public bool InGrabMove => phase == Phase.GrabWindup || phase == Phase.GrabRush || IsGrabbing;
+    /// <summary>Horde: running in for the claws, or clawing.</summary>
+    public bool InClawMove => clawRun || phase == Phase.Swipe;
     /// <summary>The grab lunge: a pipe strike landing now knocks him back (the end of the wind-up and the rush).</summary>
     public bool IsCounterable => phase == Phase.GrabRush || (phase == Phase.GrabWindup && phaseT >= T.grabWindup - T.counterWindow);
     public string PhaseName => phase.ToString();
@@ -95,6 +107,8 @@ public class QuestionerCombatState : EnemyState
         nextDecision = now + T.firstMoveDelay;
         nextScream = Mathf.Max(nextScream, now + T.firstMoveDelay);
         nextGrab = Mathf.Max(nextGrab, now + T.firstMoveDelay);
+        // a horde arrives together: stagger their first screams
+        if (q.hordeMode) nextScream = Mathf.Max(nextScream, now + Random.Range(T.firstMoveDelay, T.hordeScreamCooldownMax));
         noSightTime = 0f;
         q.ResetMouth();
         SetPhase(Phase.Free, "Q_Locomotion", 0.25f);
@@ -103,6 +117,10 @@ public class QuestionerCombatState : EnemyState
 
     public override void Exit()
     {
+        chorus = false;
+        if (wasInGrab && q.hordeMode) q.HordeGrabEnded();
+        if (wasInClaw && q.hordeMode) q.HordeClawEnded();
+        wasInGrab = wasInClaw = clawRun = false;
         ForceReleasePlayer();
         q.SetWeakpointScale(1f);
         q.ResetMouth();
@@ -142,19 +160,32 @@ public class QuestionerCombatState : EnemyState
             case Phase.Free: UpdateFree(dt, d, dir); break;
 
             case Phase.Hurt:
-                // recoils where he stands, still turning to Khalid - and comes straight back with another move
+                // recoils where he stands, still turning to Khalid - then backs off for the grab (claws straight back in
+                // after being hit felt unfair: user 2026-11-03)
                 Brake(dt); Face(dir, 120f);
                 if (phaseT >= T.hurtTime)
                 {
-                    // the claws if Khalid is still within reach (and the dice say so), otherwise the feint into a grab
-                    if (d <= T.swipeReach && Random.value >= T.hurtFeintChance) StartSwipe();
+                    if (q.hordeMode) EndMove();     // the horde just carries on
                     else BeginFeint();
                 }
                 break;
 
             case Phase.ScreamWindup:
                 Brake(dt); Face(dir, 360f);
-                if (phaseT >= T.screamWindup)
+                if (phaseT >= T.screamWindup && chorus)
+                {
+                    // the horde's chorus: the nearest few voice it, the rest of the near ones fill the air with huge waves;
+                    // the first to scream shakes Khalid, and the blur reaches him a moment later (so he sees the waves first)
+                    SetPhase(Phase.ScreamActive, "Q_Scream", 0.1f);
+                    q.SetMouth(1.15f, 0.25f);
+                    if (chorusLoud) q.PlayScream(0.9f);
+                    q.EmitScreamWave(chorusBig);
+                    var pcc = PlayerCloseCombat.instance;
+                    chorusHitPending = pcc != null && q.ClaimChorusHit();
+                    if (chorusHitPending) pcc.Shake(0.8f, T.screamActive + 0.8f);
+                    q.SetWeakpointScale(1f);
+                }
+                else if (phaseT >= T.screamWindup)
                 {
                     SetPhase(Phase.ScreamActive, "Q_Scream", 0.1f);
                     q.SetMouth(1.15f, 0.25f);
@@ -171,9 +202,15 @@ public class QuestionerCombatState : EnemyState
 
             case Phase.ScreamActive:
                 Brake(dt);
-                if (phaseT < T.screamActive * 0.85f) q.EmitScreamWave();
+                if (phaseT < T.screamActive * 0.85f) q.EmitScreamWave(chorus && chorusBig);
+                if (chorusHitPending && phaseT >= T.hordeChorusHitDelay && PlayerCloseCombat.instance != null)
+                {
+                    chorusHitPending = false;
+                    PlayerCloseCombat.instance.ApplyScream(T.screamSlow, T.screamSlowTime, T.screamEffectTime, 1f);
+                }
                 if (phaseT >= T.screamActive)
                 {
+                    chorus = false;
                     SetPhase(Phase.ScreamRecover, "Q_ScreamRecover", 0.2f);
                     q.ResetMouth();
                 }
@@ -299,6 +336,13 @@ public class QuestionerCombatState : EnemyState
                 }
                 break;
         }
+        // the horde's grabs are spaced out from the end of the last one
+        bool inGrab = InGrabMove;
+        if (wasInGrab && !inGrab && q.hordeMode) q.HordeGrabEnded();
+        wasInGrab = inGrab;
+        bool inClaw = InClawMove;
+        if (wasInClaw && !inClaw && q.hordeMode) q.HordeClawEnded();
+        wasInClaw = inClaw;
         KeepOffPlayer();
     }
 
@@ -327,9 +371,14 @@ public class QuestionerCombatState : EnemyState
             return;
         }
 
+        if (q.hordeMode) { UpdateHorde(dt, d, dir); return; }
+
         Vector3 right = Vector3.Cross(Vector3.up, dir);
         Vector3 desired;
         bool token = q.TryTakeToken();
+        // his turn came round: a beat before the first move
+        if (token && !hadToken) nextDecision = Mathf.Max(nextDecision, Time.time + T.firstMoveDelay);
+        hadToken = token;
         bool repositioning = Time.time < repositionUntil;
         if (token && Feinting)
         {
@@ -419,6 +468,68 @@ public class QuestionerCombatState : EnemyState
         }
     }
 
+    /// <summary>A horde Questioner: no turns. Walks in to hordeStopDistance and holds there drifting left / right, screams on
+    /// his own cooldown (spaced out across the horde), and grabs when close if fewer than hordeMaxGrabbers are grabbing.</summary>
+    void UpdateHorde(float dt, float d, Vector3 dir)
+    {
+        if (clawRun)
+        {
+            // got the claws: runs straight in to claw distance (gives up if Khalid outruns him)
+            clawRunT += dt;
+            float run = T.hordeClawRunSpeed * Mathf.Clamp01((d - T.swipeRange * 0.8f) / 0.5f);
+            vel = Vector3.MoveTowards(vel, dir * run + Separation(), T.acceleration * 2f * dt);
+            MoveAgent(vel * dt);
+            Face(dir, 360f);
+            SendLocomotion(vel);
+            if (d <= T.swipeRange) { clawRun = false; StartSwipe(); }
+            else if (clawRunT > 2.5f) { clawRun = false; nextDecision = Time.time + T.decisionInterval; }
+            return;
+        }
+
+        Vector3 right = Vector3.Cross(Vector3.up, dir);
+        strafeTimer -= dt;
+        if (strafeTimer <= 0f)
+        {
+            strafeDir = -strafeDir;
+            strafeTimer = Random.Range(T.strafeSwitchMin, T.strafeSwitchMax);
+        }
+        float fwd = T.walkSpeed * Mathf.Clamp((d - T.hordeStopDistance) / 0.8f, -0.6f, 1f);
+        Vector3 desired = dir * fwd + right * (strafeDir * T.strafeSpeed * 0.5f) + Separation();
+        vel = Vector3.MoveTowards(vel, desired, T.acceleration * dt);
+        MoveAgent(vel * dt);
+        Face(dir, T.turnSpeed);
+        SendLocomotion(vel);
+
+        if (Time.time < nextDecision) return;
+        nextDecision = Time.time + T.decisionInterval;
+        // facing a crowd of them for the first time: they all scream at once
+        if (q.TryHordeChorus()) return;
+        if (!q.HasLineOfSightToPlayer()) return;
+        bool inFront = InFrontOfPlayer();
+        if (inFront && Time.time >= nextGrab && d >= T.hordeGrabMin && d <= T.hordeGrabMax && Random.value < T.grabChance && q.TryHordeGrab())
+            StartGrab();
+        else if (!inFront && d <= T.hordeClawRange && Random.value < T.grabChance && q.TryHordeClaw())
+        {
+            clawRun = true;
+            clawRunT = 0f;
+            q.PlayCue(q.hissSFX);
+        }
+        else if (Time.time >= nextScream && d <= T.screamMax && q.TryHordeScream())
+            StartScream();
+    }
+
+    /// <summary>In front of Khalid: within hordeFrontAngle of the way he's running (or facing, standing still).</summary>
+    bool InFrontOfPlayer()
+    {
+        var p = Player.instance;
+        Vector3 ahead = p.controller != null ? p.controller.velocity : Vector3.zero;
+        ahead.y = 0f;
+        if (ahead.sqrMagnitude < 0.25f) { ahead = p.transform.forward; ahead.y = 0f; }
+        Vector3 toMe = q.transform.position - p.transform.position;
+        toMe.y = 0f;
+        return Vector3.Angle(ahead, toMe) <= T.hordeFrontAngle;
+    }
+
     void StartGrab()
     {
         feintUntil = 0f;
@@ -428,12 +539,25 @@ public class QuestionerCombatState : EnemyState
         q.SetMouth(0.45f);
     }
 
-    void StartScream()
+    /// <summary>The horde's chorus (QuestionerEnemy.TryHordeChorus): screams with the rest of the horde, `delay` s late so
+    /// they don't move as one; `loud` = one of the few nearest that voice it, `big` = throws the huge shells.</summary>
+    public void StartChorus(float delay, bool loud, bool big)
+    {
+        if (phase != Phase.Free && phase != Phase.Release) return;
+        clawRun = false;
+        chorus = true;
+        chorusLoud = loud;
+        chorusBig = big;
+        StartScream(loud);
+        phaseT = -delay;
+    }
+
+    void StartScream(bool cue = true)
     {
         feintUntil = 0f;
-        nextScream = Time.time + T.screamCooldown;
+        nextScream = Time.time + (q.hordeMode ? Random.Range(T.hordeScreamCooldownMin, T.hordeScreamCooldownMax) : T.screamCooldown);
         SetPhase(Phase.ScreamWindup, "Q_ScreamWindup", 0.15f);
-        q.PlayCue(q.inhaleSFX);
+        if (cue) q.PlayCue(q.inhaleSFX);
         q.SetMouth(1f);
         q.SetWeakpointScale(T.weakpointWindupScale);
     }
@@ -441,7 +565,7 @@ public class QuestionerCombatState : EnemyState
     Vector3 Separation()
     {
         Vector3 push = Vector3.zero;
-        foreach (var e in Object.FindObjectsByType<QuestionerEnemy>(FindObjectsSortMode.None))
+        foreach (var e in QuestionerEnemy.All)
         {
             if (e == q || e.health == null || e.health.IsDead) continue;
             Vector3 away = q.transform.position - e.transform.position;
@@ -459,11 +583,13 @@ public class QuestionerCombatState : EnemyState
         vel = Vector3.zero;
         if (hurtPlayer)
         {
-            // he got Khalid: give him room to recover and get ready again
+            // he got Khalid: give him room to recover and get ready again (the next Questioner's turn waits as long)
             hurtPlayer = false;
+            if (q.EndTurn(T.afterHitRepositionMin)) { repositionUntil = feintUntil = 0f; SetPhase(Phase.Free, "Q_Locomotion", 0.25f); return; }
             BeginReposition(Random.Range(T.afterHitRepositionMin, T.afterHitRepositionMax), Random.Range(3.0f, 4.0f));
             return;
         }
+        q.EndTurn(T.turnGap);
         SetPhase(Phase.Free, "Q_Locomotion", 0.25f);
         nextDecision = Time.time + Random.Range(T.moveGapMin, T.moveGapMax);
     }
@@ -492,8 +618,8 @@ public class QuestionerCombatState : EnemyState
     }
 
     /// <summary>A pipe strike (the damage + flinch are already done). Timed into the grab lunge it counters the grab: he's
-    /// knocked back and stumbles. Between moves he recoils (Hurt) and comes straight back with another move. During any other
-    /// move it only hurts him: the move carries on.</summary>
+    /// knocked back and stumbles. Between moves or in the claws he recoils (Hurt), backs off and grabs. During the scream or
+    /// the early grab wind-up it only hurts him: the move carries on.</summary>
     public void OnMeleeHit()
     {
         if (IsStaggered || IsGrabbing) return;
@@ -503,7 +629,10 @@ public class QuestionerCombatState : EnemyState
             BeginStumble(T.counterPushDistance);
             return;
         }
-        if (phase != Phase.Free && phase != Phase.Release) return;
+        // the claws are interrupted too: every pipe strike that isn't a counter sends him back for the grab
+        if (phase != Phase.Free && phase != Phase.Release && phase != Phase.Swipe) return;
+        clawRun = false;
+        chorus = false;
         // he'd just hurt Khalid and was backing off - Khalid is back at him, so no more waiting
         hurtPlayer = false;
         repositionUntil = 0f;
@@ -512,6 +641,15 @@ public class QuestionerCombatState : EnemyState
         q.ResetMouth();
         vel = Vector3.zero;
         SetPhase(Phase.Hurt, "Q_Hurt", 0.06f);
+    }
+
+    /// <summary>Khalid hit him while it was another Questioner's turn: he has taken the turn and comes straight at him (a pipe
+    /// strike goes on into the recoil and the grab, see OnMeleeHit).</summary>
+    public void OnProvoked()
+    {
+        hadToken = true;
+        repositionUntil = 0f;
+        if (phase == Phase.Free && !Feinting) nextDecision = Time.time;
     }
 
     // ---------------- grab ----------------
@@ -544,10 +682,11 @@ public class QuestionerCombatState : EnemyState
         float travelled = (q.transform.position - rushStart).magnitude;
         if (travelled >= T.rushMaxDistance || blockedTime > 0.15f)
         {
-            // missed: skids to a stop
+            // missed: skids to a stop (a horde one goes straight back to screaming)
             SetPhase(Phase.Release, "Q_Locomotion", 0.25f);
             q.ResetMouth();
             phaseT = 0.8f - T.grabMissRecovery;
+            if (q.hordeMode) nextScream = Mathf.Min(nextScream, Time.time + T.grabMissRecovery);
         }
     }
 
@@ -638,6 +777,8 @@ public class QuestionerCombatState : EnemyState
     public void BeginStagger()
     {
         feintUntil = 0f;
+        clawRun = false;
+        chorus = false;
         ForceReleasePlayer();
         q.ReleaseToken();
         q.SetWeakpointScale(1f);

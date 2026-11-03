@@ -22649,7 +22649,6 @@ MonoBehaviour:
   inventory: {fileID: 2386842303776306197}
   controller: {fileID: 5031915359852961710}
   playerStability: {fileID: 902372944366994762}
-  bloodEffectHandler: {fileID: 0}
   playerMovementLimiter: {fileID: 9196481454461096975}
   damageFillImage: {fileID: 0}
   damageEffectAlpha: 0.2
@@ -23184,7 +23183,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 115836b3a7360e54d98abdaa12232d97, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerMeleeWeapon
-  selectInput: {fileID: 4456174712544445530, guid: 5b380c80d4897454e9a01e859512909f,
+  selectInput: {fileID: 3761133838287700866, guid: 5b380c80d4897454e9a01e859512909f,
     type: 3}
   aimInput: {fileID: 1618620247075244416, guid: 5b380c80d4897454e9a01e859512909f,
     type: 3}
@@ -23194,6 +23193,12 @@ MonoBehaviour:
     type: 3}
   lookInput: {fileID: -5630151704836100654, guid: 5b380c80d4897454e9a01e859512909f,
     type: 3}
+  gunSelectInput: {fileID: 8413434831702666378, guid: 5b380c80d4897454e9a01e859512909f,
+    type: 3}
+  switchInput: {fileID: -6607558110830027163, guid: 5b380c80d4897454e9a01e859512909f,
+    type: 3}
+  switchTime: 1
+  gunDrawClip: {fileID: 8300000, guid: 726fbe2a70559164085593af871f8e63, type: 3}
   weaponItem: {fileID: 11400000, guid: 3c84af34d2b5615418d6136448475e4f, type: 2}
   pipe: {fileID: 30975931321088045}
   animator: {fileID: 7686741397361916901}
@@ -23231,8 +23236,8 @@ MonoBehaviour:
   lockRange: 9
   lockAngle: 70
   keepRange: 12
-  damage: 20
-  downedDamage: 40
+  damage: 50
+  downedDamage: 50
   reach: 2
   hitArc: 150
   knockbackScale: 2
@@ -23244,6 +23249,7 @@ MonoBehaviour:
   projectileWindow: 0.06
   projectileReach: 2.3
   projectileMaxHeight: 2.8
+  lockReach: 1.8
   swingClips:
   - {fileID: 8300000, guid: c275e5f3d6c9ca340b958d2be963efc9, type: 3}
   - {fileID: 8300000, guid: a2b4a05573c71c340a6e382882d67f96, type: 3}
@@ -23263,6 +23269,8 @@ MonoBehaviour:
   carryRootPos: {x: 7.836285e-14, y: -0.000032023312, z: 0.008986075}
   carryRootRot: {x: -0.000000094156974, y: 0.7071069, z: 0.70710677, w: -0.00000009415697}
   hasCarryRoot: 1
+  oneHandCarryTilt: 15
+  oneHandGrip: 0.12
 --- !u!114 &2601698654427394912
 MonoBehaviour:
   m_ObjectHideFlags: 0

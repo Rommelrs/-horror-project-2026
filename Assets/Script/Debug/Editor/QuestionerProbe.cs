@@ -9,8 +9,8 @@ using UnityEngine.InputSystem.LowLevel;
 ///   "far"     - Khalid stands 7 m in front, no input, 25 s: grab (instant bite) / scream / swipe flow
 ///   "counter" - pipe raised (fake right mouse); swings (left click) timed so the hit lands in the grab rush: he stumbles back
 ///   "late"    - like counter, but the swing is too late: he bites
-///   "hurt"    - pipe raised, swings whenever he's in reach between moves: recoil -> the feint into a grab, or the claws
-///   "ads"     - gun out (key 1), aiming down the sights from 8 m: he should answer with the scream; captures the ADS view
+///   "hurt"    - pipe raised, swings whenever he's in reach between moves or clawing: recoil -> backs off -> the grab
+///   "ads"     - gun out (key 2), aiming down the sights from 8 m: he should answer with the scream; captures the ADS view
 ///   "scream"  - stays 3.3-4 m away; grabs the player's view (screen echo) and a side view (sound-wave shells) in the scream
 ///   "stagger" - mouth hit -> kneel; melee-style body hit (downed damage check); second mouth hit -> kneeling death
 /// Logs "QPROBE <test>" + every phase change (time, distance, Khalid HP, grabbed, speed multiplier) to Editor.log, and
@@ -170,7 +170,7 @@ public static class QuestionerProbe
         }
         bool ready = PlayerMeleeWeapon.Ready && !PlayerMeleeWeapon.Attacking;
         // the pipe tests: take the pipe out (key 3) if a gun is in his hands
-        if (aimHeld && !PlayerMeleeWeapon.Equipped && frame % 20 == 5) InputSystem.QueueStateEvent(kb, new KeyboardState(Key.Digit3));
+        if (aimHeld && !PlayerMeleeWeapon.Equipped && frame % 20 == 5) InputSystem.QueueStateEvent(kb, new KeyboardState(Key.Digit1));
         else if (aimHeld && frame % 20 == 9) Release();
         switch (test)
         {
@@ -190,8 +190,8 @@ public static class QuestionerProbe
             case "ads":
             {
                 var ws = p.playerWeaponSystem;
-                // key 1 (the pistol) held a few frames, a moment after the fake keyboard appeared
-                if (step == 0 && stepT > 0.3f) { InputSystem.QueueStateEvent(kb, new KeyboardState(Key.Digit1)); step = 1; stepT = 0f; }
+                // key 2 (the pistol) held a few frames, a moment after the fake keyboard appeared
+                if (step == 0 && stepT > 0.3f) { InputSystem.QueueStateEvent(kb, new KeyboardState(Key.Digit2)); step = 1; stepT = 0f; }
                 else if (step == 1 && stepT > 0.15f) { Release(); step = 2; stepT = 0f; }
                 else if (step == 2 && stepT > 0.8f) { ws.aimingOverrideForTesting = true; step = 3; sb.AppendFormat("  ADS on, pipe equipped={0}" + NL, PlayerMeleeWeapon.Equipped); }
                 if (phase == "ScreamActive" && screamAt < 0f) screamAt = Time.time;
@@ -209,7 +209,7 @@ public static class QuestionerProbe
                 break;
             }
             case "hurt":
-                if (ready && d < 1.9f && (phase == "Free" || phase == "Release") && Time.time - lastMeleeT > 0.4f)
+                if (ready && d < 1.9f && (phase == "Free" || phase == "Release" || phase == "Swipe") && Time.time - lastMeleeT > 0.4f)
                 {
                     lastMeleeT = Time.time;
                     Swing(string.Format("d={0:F2} phase={1}", d, phase));

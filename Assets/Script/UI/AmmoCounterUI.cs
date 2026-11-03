@@ -2,9 +2,10 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // Small "7 / 78" ammo readout in the bottom-right corner (rounds in the magazine / spare rounds in the
-// inventory). It is only on screen while it is useful: while aiming (that is when you shoot), during a
-// reload, and briefly after either ends or after the numbers change (e.g. picking up ammo). The rest of
-// the time it is faded out, so there is no permanent HUD.
+// inventory), with the icon of the weapon that is out beside it. It is only on screen while it is useful: while
+// aiming (that is when you shoot), during a reload, and briefly after either ends or after the numbers change
+// (e.g. picking up ammo), or after switching weapons. With the pipe out only its icon shows (when it is raised or
+// just taken out). The rest of the time it is faded out, so there is no permanent HUD.
 public class AmmoCounterUI : MonoBehaviour
 {
     public const string PrefKey = "AmmoCounterEnabled";
@@ -49,11 +50,23 @@ public class AmmoCounterUI : MonoBehaviour
     [SerializeField] int magazineFontSize = 36;
     [SerializeField] int reserveFontSize = 26;
 
+    [Header("Weapon icon")]
+    [SerializeField] Image weaponIcon;
+    [SerializeField] Sprite gunIcon;
+    [SerializeField] Sprite pipeIcon;
+    [Tooltip("How long it shows after switching between the pipe and the gun.")]
+    [SerializeField] float lingerAfterSwitch = 2f;
+
     PlayerWeaponSystem weapon;
     float visibleUntil;
     int shownMagazine = -1;
     int shownReserve = -1;
     bool initialised;
+    bool switchingToPipe;
+
+    void OnEnable() => PlayerMeleeWeapon.OnSwitchStarted += OnSwitchStarted;
+    void OnDisable() => PlayerMeleeWeapon.OnSwitchStarted -= OnSwitchStarted;
+    void OnSwitchStarted(bool toPipe) => switchingToPipe = toPipe;
 
     private void Awake()
     {
@@ -67,10 +80,27 @@ public class AmmoCounterUI : MonoBehaviour
         if (weapon == null && Player.instance != null)
             weapon = Player.instance.playerWeaponSystem;
 
-        bool allowed = weapon != null && Enabled && weapon.weaponIsEnabled && Player.instance != null
+        // the pipe that is out (or about to be): its icon only
+        bool pipe = PlayerMeleeWeapon.Switching ? switchingToPipe : PlayerMeleeWeapon.Equipped;
+        bool allowed = weapon != null && Enabled && (weapon.weaponIsEnabled || pipe) && Player.instance != null
             && !Player.instance.IsDead() && !GameManager.IsPaused;
 
-        if (allowed)
+        if (weaponIcon != null)
+        {
+            weaponIcon.sprite = pipe ? pipeIcon : gunIcon;
+            weaponIcon.enabled = weaponIcon.sprite != null;
+        }
+        label.enabled = !pipe;
+
+        if (allowed && PlayerMeleeWeapon.Switching)
+            visibleUntil = Mathf.Max(visibleUntil, Time.unscaledTime + lingerAfterSwitch);
+
+        if (allowed && pipe)
+        {
+            if (PlayerMeleeWeapon.Ready) visibleUntil = Mathf.Max(visibleUntil, Time.unscaledTime + lingerAfterAim);
+            allowed = Time.unscaledTime < visibleUntil;
+        }
+        else if (allowed)
         {
             float now = Time.unscaledTime;
 

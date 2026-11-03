@@ -147,6 +147,7 @@ MonoBehaviour:
   wanderingSpeed: 1.3
   canHearGunshots: 1
   investigateDuration: 5
+  becomesAggressiveWhenAlerted: 0
   damage: 15
   attackRate: 20
   attackIndexes: 
@@ -460,6 +461,8 @@ MonoBehaviour:
       m_Calls: []
   damageDirection: {x: 0, y: 0, z: 0}
   damageForceMultiplier: 0
+  pendingKnockbackScale: 1
+  pendingMeleeHit: 0
   chaseStartDelayEnabled: 1
   playerDetected: 0
   onPlayerDetected:
@@ -483,6 +486,8 @@ MonoBehaviour:
     weakpointShowDelay: 0.3
     reloadDurationStart: 0.5
     reloadDurationEnd: 1.5
+  startWithoutBags: 0
+  firstReloadDistance: 11
   separationDistance: 2
   separationForce: 1
   enemyLayer:
@@ -502,19 +507,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 800029f8080ce2a499cf38d07bc52fe2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemDrops:
-  - itemPrefab: {fileID: 2754334804066192167, guid: 2eaabf28334e0384b801963e01027ffc,
-      type: 3}
-    dropChance: 40.2
-  - itemPrefab: {fileID: 2754334804066192167, guid: 42707022f265e9145883e82ea170ff9b,
-      type: 3}
-    dropChance: 28.4
-  - itemPrefab: {fileID: 2754334804066192167, guid: 6a045e7d1d636fa428bdfbafc9fa57c6,
-      type: 3}
-    dropChance: 80.5
-  - itemPrefab: {fileID: 2754334804066192167, guid: 4b2f0eb3ce7b2054ba1b09c22dbec721,
-      type: 3}
-    dropChance: 46.4
+  itemDrops: []
   dropOffset: {x: 0, y: 0.5, z: 0}
 --- !u!114 &-7640194765309346968
 MonoBehaviour:

@@ -1,11 +1,12 @@
+using System.Collections;
 using System.Collections.Generic;
 using Cinemachine;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// The player's melee weapon, a steel pipe. Key 3 (d-pad up) takes it out, 1 / 2 go back to the guns; with no gun at all it
-/// is out on its own. All the motion is the user's own filmed takes (QuickMagic, AnimationTools/melee/qm_source.py):
+/// The player's melee weapon, a steel pipe. Key 1 (d-pad up) takes it out, 2 the gun (the mouse wheel flips between them,
+/// see UpdateSelection); with no gun at all it is out on its own. All the motion is the user's own filmed takes (QuickMagic, AnimationTools/melee/qm_source.py):
 /// out, he carries it upright in both hands (upper-body MeleeCarry layer over his own idle / walk / run); hold Aim to
 /// raise it over his right shoulder (the filmed raise when standing), WASD walks and strafes (no sprint) and he keeps
 /// facing the nearest enemy in front of him (with none, the mouse turns him).
@@ -27,6 +28,10 @@ public class PlayerMeleeWeapon : MonoBehaviour
     /// <summary>Raised or swinging: this component moves and turns him, PlayerMovement stays out of it.</summary>
     public static bool Ready => instance != null && instance.ready;
     public static bool Attacking => instance != null && instance.attacking;
+    /// <summary>Putting one weapon away and taking the other out (no aiming / raising meanwhile).</summary>
+    public static bool Switching { get; private set; }
+    /// <summary>A switch starts: true = to the pipe, false = to the gun.</summary>
+    public static event System.Action<bool> OnSwitchStarted;
     /// <summary>Enemy hits / wall clangs so far (test benches read these).</summary>
     public int EnemyHits { get; private set; }
     public int WallHits { get; private set; }
@@ -40,6 +45,13 @@ public class PlayerMeleeWeapon : MonoBehaviour
     [SerializeField] InputActionReference shootInput;
     [SerializeField] InputActionReference moveInput;
     [SerializeField] InputActionReference lookInput;
+    [Tooltip("Takes the gun out instead (key 2) - when there is no PlayerWeaponSwitcher (the Gym's has its own gun keys).")]
+    [SerializeField] InputActionReference gunSelectInput;
+    [Tooltip("Mouse wheel: flips between the pipe and the gun.")]
+    [SerializeField] InputActionReference switchInput;
+    [Tooltip("Seconds to put one weapon away and take the other out.")]
+    [SerializeField] float switchTime = 1f;
+    [SerializeField] AudioClip gunDrawClip;
     [SerializeField] Item weaponItem;
     [Tooltip("The pipe in his right hand.")]
     [SerializeField] GameObject pipe;
@@ -105,8 +117,8 @@ public class PlayerMeleeWeapon : MonoBehaviour
     [SerializeField] float keepRange = 12f;
 
     [Header("Hit")]
-    [SerializeField] int damage = 20;
-    [SerializeField] int downedDamage = 40;
+    [SerializeField] int damage = 50;
+    [SerializeField] int downedDamage = 50;
     [Tooltip("Reach from his centre to the enemy's centre.")]
     [SerializeField] float reach = 2.0f;
     [SerializeField] float hitArc = 150f;
@@ -144,6 +156,8 @@ public class PlayerMeleeWeapon : MonoBehaviour
     CharacterController controller;
 
     bool equipped, selected, ready, hiddenForUse, hiddenForGrab;
+    bool switching, putAway;
+    float wheelReadyAt;
     int moveLayer = -1, carryLayer = -1, upperLayer = -1;
     float carryWeight, upperWeight, raiseElapsed;
     bool raising;
@@ -169,6 +183,12 @@ public class PlayerMeleeWeapon : MonoBehaviour
     [SerializeField, HideInInspector] bool hasCarryRoot;
     Vector3 pipeLocalPos;   // the grip in the right fist (the bake's fist centre), set by the builder
     Quaternion pipeLocalRot;
+    float pipeTail;         // along the pipe (its up axis) from its origin: the taped end (the head is up the axis)
+    [Tooltip("Cutscene clips (CutsceneHold.Timeline): the pipe carried in one hand near its taped end, the head hanging "
+             + "back and this many degrees down from square to the forearm.")]
+    [SerializeField] float oneHandCarryTilt = 15f;
+    [Tooltip("Where the fist holds it then: metres in from the taped end.")]
+    [SerializeField] float oneHandGrip = 0.12f;
 
     Transform shakeCam;
     Quaternion shakeCamRest;
@@ -207,6 +227,20 @@ public class PlayerMeleeWeapon : MonoBehaviour
             if (animator != null)
                 foreach (var t in animator.GetComponentsInChildren<Transform>(true))
                     if (t.name == "hand.l") { leftHand = t; break; }
+            // the pipe's ends along its length (its origin is the grip near the taped end)
+            float lo = float.MaxValue, hi = float.MinValue;
+            foreach (var mf in pipe.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (mf.sharedMesh == null) continue;
+                var b = mf.sharedMesh.bounds;
+                for (int i = 0; i < 8; i++)
+                {
+                    var corner = b.center + Vector3.Scale(b.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+                    float y = pipe.transform.InverseTransformPoint(mf.transform.TransformPoint(corner)).y;
+                    lo = Mathf.Min(lo, y); hi = Mathf.Max(hi, y);
+                }
+            }
+            pipeTail = lo < hi ? lo : 0f;
             BuildAttachments();
         }
     }
@@ -239,13 +273,13 @@ public class PlayerMeleeWeapon : MonoBehaviour
 
     void OnEnable()
     {
-        foreach (var a in new[] { selectInput, aimInput, shootInput, moveInput, lookInput })
+        foreach (var a in new[] { selectInput, aimInput, shootInput, moveInput, lookInput, gunSelectInput, switchInput })
             if (a != null && a.action != null) a.action.Enable();
     }
 
     void OnDisable()
     {
-        if (instance == this) { ready = false; attacking = false; }
+        if (instance == this) { ready = false; attacking = false; switching = putAway = false; Switching = false; }
     }
 
     void OnDestroy()
@@ -347,6 +381,17 @@ public class PlayerMeleeWeapon : MonoBehaviour
         instance.RefreshPipe();
     }
 
+    /// <summary>How a cutscene holds the pipe. None = normal play. Away: put away (a scene with the gun). Carry / Raised: his
+    /// Animator Controller poses him as in play - carried, or the raised stance (the coward meeting without a gun). Timeline:
+    /// a cutscene clip poses him, so the pipe just hangs along his forearm and the carry layer fixes stay off.</summary>
+    public enum CutsceneHold { None, Away, Carry, Raised, Timeline }
+    CutsceneHold cutscene;
+
+    public static void SetCutscene(CutsceneHold hold)
+    {
+        if (instance != null) instance.cutscene = hold;
+    }
+
     /// <summary>Hides the pipe while a Questioner has hold of him (it pokes into the grab camera's shot).</summary>
     public static void SetHiddenForGrab(bool hidden)
     {
@@ -367,6 +412,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
         UpdateShake();
         if (player.IsDead()) { if (equipped) SetEquipped(false); ApplyWeights(0f, true); return; }
         if (GameManager.IsPaused) return;
+        if (cutscene != CutsceneHold.None) { UpdateCutscene(); return; }
 
         UpdateSelection();
         if (!equipped) { ApplyWeights(0f, false); return; }
@@ -405,18 +451,78 @@ public class PlayerMeleeWeapon : MonoBehaviour
 
     // ---------------- equip ----------------
 
+    // 1 = the pipe, 2 = the gun (the Gym's switcher: its own gun keys), the mouse wheel flips between them. Only one
+    // weapon owned: that one. Picking the gun up while the pipe is out leaves the pipe out (the tutorial then shows how
+    // to switch). Between the two it takes switchTime (Co_Switch); the first weapon just comes out.
     void UpdateSelection()
     {
         bool owns = weaponItem != null && inventory != null && inventory.HasItem(weaponItem);
-        bool busy = PlayerQuickHeal.Using || (weapons != null && weapons.isReloading);
-        if (owns && !busy && selectInput != null && selectInput.action.WasPressedThisFrame()) selected = true;
-        if (switcher != null && !ready)
-            foreach (var g in switcher.guns)
-                if (g.selectInput != null && g.selectInput.action.WasPressedThisFrame() && inventory.HasItem(g.weaponItem))
-                    selected = false;
+        bool hasGun = inventory != null && inventory.HasWeapon();
+        if (!owns) selected = false;
+        else if (!hasGun) selected = true;
+        else if (!switching && !ready && !PlayerQuickHeal.Using && (weapons == null || (!weapons.isReloading && !weapons.isAiming)))
+        {
+            if (selectInput != null && selectInput.action.WasPressedThisFrame()) selected = true;
+            if (GunKeyPressed()) selected = false;
+            float wheel = switchInput != null ? switchInput.action.ReadValue<float>() : 0f;
+            if (Mathf.Abs(wheel) > 0.01f && Time.unscaledTime >= wheelReadyAt) { selected = !selected; wheelReadyAt = Time.unscaledTime + 0.25f; }
+        }
 
-        bool want = owns && (selected || !inventory.HasWeapon());
+        if (selected == equipped || switching) return;
+        if (owns && hasGun && !player.IsDead()) StartCoroutine(Co_Switch(selected));
+        else SetEquipped(selected);
+    }
+
+    bool GunKeyPressed()
+    {
+        if (switcher != null)
+        {
+            foreach (var g in switcher.guns)
+                if (g.selectInput != null && g.selectInput.action.WasPressedThisFrame() && inventory.HasItem(g.weaponItem)) return true;
+            return false;
+        }
+        return gunSelectInput != null && gunSelectInput.action.WasPressedThisFrame();
+    }
+
+    // Putting one away and taking the other out: the hands drop the weapon that is out to his side, it is swapped there
+    // (with the draw sound) and the new one comes up - the pipe into the two-handed carry, the gun hangs in his hand.
+    // No aiming / raising until it is done.
+    IEnumerator Co_Switch(bool toPipe)
+    {
+        switching = true;
+        Switching = true;
+        OnSwitchStarted?.Invoke(toPipe);
+        Lower();
+        if (weapons != null && weapons.isAiming) weapons.ExitOutOfAiming();
+        float swapAt = switchTime * (toPipe ? 0.35f : 0.45f);
+        if (!toPipe) putAway = true;                 // the carry lets go: his arms bring the pipe down to his side
+        yield return new WaitForSeconds(swapAt);
+        putAway = false;
+        SetEquipped(toPipe);
+        if (!toPipe) Play2D(gunDrawClip, 0.8f);
+        yield return new WaitForSeconds(switchTime - swapAt);
+        switching = false;
+        Switching = false;
+    }
+
+    // no input while a cutscene holds the pipe: it only says how (see CutsceneHold)
+    void UpdateCutscene()
+    {
+        bool want = cutscene != CutsceneHold.Away && weaponItem != null && inventory != null && inventory.HasItem(weaponItem);
         if (want != equipped) SetEquipped(want);
+        if (!equipped) { ApplyWeights(0f, false); return; }
+        if (cutscene == CutsceneHold.Raised)
+        {
+            if (!ready)
+            {
+                Raise();
+                // the stance standing still, whatever speed he walked in at
+                velocity = Vector3.zero;
+                if (animator != null) { animator.SetFloat(MeleeX, 0f); animator.SetFloat(MeleeY, 0f); }
+            }
+        }
+        else Lower();
+        ApplyWeights(ready ? 1f : 0f, false);
     }
 
     void SetEquipped(bool on)
@@ -444,6 +550,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
 
     bool CanRaise()
     {
+        if (switching) return false;
         if (player.pauseMovement || player.isScared || player.isRolling || player.isGrabbed || PlayerQuickHeal.Using) return false;
         if (EyePeakHandler.instance != null && EyePeakHandler.instance.IsEyePeakActivated()) return false;
         if (LevelManager.instance != null && (LevelManager.instance.isGameOver || LevelManager.instance.isGameWon)) return false;
@@ -518,8 +625,9 @@ public class PlayerMeleeWeapon : MonoBehaviour
         // the upright two-handed carry, whenever the pipe is in his hands
         if (carryLayer >= 0)
         {
-            float want = equipped && !hiddenForUse && !player.IsDead() ? 1f : 0f;
-            carryWeight = instant ? want : Mathf.MoveTowards(carryWeight, want, Time.deltaTime / Mathf.Max(0.01f, carryBlend));
+            float want = equipped && !hiddenForUse && !putAway && !player.IsDead() && cutscene != CutsceneHold.Timeline ? 1f : 0f;
+            float blend = switching ? switchTime * 0.45f : carryBlend;
+            carryWeight = instant ? want : Mathf.MoveTowards(carryWeight, want, Time.deltaTime / Mathf.Max(0.01f, blend));
             animator.SetLayerWeight(carryLayer, carryWeight * carryWeight * (3f - 2f * carryWeight));
         }
     }
@@ -610,7 +718,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
         // nothing alive in reach: a padlock in front of him?
         if (BreakLocks(origin))
         {
-            Play2D(Pick(wallHitClips), wallVolume);
+            // no metal clang - the lock plays its own break sound
             if (HitstopManager.instance != null) HitstopManager.instance.FreezeTime(hitstop * 0.6f);
             Shake(shakeIntensity * 0.7f, shakeDuration);
             return;
@@ -781,6 +889,24 @@ public class PlayerMeleeWeapon : MonoBehaviour
 
     void AimPipe()
     {
+        // a cutscene's walk / idle clips: held in one hand near the taped end, across the fist, the head hanging back
+        // and down - it swings with his arm
+        if (cutscene == CutsceneHold.Timeline && hand != null && elbow != null)
+        {
+            Vector3 arm = (hand.position - elbow.position).normalized;
+            Vector3 behind = Vector3.ProjectOnPlane(-transform.forward, arm);
+            if (behind.sqrMagnitude < 1e-4f) behind = -transform.forward;
+            behind.Normalize();
+            float tilt = oneHandCarryTilt * Mathf.Deg2Rad;
+            Vector3 along = (behind * Mathf.Cos(tilt) + arm * Mathf.Sin(tilt)).normalized;
+            // square to the forearm tips it up / down with every arm swing - the wrist keeps it nearer a steady angle
+            Vector3 steady = (-transform.forward * Mathf.Cos(tilt) - Vector3.up * Mathf.Sin(tilt)).normalized;
+            along = Vector3.Slerp(along, steady, 0.6f);
+            pipe.transform.rotation = Quaternion.LookRotation(along, -arm) * Quaternion.Euler(90f, 0f, 0f);
+            pipe.transform.position = hand.TransformPoint(pipeLocalPos) - pipe.transform.TransformVector(Vector3.up * pipeTail) - along * oneHandGrip;
+            return;
+        }
+
         // raised: rigid in the right fist, exactly as baked (thumb along the pipe)
         pipe.transform.localPosition = pipeLocalPos;
         pipe.transform.localRotation = pipeLocalRot;

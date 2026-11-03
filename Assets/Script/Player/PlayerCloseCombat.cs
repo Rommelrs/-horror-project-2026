@@ -319,6 +319,18 @@ public class PlayerCloseCombat : MonoBehaviour
 
     // ---------------- scream ----------------
 
+    ScreamEchoEffect Echo()
+    {
+        var cam = Camera.main;
+        if (cam == null || screamEchoShader == null) return null;
+        if (echo == null || echo.gameObject != cam.gameObject)
+        {
+            echo = cam.GetComponent<ScreamEchoEffect>();
+            if (echo == null) { echo = cam.gameObject.AddComponent<ScreamEchoEffect>(); echo.shader = screamEchoShader; }
+        }
+        return echo;
+    }
+
     /// <summary>The Question hit him: slowed by `slow` for `slowTime` (0 = not slowed), and for `effectTime` the aim sway, the
     /// screen blur / echo and the ringing. `strength` (0..1) scales the blur / ringing (how close he was).</summary>
     public void ApplyScream(float slow, float slowTime, float effectTime, float strength = 1f)
@@ -332,16 +344,7 @@ public class PlayerCloseCombat : MonoBehaviour
         swayUntil = Time.time + effectTime;
 
         float length = effectTime;
-        var cam = Camera.main;
-        if (cam != null && screamEchoShader != null)
-        {
-            if (echo == null || echo.gameObject != cam.gameObject)
-            {
-                echo = cam.GetComponent<ScreamEchoEffect>();
-                if (echo == null) { echo = cam.gameObject.AddComponent<ScreamEchoEffect>(); echo.shader = screamEchoShader; }
-            }
-            echo.Trigger(length, Mathf.Lerp(0.55f, 1f, strength));
-        }
+        if (Echo() != null) echo.Trigger(length, Mathf.Lerp(0.55f, 1f, strength));
 
         if (ringingSFX != null)
         {

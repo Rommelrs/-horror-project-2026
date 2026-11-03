@@ -300,8 +300,8 @@ public class PlayerWeaponSystem : MonoBehaviour
         if (!weaponIsEnabled)
             return;
 
-        //The melee pipe is out instead (PlayerMeleeWeapon owns Aim / Shoot then)
-        if (PlayerMeleeWeapon.Equipped)
+        //The melee pipe is out instead (PlayerMeleeWeapon owns Aim / Shoot then), or he is swapping the pipe and the gun
+        if (PlayerMeleeWeapon.Equipped || PlayerMeleeWeapon.Switching)
             return;
 
         //Held by a Questioner: no aiming or shooting until he lets go

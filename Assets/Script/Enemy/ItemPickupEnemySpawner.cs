@@ -18,6 +18,11 @@ public class ItemPickupEnemySpawner : MonoBehaviour
     [SerializeField] private float delayBetweenWaves = 3f;
     [SerializeField] private int maxWaves = 0; // 0 = infinite
 
+    [Header("Other Enemies")]
+    [Tooltip("While the sequence runs, any other enemy (not spawned by this spawner) within this distance (m) of a spawned "
+           + "enemy or a spawn point is removed, so nothing else (a BagBearer, a normal Questioner...) interrupts it. 0 = off.")]
+    [SerializeField] private float clearOtherEnemiesRadius = 20f;
+
     [Header("Audio")]
     [SerializeField] private AudioSource musicAudioSource;
     [SerializeField] private AudioClip pickupMusic;
@@ -115,6 +120,8 @@ public class ItemPickupEnemySpawner : MonoBehaviour
         PlayPickupMusic();
         
         onSpawningStarted?.Invoke();
+        QuestionerEnemy.ResetHordeChorus();
+        if (clearOtherEnemiesRadius > 0f) StartCoroutine(Co_ClearOtherEnemies());
 
         int waveCount = 0;
 
@@ -145,6 +152,36 @@ public class ItemPickupEnemySpawner : MonoBehaviour
         } while (spawnContinuously && (maxWaves == 0 || waveCount < maxWaves));
         
         onSpawningCompleted?.Invoke();
+    }
+
+    /// <summary>Every half second: other enemies near the horde or its spawn points disappear.</summary>
+    private IEnumerator Co_ClearOtherEnemies()
+    {
+        var wait = new WaitForSeconds(0.5f);
+        var mine = new HashSet<GameObject>();
+        var centres = new List<Vector3>();
+        float r2 = clearOtherEnemiesRadius * clearOtherEnemiesRadius;
+        while (true)
+        {
+            mine.Clear();
+            centres.Clear();
+            foreach (var e in spawnedEnemies) if (e != null) { mine.Add(e); centres.Add(e.transform.position); }
+            foreach (var sp in spawnPoints) if (sp.spawnPosition != null) centres.Add(sp.spawnPosition.position);
+
+            foreach (var enemy in FindObjectsByType<Enemy>(FindObjectsSortMode.None))
+            {
+                if (mine.Contains(enemy.gameObject) || enemy.health == null || enemy.health.IsDead) continue;
+                if (enemy is QuestionerEnemy q && q.hordeMode) continue;
+                Vector3 at = enemy.transform.position;
+                foreach (var c in centres)
+                {
+                    if ((at - c).sqrMagnitude > r2) continue;
+                    enemy.gameObject.SetActive(false);
+                    break;
+                }
+            }
+            yield return wait;
+        }
     }
 
     public void StopSpawning()

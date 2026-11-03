@@ -40,6 +40,9 @@ public class Enemy : MonoBehaviour, IPoolable
     [HideInInspector] public float pendingKnockbackScale = 1f;
     /// <summary>Set by the melee weapon around its Damage() call: the hit is a melee strike (the Questioner gets shoved back by it).</summary>
     [HideInInspector] public bool pendingMeleeHit;
+    /// <summary>Set by a DangerZone around its Damage() call: the action sequence's weakpoint blast, not a shot by the player
+    /// (the Questioner is knocked down by it instead of taking it as a mouth shot).</summary>
+    [HideInInspector] public bool pendingEnvironmentHit;
 
     protected float ConsumeKnockbackScale()
     {

@@ -155,7 +155,9 @@ public class DangerZone : MonoBehaviour
 
                     // Set weakpoint hit flag and deal damage
                     enemy.health.isDamageByWeakpointHit = true;
+                    enemy.pendingEnvironmentHit = true;
                     enemy.health.Damage(weakpointDamage);
+                    enemy.pendingEnvironmentHit = false;
                 }
                 catch (System.Exception e)
                 {

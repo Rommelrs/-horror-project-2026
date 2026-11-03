@@ -188,7 +188,7 @@ MonoBehaviour:
       m_Calls: []
   IsDead: 0
   health: 250
-  maxHealth: 160
+  maxHealth: 250
   hitBoxCenter: {x: 0, y: 0, z: 0}
   healthBar: {fileID: 0}
   healthUIBehaviour: 0
@@ -498,7 +498,6 @@ MonoBehaviour:
     staggerRecovery: 0.8
     staggerShotDamage: 25
     hurtTime: 0.45
-    hurtFeintChance: 0.5
     feintTimeMin: 0.8
     feintTimeMax: 2.4
     feintDistMin: 2.2
@@ -549,22 +548,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 800029f8080ce2a499cf38d07bc52fe2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemDrops:
-  - itemPrefab: {fileID: 2754334804066192167, guid: 6a045e7d1d636fa428bdfbafc9fa57c6,
-      type: 3}
-    dropChance: 50.9
-  - itemPrefab: {fileID: 2754334804066192167, guid: a17daee425a9bb244b72baaf91f3b669,
-      type: 3}
-    dropChance: 17.4
-  - itemPrefab: {fileID: 2754334804066192167, guid: 4b2f0eb3ce7b2054ba1b09c22dbec721,
-      type: 3}
-    dropChance: 8.7
-  - itemPrefab: {fileID: 2754334804066192167, guid: 42707022f265e9145883e82ea170ff9b,
-      type: 3}
-    dropChance: 10.2
-  - itemPrefab: {fileID: 2754334804066192167, guid: 2eaabf28334e0384b801963e01027ffc,
-      type: 3}
-    dropChance: 4.9
+  itemDrops: []
   dropOffset: {x: 0, y: 0.5, z: 0}
 --- !u!114 &3054908589268921765
 MonoBehaviour:

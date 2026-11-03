@@ -439,6 +439,8 @@ MonoBehaviour:
       m_Calls: []
   damageDirection: {x: 0, y: 0, z: 0}
   damageForceMultiplier: 0
+  pendingKnockbackScale: 1
+  pendingMeleeHit: 0
   chaseStartDelayEnabled: 1
   playerDetected: 0
   onPlayerDetected:
@@ -508,9 +510,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   itemDrops:
-  - itemPrefab: {fileID: 2754334804066192167, guid: 2eaabf28334e0384b801963e01027ffc,
-      type: 3}
-    dropChance: 70.4
   - itemPrefab: {fileID: 6478322687340471994, guid: 607227a4a095c6c44a9c9cfe30614098,
       type: 3}
     dropChance: 100
