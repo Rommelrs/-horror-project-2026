@@ -57,6 +57,12 @@ public class CashRegisterPowerFX : MonoBehaviour
         if (fusebox != null) fusebox.onEnergyRestored.RemoveListener(PowerOn);
     }
 
+    /// <summary>Loaded from a save: already on, no boot sound.</summary>
+    public void RestorePowered()
+    {
+        Set(1f);
+    }
+
     [ContextMenu("Power on")]
     public void PowerOn()
     {

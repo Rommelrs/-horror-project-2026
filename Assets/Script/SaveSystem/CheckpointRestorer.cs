@@ -82,6 +82,7 @@ public class CheckpointRestorer : MonoBehaviour
 
         // Mark inventory as initialized so it doesn't reset on next scene load
         p.inventory.MarkInitialized();
+        CheckpointManager.MarkInventoryRestored();
     }
 
     }

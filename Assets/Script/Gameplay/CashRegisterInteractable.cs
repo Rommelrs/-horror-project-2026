@@ -9,6 +9,9 @@ public class CashRegisterInteractable : Interactable
 {
     public static CashRegisterInteractable instance;
 
+    /// <summary>Saved when the right code goes in. A reloaded scene otherwise lets the player type it again for a second key.</summary>
+    public const string SolvedKey = "store:register-solved";
+
     [Header("UI")]
     [SerializeField] GameObject cashRegisterMenu;
     [SerializeField] GameObject cashRegisterDrawerPanel;
@@ -51,7 +54,8 @@ public class CashRegisterInteractable : Interactable
     private void Start()
     {
         // Check if already used in a previous save
-        if (saveableInteractable != null && saveableInteractable.WasAlreadyUsed())
+        if ((saveableInteractable != null && saveableInteractable.WasAlreadyUsed())
+            || (SaveManager.instance != null && SaveManager.instance.IsInteractableUsed(SolvedKey)))
         {
             RestoreUsedState();
         }
@@ -315,6 +319,8 @@ public class CashRegisterInteractable : Interactable
         // Mark as used in save system
         if (saveableInteractable != null)
             saveableInteractable.MarkAsUsed();
+        if (SaveManager.instance != null)
+            SaveManager.instance.RegisterUsedInteractable(SolvedKey);
 
         //Trigger Event
         OnCashRegisterOpenedSuccessfully?.Invoke();

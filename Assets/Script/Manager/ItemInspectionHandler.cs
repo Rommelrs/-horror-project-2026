@@ -125,6 +125,9 @@ public class ItemInspectionHandler : MonoBehaviour
                 //Play SFX
                 if (currentInspectableItem.pckupClip != null)
                     SoundEffectManager.instance.PlaySFX(currentInspectableItem.pckupClip);
+                // No clip of its own: the main menu hover, so no item is picked up in silence. Notes stay silent.
+                else if (currentInspectableItem.itemToPickup != null && currentInspectableItem.itemToPickup.itemType != ItemType.Note && UISoundManager.instance != null)
+                    UISoundManager.instance.PlayButtonHoverSound();
 
                 //Set Interaction Time
                 Player.instance.SetLastInteractionTime(Time.unscaledTime);

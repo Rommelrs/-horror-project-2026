@@ -23,6 +23,16 @@ public class ItemPickupEnemySpawner : MonoBehaviour
            + "enemy or a spawn point is removed, so nothing else (a BagBearer, a normal Questioner...) interrupts it. 0 = off.")]
     [SerializeField] private float clearOtherEnemiesRadius = 20f;
 
+    [Header("Chorus Line-Up")]
+    [Tooltip("Spawned the moment the sequence starts, standing still at Line Up Centre (put it out of the player's sight, on "
+           + "their way), until they all scream at once as the player reaches them. Its forward = the way they face.")]
+    [SerializeField] private GameObject lineUpPrefab;
+    [SerializeField] private Transform lineUpCentre;
+    [SerializeField] private int lineUpCount = 16;
+    [SerializeField] private int lineUpColumns = 4;
+    [SerializeField] private float lineUpWidth = 5.5f;
+    [SerializeField] private float lineUpDepth = 4.5f;
+
     [Header("Audio")]
     [SerializeField] private AudioSource musicAudioSource;
     [SerializeField] private AudioClip pickupMusic;
@@ -121,6 +131,7 @@ public class ItemPickupEnemySpawner : MonoBehaviour
         
         onSpawningStarted?.Invoke();
         QuestionerEnemy.ResetHordeChorus();
+        SpawnLineUp();
         if (clearOtherEnemiesRadius > 0f) StartCoroutine(Co_ClearOtherEnemies());
 
         int waveCount = 0;
@@ -152,6 +163,33 @@ public class ItemPickupEnemySpawner : MonoBehaviour
         } while (spawnContinuously && (maxWaves == 0 || waveCount < maxWaves));
         
         onSpawningCompleted?.Invoke();
+    }
+
+    private void SpawnLineUp()
+    {
+        if (lineUpPrefab == null || lineUpCentre == null) return;
+        int rows = Mathf.CeilToInt(lineUpCount / (float)lineUpColumns);
+        for (int i = 0; i < lineUpCount; i++)
+        {
+            int row = i / lineUpColumns, column = i % lineUpColumns;
+            // rows staggered, so the back ones show between the front ones
+            float x = ((column + (row % 2 == 0 ? 0.25f : 0.75f)) / lineUpColumns - 0.5f) * lineUpWidth;
+            float z = (rows > 1 ? 0.5f - row / (rows - 1f) : 0f) * lineUpDepth;
+            Vector3 at = lineUpCentre.TransformPoint(new Vector3(x + Random.Range(-0.15f, 0.15f), 0f, z + Random.Range(-0.15f, 0.15f)));
+            if (UnityEngine.AI.NavMesh.SamplePosition(at, out var hit, 2f, UnityEngine.AI.NavMesh.AllAreas)) at = hit.position;
+            GameObject spawned = Instantiate(lineUpPrefab, at, lineUpCentre.rotation);
+            spawnedEnemies.Add(spawned);
+            var questioner = spawned.GetComponent<QuestionerEnemy>();
+            if (questioner != null) questioner.JoinLineUp();
+        }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (lineUpCentre == null) return;
+        Gizmos.color = Color.red;
+        Gizmos.matrix = lineUpCentre.localToWorldMatrix;
+        Gizmos.DrawWireCube(Vector3.up, new Vector3(lineUpWidth, 2f, lineUpDepth));
     }
 
     /// <summary>Every half second: other enemies near the horde or its spawn points disappear.</summary>

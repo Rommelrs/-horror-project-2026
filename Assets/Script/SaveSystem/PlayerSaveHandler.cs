@@ -199,6 +199,9 @@ public class PlayerSaveHandler : MonoBehaviour, ISaveable
                 Debug.LogWarning($"Could not find note: {noteData.itemName}");
             }
         }
+
+        // ClearInventory left it "not initialized": without this the default items were added on top of the loaded ones
+        inventory.MarkInitialized();
     }
     
     // Find an Item ScriptableObject by name from all loaded assets

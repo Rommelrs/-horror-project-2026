@@ -45,6 +45,21 @@ public class MapLocationReveal : MonoBehaviour
     // Static flag checked by MapHandler and PauseHandler to block input during sequence
     public static bool IsSequenceActive = false;
 
+    // Statics survive scene loads: a sequence cut short by dying or quitting (the table knockdown, the cash register) never reaches
+    // the line that clears this, and ESC + the map would stay blocked in the next run.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void HookSceneLoads()
+    {
+        IsSequenceActive = false;
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= ClearOnSceneLoaded;
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += ClearOnSceneLoaded;
+    }
+
+    static void ClearOnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        IsSequenceActive = false;
+    }
+
     private void Start()
     {
         if (!string.IsNullOrEmpty(triggerNoteItemName) && ItemInspectionHandler.instance != null)

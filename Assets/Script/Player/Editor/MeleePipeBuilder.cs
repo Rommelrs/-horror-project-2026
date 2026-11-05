@@ -231,6 +231,16 @@ public static class MeleePipeBuilder
             name = UpperLayer, stateMachine = upper, defaultWeight = 0f, blendingMode = AnimatorLayerBlendingMode.Override,
             avatarMask = AssetDatabase.LoadAssetAtPath<AvatarMask>(UpperBodyMask)
         });
+        // the weapon switch: the right arm only (the hand to the back pocket; AnimationTools/questioner/khalid_cc_build.py)
+        var switchSm = new AnimatorStateMachine { name = "WeaponSwitch", hideFlags = HideFlags.HideInHierarchy };
+        AssetDatabase.AddObjectToAsset(switchSm, ctrl);
+        switchSm.defaultState = switchSm.AddState("Empty");
+        switchSm.AddState("WeaponSwitch").motion = Clip("Khalid_Switch_Draw");
+        layers.Insert(insertAt + 2, new AnimatorControllerLayer
+        {
+            name = "WeaponSwitch", stateMachine = switchSm, defaultWeight = 0f, blendingMode = AnimatorLayerBlendingMode.Override,
+            avatarMask = AssetDatabase.LoadAssetAtPath<AvatarMask>("Assets/Animations/SwitchRightArm.mask")
+        });
         ctrl.layers = layers.ToArray();
         EditorUtility.SetDirty(ctrl);
         AssetDatabase.SaveAssets();

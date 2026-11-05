@@ -119,6 +119,9 @@ public class StoreBlackoutSequence : MonoBehaviour
     bool rushedToFusebox;      // the player actually walked up to the fuse box with the fuse (not just the 90 s failsafe)
     float fuseHeldSince = -1f;
 
+    // Saved with the rest of the used-interactable list, so a checkpoint from before the fuse doesn't have it and New Game clears it.
+    const string PowerRestoredKey = "store:power-restored";
+
     void Start()
     {
         if (footsteps != null) footsteps.onSequenceFinished.AddListener(Begin);
@@ -134,6 +137,57 @@ public class StoreBlackoutSequence : MonoBehaviour
             fusebox.onEnergyRestored.AddListener(RestorePartialPower);
             fusebox.useBlocked = true;     // the fuse can only go in after the blackout
         }
+
+        // runs after every other script's Start (execution order 1000), so they are all ready to be told
+        if (SaveManager.instance != null && SaveManager.instance.IsInteractableUsed(PowerRestoredKey)) RestoreAfterLoad();
+    }
+
+    /// <summary>A checkpoint or save from after the fuse went in: nothing of this level is saved by itself, so a reloaded scene is
+    /// back at the start with the sun on. Everything goes straight to how the player left it, silently, and nothing replays.</summary>
+    void RestoreAfterLoad()
+    {
+        Started = Finished = true;
+        PowerIsOut = false;
+        partiallyRestored = true;
+        expedited = true;
+
+        if (footsteps != null) footsteps.RestoreFinished();
+        if (StoreSequenceManager.instance != null) StoreSequenceManager.instance.RestoreStarted();
+        if (FuseHuntManager.instance != null) FuseHuntManager.instance.RestoreFuseUsed();
+        if (fusebox != null) fusebox.RestoreFuseInstalled();
+        if (collapse != null) collapse.SnapToCollapsed();
+
+        foreach (var l in lights)
+        {
+            if (l == null) continue;
+            var f = l.GetComponent<LightFlicker>();
+            if (f != null) f.enabled = false;
+            l.enabled = false;
+            l.gameObject.SetActive(false);
+        }
+        SetEmission(false);
+        var toRestore = LightsToRestore();
+        foreach (var l in toRestore) { l.gameObject.SetActive(true); l.intensity = normalIntensity[l] * restoredLightLevel; }
+        bool haveFixtures = fixtures != null && fixtures.Length > 0;
+        if (haveFixtures) { foreach (var fx in fixtures) if (fx != null) fx.RestoreInstant(); }
+        else SetRestoredLights(toRestore, true);
+
+        ambientTarget = ambientK = restoredAmbientScale;
+        foreach (var a in ambienceToFade) if (a != null) a.volume = 0f;
+
+        var powerFx = FindObjectOfType<CashRegisterPowerFX>();
+        if (powerFx != null) powerFx.RestorePowered();
+        var presence = FindObjectOfType<StorageRoomPresence>();
+        if (presence != null) presence.RestoreFinished();
+        Debug.Log("[StoreBlackout] restored from a save: the power was already back");
+    }
+
+    List<Light> LightsToRestore()
+    {
+        var list = new List<Light>();
+        foreach (var l in lights) if (l != null && l.GetComponent<LightFlicker>() == null) list.Add(l);
+        foreach (var l in restoredLights) if (l != null) list.Add(l);
+        return list;
     }
 
     void Update()
@@ -360,6 +414,7 @@ public class StoreBlackoutSequence : MonoBehaviour
     {
         if (!PowerIsOut || partiallyRestored) return;
         partiallyRestored = true;
+        if (SaveManager.instance != null) SaveManager.instance.RegisterUsedInteractable(PowerRestoredKey);
         if (powerOnClip != null)
             Play(powerOnClip, powerCutPoint != null ? powerCutPoint.position : transform.position, powerOnVolume, flatLayerVolume, 40f);
         StartCoroutine(Co_PartialRestore());
@@ -369,9 +424,7 @@ public class StoreBlackoutSequence : MonoBehaviour
 
     IEnumerator Co_PartialRestore()
     {
-        var toRestore = new List<Light>();
-        foreach (var l in lights) if (l != null && l.GetComponent<LightFlicker>() == null) toRestore.Add(l);
-        foreach (var l in restoredLights) if (l != null) toRestore.Add(l);
+        var toRestore = LightsToRestore();
         foreach (var l in toRestore) { l.gameObject.SetActive(true); l.intensity = normalIntensity[l] * restoredLightLevel; }
 
         ambientTarget = restoredAmbientScale;

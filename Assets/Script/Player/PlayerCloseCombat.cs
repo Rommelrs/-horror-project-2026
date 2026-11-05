@@ -58,7 +58,7 @@ public class PlayerCloseCombat : MonoBehaviour
     public bool IsGrabbed => grabber != null;
     public bool IsKnockedBack => Time.time < knockEnd;
     public bool IsPushingOff => Time.time < pushOffEnd;
-    public bool CanBeGrabbed => player != null && !player.IsDead() && grabber == null && !player.isScared;
+    public bool CanBeGrabbed => player != null && !player.IsDead() && grabber == null && !player.isScared && !player.isKnockedDown;
 
     Player player;
     Animator animator;
@@ -149,7 +149,7 @@ public class PlayerCloseCombat : MonoBehaviour
     /// <summary>An enemy hit shoves him back `distance` m over `time` s (his own movement is held meanwhile).</summary>
     public void Knockback(Vector3 dir, float distance, float time)
     {
-        if (IsGrabbed || player.IsDead()) return;
+        if (IsGrabbed || player.IsDead() || player.isKnockedDown) return;
         dir.y = 0f;
         if (dir.sqrMagnitude < 0.0001f) return;
         knockDir = dir.normalized;
@@ -201,9 +201,11 @@ public class PlayerCloseCombat : MonoBehaviour
         }
         else
         {
+            // the holder is gone (killed, knocked down, despawned): the held pose ends now (its reaction runs "until released")
             StopGrabCam();
             PlayerMeleeWeapon.SetHiddenForGrab(false);
-            if (Time.time > reactionEnd) layerTarget = 0f;
+            reactionEnd = 0f;
+            layerTarget = 0f;
         }
         if (player.playerWeaponSystem != null) player.playerWeaponSystem.SyncCameraYaw();
     }

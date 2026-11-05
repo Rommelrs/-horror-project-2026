@@ -29,6 +29,18 @@ public class CheckpointManager : MonoBehaviour
     /// <summary>True while a checkpoint restore is in progress. Blocks new checkpoint saves to prevent overwriting with bad mid-restore data.</summary>
     public static bool IsRestoring { get; private set; }
 
+    /// <summary>From the moment a checkpoint's scene has loaded until its inventory is back. Until then the player still holds the dead life's
+    /// inventory (the static copy loads in Awake), so nothing should act on what they seem to own.</summary>
+    /// <remarks>Static on purpose: started straight from a level, this manager belongs to that level and dies with the reload, leaving the
+    /// work to CheckpointRestorer. The time limit is a safety net so a scene with no restorer can't hold this forever.</remarks>
+    public static bool IsLoadingCheckpoint => IsRestoring || (inventoryPending && Time.unscaledTime < inventoryPendingSince + 5f);
+
+    static bool inventoryPending;
+    static float inventoryPendingSince;
+
+    /// <summary>The checkpoint's inventory is in. Called by whichever restorer gets there.</summary>
+    public static void MarkInventoryRestored() { inventoryPending = false; }
+
     private void Awake()
     {
         if (instance != null)
@@ -260,6 +272,8 @@ public class CheckpointManager : MonoBehaviour
     {
         if (scene.name != pendingLoadData.sceneName) return;
         SceneManager.sceneLoaded -= OnSceneLoadedForCheckpoint;
+        inventoryPending = true;
+        inventoryPendingSince = Time.unscaledTime;
 
         // Restore runtime tracking IMMEDIATELY before any Start() runs
         if (SaveManager.instance != null)
@@ -361,6 +375,7 @@ public class CheckpointManager : MonoBehaviour
             }
 
             p.inventory.MarkInitialized();
+            MarkInventoryRestored();
         }
 
         IsRestoring = false;

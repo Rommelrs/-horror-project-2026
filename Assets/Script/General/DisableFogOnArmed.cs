@@ -23,6 +23,9 @@ public class DisableFogOnArmed : MonoBehaviour
             return;
         }
 
+        // the dead life's weapons are still there for a few frames after a reload: they must not latch the fog off
+        if (CheckpointManager.IsLoadingCheckpoint) return;
+
         // the gun, or the Store's steel pipe
         Player player = Player.instance;
         if (player != null && ((player.playerWeaponSystem != null && player.playerWeaponSystem.weaponIsEnabled) || PlayerMeleeWeapon.Equipped))

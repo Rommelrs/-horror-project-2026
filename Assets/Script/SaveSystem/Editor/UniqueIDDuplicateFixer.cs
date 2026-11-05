@@ -7,13 +7,16 @@ using UnityEngine;
 /// Two objects with the same UniqueID share one saved state: killing one enemy, taking one pickup or firing one trigger marks all of
 /// its twins as done in the next save / checkpoint (they vanish or switch off on load). Copy-pasting a saveable object copies its ID,
 /// so this happens easily. This finds them in the open scene(s) and gives every duplicate except one a fresh ID.
+/// An EMPTY ID is the opposite problem: UniqueID.ID makes a new random one every run, so the object is never remembered (a pickup comes
+/// back after every load or scene change). Pickup prefabs ship with empty IDs on purpose, so every placed instance needs one of its own.
+/// Those get a fresh ID too. Run it with one scene open at a time if an ID is meant to be shared between scenes.
 /// </summary>
 public static class UniqueIDDuplicateFixer
 {
-    [MenuItem("Tools/Save System/Report Duplicate UniqueIDs (open scenes)")]
+    [MenuItem("Tools/Save System/Report Duplicate or Empty UniqueIDs (open scenes)")]
     public static void Report() { Run(false); }
 
-    [MenuItem("Tools/Save System/Fix Duplicate UniqueIDs (open scenes)")]
+    [MenuItem("Tools/Save System/Fix Duplicate or Empty UniqueIDs (open scenes)")]
     public static void Fix() { Run(true); }
 
     static string Path(Transform t) { string p = t.name; while (t.parent) { t = t.parent; p = t.name + "/" + p; } return p; }
@@ -29,10 +32,11 @@ public static class UniqueIDDuplicateFixer
     public static int Run(bool apply)
     {
         var groups = new Dictionary<string, List<UniqueID>>();
+        var empties = new List<UniqueID>();
         foreach (UniqueID u in Object.FindObjectsByType<UniqueID>(FindObjectsInactive.Include, FindObjectsSortMode.None))
         {
             string id = new SerializedObject(u).FindProperty("id").stringValue;
-            if (string.IsNullOrEmpty(id)) continue;
+            if (string.IsNullOrEmpty(id)) { empties.Add(u); continue; }
             if (!groups.ContainsKey(id)) groups[id] = new List<UniqueID>();
             groups[id].Add(u);
         }
@@ -50,19 +54,28 @@ public static class UniqueIDDuplicateFixer
             Debug.Log("[UniqueID] " + kv.Value.Count + " objects share " + kv.Key + ": keeping it on '" + Path(kv.Value[0].transform) + "'");
             for (int i = 1; i < kv.Value.Count; i++)
             {
-                UniqueID u = kv.Value[i];
-                string fresh = System.Guid.NewGuid().ToString();
-                Debug.Log("[UniqueID]    " + (apply ? "new id " + fresh + " for" : "would change") + " '" + Path(u.transform) + "'");
+                Regenerate(kv.Value[i], apply);
                 changed++;
-                if (!apply) continue;
-                var so = new SerializedObject(u);
-                so.FindProperty("id").stringValue = fresh;      // through SerializedObject so a prefab instance records the override
-                so.ApplyModifiedProperties();
-                EditorUtility.SetDirty(u);
-                EditorSceneManager.MarkSceneDirty(u.gameObject.scene);
             }
         }
-        Debug.Log("[UniqueID] " + (apply ? "regenerated " : "found ") + changed + " duplicate id(s)");
+        foreach (UniqueID u in empties)
+        {
+            Regenerate(u, apply);
+            changed++;
+        }
+        Debug.Log("[UniqueID] " + (apply ? "regenerated " : "found ") + changed + " duplicate or empty id(s), " + empties.Count + " of them empty");
         return changed;
+    }
+
+    static void Regenerate(UniqueID u, bool apply)
+    {
+        string fresh = System.Guid.NewGuid().ToString();
+        Debug.Log("[UniqueID]    " + (apply ? "new id " + fresh + " for" : "would change") + " '" + Path(u.transform) + "'");
+        if (!apply) return;
+        var so = new SerializedObject(u);
+        so.FindProperty("id").stringValue = fresh;      // through SerializedObject so a prefab instance records the override
+        so.ApplyModifiedProperties();
+        EditorUtility.SetDirty(u);
+        EditorSceneManager.MarkSceneDirty(u.gameObject.scene);
     }
 }

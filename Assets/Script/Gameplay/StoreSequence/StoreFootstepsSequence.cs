@@ -212,6 +212,18 @@ public class StoreFootstepsSequence : MonoBehaviour
         onSequenceFinished?.Invoke();
     }
 
+    /// <summary>Loaded from a save: the scene is long over and the door stays locked. No click, no Runner, no events.</summary>
+    public void RestoreFinished()
+    {
+        Started = Finished = EntranceLocked = true;
+        if (actor != null) actor.gameObject.SetActive(false);
+        if (entranceDoor != null)
+        {
+            entranceDoor.hasDoorLock = true;
+            entranceDoor.OnInteractionFailed.AddListener(OnLockedDoorTried);
+        }
+    }
+
     /// <summary>Skips the rest of the scene (the player is not watching it): the Runner disappears and the door locks right now.</summary>
     public void AbortAndLock()
     {

@@ -19,7 +19,7 @@ public class Box : MonoBehaviour
 
     public void Collide()
     {
-        if (Time.time < nextCollide)
+        if (collideClips == null || collideClips.Length <= 0 || Time.time < nextCollide)
             return;
 
         nextCollide = Time.time + collideMinCooldown;

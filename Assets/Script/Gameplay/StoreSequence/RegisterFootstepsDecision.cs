@@ -106,6 +106,12 @@ public class RegisterFootstepsDecision : MonoBehaviour
     {
         if (register != null) register.OnCashRegisterOpenedSuccessfully.AddListener(OnCodeAccepted);
         if (runner == null) runner = FindObjectOfType<RunnerPuppet>(true);
+        // loaded from a save with the code already entered: this event is over
+        if (SaveManager.instance != null && SaveManager.instance.IsInteractableUsed(CashRegisterInteractable.SolvedKey))
+        {
+            codeDone = cameoUsed = true;
+            Current = State.Done;
+        }
     }
 
     void OnDestroy()

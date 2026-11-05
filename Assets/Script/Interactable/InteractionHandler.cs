@@ -136,7 +136,13 @@ public class InteractionHandler : MonoBehaviour
 
     public void PlayItemPickupSound()
     {
-        //Play Item Pickup Sound
+        //Play Item Pickup Sound: the main menu hover, like the other pickups. The list is only for scenes without a UISoundManager.
+        if (UISoundManager.instance != null)
+        {
+            UISoundManager.instance.PlayButtonHoverSound();
+            return;
+        }
+
         if (audioSource != null && itemPickupClips != null && itemPickupClips.Length > 0)
             audioSource.PlayOneShot(itemPickupClips[Random.Range(0, itemPickupClips.Length)]);
     }

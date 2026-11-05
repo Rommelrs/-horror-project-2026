@@ -118,6 +118,14 @@ public class FuseHuntManager : MonoBehaviour
         forcedIdentified = true;
     }
 
+    /// <summary>Loaded from a save: the fuse was found and used. It stays hidden and the hunt's events don't fire again.</summary>
+    public void RestoreFuseUsed()
+    {
+        forcedIdentified = identifiedAnnounced = true;
+        FuseRevealed = FusePickedUp = true;
+        if (fuseObject != null) fuseObject.SetActive(false);
+    }
+
     void OnFuseTaken()
     {
         if (FusePickedUp) return;

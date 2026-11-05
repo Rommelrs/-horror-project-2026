@@ -22,6 +22,11 @@ using UnityEditor;
 // puts claude.exe into that cache before it connects, with exactly what the package would end up with: the streamed
 // SHA256 (cheap) and "unsigned" (what the failed signature check produces). Approval prompts and trust matching are
 // unchanged - the package keys unsigned clients by hash either way. If the package's internals change this does nothing.
+//
+// It has to win a race: the package validates on a background thread as soon as a running client reconnects, which doesn't
+// wait for the main thread. So the seeding happens straight away in the static constructor - the first EditorApplication.update
+// can be over a minute later, while a big scene loads (2026-11-04: lost that race, the heap went to 7.8 GB again). Hashes are
+// kept in Library so that takes no time, except the first time a new claude.exe is seen.
 // Remove once a package update stops reading big executables into memory.
 [InitializeOnLoad]
 static class McpIdentityCacheSeed
@@ -29,12 +34,17 @@ static class McpIdentityCacheSeed
     const string ClientProcess = "claude";
     const double PollSeconds = 3;
     const long MinBytes = 50L * 1024 * 1024; // only big executables are worth it
+    const string HashFile = "Library/McpIdentitySeedHashes.txt";
 
     static readonly HashSet<string> seeded = new HashSet<string>();
+    static readonly object hashLock = new object();
+    static Dictionary<string, string> hashes;
     static double nextPoll;
 
     static McpIdentityCacheSeed()
     {
+        if (AssetDatabase.IsAssetImportWorkerProcess()) return; // no MCP clients connect to those
+        Scan(path => Seed(path));
         EditorApplication.update += Poll;
     }
 
@@ -43,7 +53,11 @@ static class McpIdentityCacheSeed
     {
         if (EditorApplication.timeSinceStartup < nextPoll) return;
         nextPoll = EditorApplication.timeSinceStartup + PollSeconds;
+        Scan(path => Task.Run(() => Seed(path)));
+    }
 
+    static void Scan(Action<string> seed)
+    {
         foreach (var p in Process.GetProcessesByName(ClientProcess))
         {
             using (p)
@@ -53,7 +67,7 @@ static class McpIdentityCacheSeed
                 string key = path + "|" + File.GetLastWriteTime(path).Ticks;
                 if (!seeded.Add(key)) continue;
                 if (new FileInfo(path).Length < MinBytes) continue;
-                Task.Run(() => Seed(path));
+                seed(path);
             }
         }
     }
@@ -75,10 +89,7 @@ static class McpIdentityCacheSeed
             lock (cacheLock)
                 if (cache.Contains(path)) return; // already done by the package (or restored after a domain reload)
 
-            string hash;
-            using (var sha = SHA256.Create())
-            using (var stream = File.OpenRead(path))
-                hash = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+            string hash = HashOf(path, modTime);
 
             var identity = Activator.CreateInstance(identityType, true);
             identityType.GetField("Path").SetValue(identity, path);
@@ -102,6 +113,38 @@ static class McpIdentityCacheSeed
         {
             UnityEngine.Debug.LogWarning("[McpIdentityCacheSeed] skipped: " + e.Message);
         }
+    }
+
+    // The file's SHA256, remembered per path + modification time (the same rule as the package's own cache)
+    static string HashOf(string path, DateTime modTime)
+    {
+        string key = path + "|" + modTime.Ticks;
+        lock (hashLock)
+        {
+            if (hashes == null)
+            {
+                hashes = new Dictionary<string, string>();
+                if (File.Exists(HashFile))
+                    foreach (var line in File.ReadAllLines(HashFile))
+                    {
+                        int split = line.LastIndexOf('|');
+                        if (split > 0) hashes[line.Substring(0, split)] = line.Substring(split + 1);
+                    }
+            }
+            if (hashes.TryGetValue(key, out var known)) return known;
+        }
+
+        string hash;
+        using (var sha = SHA256.Create())
+        using (var stream = File.OpenRead(path))
+            hash = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
+
+        lock (hashLock)
+        {
+            hashes[key] = hash;
+            File.WriteAllLines(HashFile, hashes.Select(h => h.Key + "|" + h.Value));
+        }
+        return hash;
     }
 
     static Type FindType(string fullName) =>

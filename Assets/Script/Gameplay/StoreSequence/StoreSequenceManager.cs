@@ -139,6 +139,12 @@ public class StoreSequenceManager : MonoBehaviour
         OnSequenceStart?.Invoke();
     }
 
+    /// <summary>Loaded from a save: it already started. Doesn't fire OnSequenceStart again.</summary>
+    public void RestoreStarted()
+    {
+        SequenceStarted = true;
+    }
+
     [ContextMenu("Force start sequence")]
     void ForceStart()
     {

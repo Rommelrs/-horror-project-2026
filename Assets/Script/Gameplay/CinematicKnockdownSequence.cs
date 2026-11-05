@@ -23,8 +23,8 @@ public class CinematicKnockdownSequence : MonoBehaviour
     [SerializeField] SubtitleTrigger knockdownSubtitle;
 
     [Header("Player Animator")]
-    [Tooltip("Animator layer index for the Knockdown layer (check Layers tab, starts at 0).")]
-    [SerializeField] int knockdownLayerIndex = 6;
+    [Tooltip("Name of the animator's Knockdown layer (by name: new layers keep moving its index).")]
+    [SerializeField] string knockdownLayerName = "Knockdown";
     [Tooltip("Exact name of the KnockedDown state in the Knockdown layer.")]
     [SerializeField] string knockdownStateName = "KnockedDown";
     [Tooltip("Exact name of the StandUp state in the Knockdown layer.")]
@@ -111,8 +111,13 @@ public class CinematicKnockdownSequence : MonoBehaviour
     bool isKnockdownAnimPlaying = false;
     Quaternion downedPlayerRotation;
 
+    int KnockdownLayer => Player.instance.animator.GetLayerIndex(knockdownLayerName);
+    // he kills them from the floor with the gun; without one the gate would never open, so he just gets up and fights
+    bool HasGun => Player.instance.inventory != null && Player.instance.inventory.HasWeapon();
+
     bool AllEnemiesDead()
     {
+        if (!HasGun) return true;
         if (enemiesToKill == null || enemiesToKill.Length == 0) return true;
         foreach (var e in enemiesToKill)
             if (e != null && !e.health.IsDead) return false;
@@ -150,13 +155,13 @@ public class CinematicKnockdownSequence : MonoBehaviour
             if (isKnockdownAnimPlaying)
             {
                 // Wait for the animation to finish before freezing
-                AnimatorStateInfo stateInfo = Player.instance.animator.GetCurrentAnimatorStateInfo(knockdownLayerIndex);
+                AnimatorStateInfo stateInfo = Player.instance.animator.GetCurrentAnimatorStateInfo(KnockdownLayer);
                 if (stateInfo.IsName(knockdownStateName) && stateInfo.normalizedTime >= 1f)
                     isKnockdownAnimPlaying = false;
             }
             else
             {
-                Player.instance.animator.Play(knockdownStateName, knockdownLayerIndex, 1f);
+                Player.instance.animator.Play(knockdownStateName, KnockdownLayer, 1f);
             }
         }
 
@@ -274,6 +279,8 @@ public class CinematicKnockdownSequence : MonoBehaviour
         OnSequenceStarted?.Invoke();
 
         // Remove ALL player control
+        Player.instance.isKnockedDown = true;
+        PlayerMeleeWeapon.SetCutscene(PlayerMeleeWeapon.CutsceneHold.Away);     // his fall is full body, the gun comes out for the floor
         Player.instance.playerWeaponSystem.weaponIsEnabled = false;
         Player.instance.playerWeaponSystem.ExitOutOfAiming();
         Player.instance.playerMovement.enabled = false;
@@ -414,16 +421,17 @@ public class CinematicKnockdownSequence : MonoBehaviour
 
         // Activate the knockdown layer and play the animation from the start
         isKnockdownAnimPlaying = true;
-        Player.instance.animator.SetLayerWeight(knockdownLayerIndex, 1f);
-        Player.instance.animator.Play(knockdownStateName, knockdownLayerIndex, 0f);
+        Player.instance.animator.SetLayerWeight(KnockdownLayer, 1f);
+        Player.instance.animator.Play(knockdownStateName, KnockdownLayer, 0f);
 
         OnPlayerKnockedDown?.Invoke();
 
         // Enable full weapon system (it handles FP hands/ADS normally)
         // downedAimCam override is handled in Update() via isAiming
-        Player.instance.playerWeaponSystem.weaponIsEnabled = true;
+        bool hasGun = HasGun;
+        if (hasGun) Player.instance.playerWeaponSystem.weaponIsEnabled = true;
         // Grant infinite ammo while downed
-        Player.instance.playerWeaponSystem.infiniteAmmo = true;
+        Player.instance.playerWeaponSystem.infiniteAmmo = hasGun;
 
         // Fade in knockdown music
         if (knockdownMusicSource != null)
@@ -446,7 +454,7 @@ public class CinematicKnockdownSequence : MonoBehaviour
 
         // Wait for stand up
         // If enemiesToKill is assigned, stand up is handled in Update() via enemy gate
-        bool useEnemyGate = enemiesToKill != null && enemiesToKill.Length > 0;
+        bool useEnemyGate = hasGun && enemiesToKill != null && enemiesToKill.Length > 0;
         if (!manualStandUp && !useEnemyGate)
         {
             if (knockdownDuration > 0)
@@ -476,7 +484,7 @@ public class CinematicKnockdownSequence : MonoBehaviour
         Player.instance.playerWeaponSystem.ExitOutOfAiming();
 
         // Play stand up animation then deactivate the layer when done
-        Player.instance.animator.Play(standUpStateName, knockdownLayerIndex, 0f);
+        Player.instance.animator.Play(standUpStateName, KnockdownLayer, 0f);
         StartCoroutine(Co_DeactivateLayerAfterStandUp());
 
         // Deactivate downed aim cam and restore everything regardless of ADS state
@@ -568,11 +576,14 @@ public class CinematicKnockdownSequence : MonoBehaviour
     {
         // Wait for stand up animation to finish
         yield return new WaitForEndOfFrame();
-        AnimatorStateInfo info = Player.instance.animator.GetCurrentAnimatorStateInfo(knockdownLayerIndex);
+        AnimatorStateInfo info = Player.instance.animator.GetCurrentAnimatorStateInfo(KnockdownLayer);
         yield return new WaitForSeconds(info.length);
 
         // Deactivate knockdown layer so base layer resumes
-        Player.instance.animator.SetLayerWeight(knockdownLayerIndex, 0f);
+        Player.instance.animator.SetLayerWeight(KnockdownLayer, 0f);
+        Player.instance.isKnockedDown = false;
+        if (HasGun) PlayerMeleeWeapon.SelectGun();      // he fought from the floor with it: it stays out
+        PlayerMeleeWeapon.SetCutscene(PlayerMeleeWeapon.CutsceneHold.None);
     }
 
     IEnumerator Co_WatchSubtitleDismiss()

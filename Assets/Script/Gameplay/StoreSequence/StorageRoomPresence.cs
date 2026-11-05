@@ -111,6 +111,22 @@ public class StorageRoomPresence : MonoBehaviour
         if (storageDoor != null) storageDoor.OnInteractionFailed.RemoveListener(OnDoorTried);
     }
 
+    /// <summary>Loaded from a save: no more sounds from the storage room, the player has been inside it. The only checkpoint in the
+    /// level is in there, so an unlocked door was also gone through: its triggers are put back as going through left them
+    /// (without this the exit trigger is off and the player stands inside with the door back to the shop not working).</summary>
+    public void RestoreFinished()
+    {
+        Step = 3;
+        crashed = powerBack = true;
+        if (storageDoor != null && storageDoor.IsUnlocked)
+        {
+            storageDoor.OnInteracted?.Invoke();
+            // "entering the storage room for the first time": already heard, and it would play again on going back in
+            var firstEntryLine = storageDoor.GetComponentInChildren<AudioTrigger>(true);
+            if (firstEntryLine != null) Destroy(firstEntryLine.gameObject);
+        }
+    }
+
     void OnCrash() { crashed = true; crashAt = Time.time; Debug.Log("[StoragePresence] the shelf has fallen - the room is listening"); }
     void OnPowerBack() { powerBack = true; DreadEvents.HoldFor(quietAfterPowerRestore); }
     void OnRegisterUsed() { registerUsed = true; }

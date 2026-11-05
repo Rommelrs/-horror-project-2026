@@ -8,6 +8,7 @@
 #   Khalid_CC_Grabbed   36 f loop: leaning back, face turned away from the split mouth, gripping the Questioner's forearms
 #   Khalid_CC_BreakFree 18 f: from the struggle into a shove (6), recovering (18)
 #   Khalid_CC_Bitten    27 f: head snaps away, hand to the bitten neck, recoils (8), recovering (27)
+#   Khalid_Switch_Draw  30 f: the right hand to the back pocket and back (right arm only, own layer WeaponSwitch)
 import bpy, sys, math
 from mathutils import Vector, Matrix
 
@@ -154,6 +155,22 @@ def k_bitten(k=1.0):
     return W
 
 
+def k_pocket(k=1.0):
+    """the right hand at his back pocket, torso turned a little to reach it (weapon switch)"""
+    W = dict(W0)
+    hand(W, "Left", P(-0.24, 0.02, 0.86), D(-0.05, 0.1, -1), D(1, 0, 0), elbow_back=0.4)
+    hand(W, "Right", P(0.24 - 0.12 * k, 0.02 - 0.21 * k, 0.86 + 0.10 * k), D(-0.25, -0.2, -1), D(-0.5, 1, 0), elbow_out=0.7, elbow_down=0.2, elbow_back=0.8)
+    return W
+
+
+def k_drawn():
+    """coming back from the pocket, what he took out by his right thigh"""
+    W = dict(W0)
+    hand(W, "Left", P(-0.24, 0.02, 0.86), D(-0.05, 0.1, -1), D(1, 0, 0), elbow_back=0.4)
+    hand(W, "Right", P(0.27, 0.10, 0.97), D(0.05, 0.5, -1), D(-1, 0, 0), elbow_out=0.4, elbow_down=0.5, elbow_back=0.4)
+    return W
+
+
 def sequence(keys):
     """keys: [(frame, W)] -> per-frame poses, smoothstep blends between keys (parent-relative)"""
     poses = []
@@ -176,6 +193,8 @@ CLIPS = {
     "Khalid_CC_Bitten": [(0, k_grabbed()), (4, k_bitten(1.1)), (8, k_bitten(1.0)), (18, k_bitten(0.85)), (27, IDLE)],
     # the grab sequence: bitten and still held (ends in the bitten pose), then he shoves the Questioner off
     "Khalid_CC_BittenHold": [(0, k_grabbed()), (4, k_bitten(1.15)), (8, k_bitten(1.0)), (14, k_bitten(0.92)), (20, k_bitten(1.05)), (26, k_bitten(1.0))],
+    # a weapon switch, 1 s: hand to the back pocket by frame 13, what's in the hand swaps there (0.45 s), and back
+    "Khalid_Switch_Draw": [(0, IDLE), (7, k_pocket(0.6)), (13, k_pocket(1.0)), (16, k_pocket(1.0)), (23, k_drawn()), (30, IDLE)],
     "Khalid_CC_PushOff": [(0, k_bitten(1.0)), (4, k_chest(-8)), (7, k_push(0.70, 15)), (11, k_push(0.64, 10)), (22, IDLE)],
 }
 only = ARGS[2].split(",") if len(ARGS) > 2 else None

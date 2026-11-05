@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 /// <summary>
 /// The Questioner's fight (spec moveset). One state with its own phases, driven by timers (spec numbers in QuestionerTuning):
@@ -20,8 +21,9 @@ using UnityEngine;
 ///             scream or the claws) - backs off and drifts left or right to a random distance, for a random time, then the
 ///             grab (a test of patience). Strikes during the scream only hurt him (damage + flinch); it carries on.
 ///  Stagger  - mouth hit: knees, hands over the mouth 4 s, stands up 0.8. Melee does double, a second mouth hit kills.
-/// Movement uses NavMeshAgent.Move (stays on the navmesh, no path), he always faces Khalid; the animator gets the local
-/// velocity (MoveX / MoveZ) for the Q_Locomotion blend tree and plays the move states by name.
+/// Movement uses NavMeshAgent.Move (stays on the navmesh), he always faces Khalid; the animator gets the local
+/// velocity (MoveX / MoveZ) for the Q_Locomotion blend tree and plays the move states by name. A straight line at Khalid
+/// unless the navmesh blocks it: then he walks a path around, facing the way he goes (UpdateRoute).
 /// </summary>
 public class QuestionerCombatState : EnemyState
 {
@@ -51,7 +53,12 @@ public class QuestionerCombatState : EnemyState
     bool hadToken, wasInGrab, wasInClaw;
     bool clawRun;
     float clawRunT;
-    bool chorus, chorusLoud, chorusBig, chorusHitPending;
+    bool chorus, chorusLoud, chorusBig, chorusHitPending, chorusInhaled;
+    readonly NavMeshPath routePath = new NavMeshPath();
+    readonly Vector3[] routeCorners = new Vector3[16];
+    int routeCornerCount, routeCorner;
+    float nextRouteCheck;
+    bool StraightLineClear => routeCornerCount == 0;
 
     public bool IsStaggered => phase == Phase.StaggerDown || phase == Phase.StaggerLoop || phase == Phase.StaggerUp;
     public bool IsGrabbing => phase == Phase.GrabHold || phase == Phase.GrabScream || phase == Phase.Bite;
@@ -59,6 +66,8 @@ public class QuestionerCombatState : EnemyState
     public bool InGrabMove => phase == Phase.GrabWindup || phase == Phase.GrabRush || IsGrabbing;
     /// <summary>Horde: running in for the claws, or clawing.</summary>
     public bool InClawMove => clawRun || phase == Phase.Swipe;
+    /// <summary>Free to drop what he's doing for the chorus (not in a grab, a claw swing, a recoil or a stagger).</summary>
+    public bool CanJoinChorus => phase == Phase.Free || phase == Phase.Release || phase == Phase.ScreamWindup || phase == Phase.ScreamActive || phase == Phase.ScreamRecover;
     /// <summary>The grab lunge: a pipe strike landing now knocks him back (the end of the wind-up and the rush).</summary>
     public bool IsCounterable => phase == Phase.GrabRush || (phase == Phase.GrabWindup && phaseT >= T.grabWindup - T.counterWindow);
     public string PhaseName => phase.ToString();
@@ -72,6 +81,7 @@ public class QuestionerCombatState : EnemyState
     }
 
     Transform PlayerT => Player.instance != null ? Player.instance.transform : null;
+    static bool CanGrabKhalid => PlayerCloseCombat.instance != null && PlayerCloseCombat.instance.CanBeGrabbed;
     static bool PlayerAiming => Player.instance != null && Player.instance.playerWeaponSystem != null && Player.instance.playerWeaponSystem.isAiming;
 
     Vector3 ToPlayerFlat()
@@ -110,6 +120,8 @@ public class QuestionerCombatState : EnemyState
         // a horde arrives together: stagger their first screams
         if (q.hordeMode) nextScream = Mathf.Max(nextScream, now + Random.Range(T.firstMoveDelay, T.hordeScreamCooldownMax));
         noSightTime = 0f;
+        routeCornerCount = 0;
+        nextRouteCheck = 0f;
         q.ResetMouth();
         SetPhase(Phase.Free, "Q_Locomotion", 0.25f);
         q.OnAttackStarted?.Invoke();
@@ -172,6 +184,16 @@ public class QuestionerCombatState : EnemyState
 
             case Phase.ScreamWindup:
                 Brake(dt); Face(dir, 360f);
+                if (chorus && !chorusInhaled)
+                {
+                    // the line-up: standing still, staring at Khalid, then they all breathe in
+                    if (phaseT < 0f) break;
+                    chorusInhaled = true;
+                    q.anim.CrossFadeInFixedTime("Q_ScreamWindup", 0.15f, 0);
+                    if (chorusLoud) q.PlayCue(q.inhaleSFX);
+                    q.SetMouth(1f);
+                    q.SetWeakpointScale(T.weakpointWindupScale);
+                }
                 if (phaseT >= T.screamWindup && chorus)
                 {
                     // the horde's chorus: the nearest few voice it, the rest of the near ones fill the air with huge waves;
@@ -362,6 +384,15 @@ public class QuestionerCombatState : EnemyState
 
     void UpdateFree(float dt, float d, Vector3 dir)
     {
+        // the chorus line-up: stands still on the road, turning to Khalid as he comes, until the chorus
+        if (q.InLineUp)
+        {
+            Brake(dt);
+            if (d < T.hordeChorusRange * 2f) Face(dir, 120f);
+            q.TryHordeChorus();
+            return;
+        }
+
         // lost him: back to the normal chase
         noSightTime = q.HasLineOfSightToPlayer() ? 0f : noSightTime + dt;
         if (d > T.disengageRange || noSightTime > 2f)
@@ -371,6 +402,7 @@ public class QuestionerCombatState : EnemyState
             return;
         }
 
+        UpdateRoute();
         if (q.hordeMode) { UpdateHorde(dt, d, dir); return; }
 
         Vector3 right = Vector3.Cross(Vector3.up, dir);
@@ -426,11 +458,15 @@ public class QuestionerCombatState : EnemyState
             float radial = Mathf.Clamp((d - circleRadius) * 0.8f, -T.walkSpeed * 0.6f, T.walkSpeed);
             desired = dir * radial + right * (circleDir * T.strafeSpeed * 0.55f);
         }
+        // on his way to Khalid with something in between: around it, not into it
+        Vector3 way = Vector3.zero;
+        bool routing = Vector3.Dot(desired, dir) > 0.05f && RouteDirection(out way);
+        if (routing) desired = way * T.walkSpeed;
         desired += Separation();
 
         vel = Vector3.MoveTowards(vel, desired, T.acceleration * dt);
         MoveAgent(vel * dt);
-        Face(dir, T.turnSpeed);
+        Face(routing ? way : dir, T.turnSpeed);
         SendLocomotion(vel);
 
         if (!token || Time.time < nextDecision) return;
@@ -440,7 +476,7 @@ public class QuestionerCombatState : EnemyState
         // the feint after a pipe strike always ends in the grab (no scream, whatever Khalid does meanwhile)
         if (Feinting)
         {
-            if (Time.time >= feintUntil && sight) { feintUntil = 0f; StartGrab(); }
+            if (Time.time >= feintUntil && sight) { feintUntil = 0f; if (CanGrabKhalid && StraightLineClear) StartGrab(); }
             else if (Time.time >= feintUntil + 2f) feintUntil = 0f;      // lost sight of him: give up the feint
             return;
         }
@@ -458,7 +494,7 @@ public class QuestionerCombatState : EnemyState
         {
             StartSwipe();
         }
-        else if (sight && Time.time >= nextGrab && d >= T.grabMin && d <= T.grabMax && Random.value < T.grabChance)
+        else if (sight && StraightLineClear && CanGrabKhalid && Time.time >= nextGrab && d >= T.grabMin && d <= T.grabMax && Random.value < T.grabChance)
         {
             StartGrab();
         }
@@ -472,14 +508,16 @@ public class QuestionerCombatState : EnemyState
     /// his own cooldown (spaced out across the horde), and grabs when close if fewer than hordeMaxGrabbers are grabbing.</summary>
     void UpdateHorde(float dt, float d, Vector3 dir)
     {
+        if (clawRun && Player.instance.isGrabbed) clawRun = false;
         if (clawRun)
         {
             // got the claws: runs straight in to claw distance (gives up if Khalid outruns him)
             clawRunT += dt;
             float run = T.hordeClawRunSpeed * Mathf.Clamp01((d - T.swipeRange * 0.8f) / 0.5f);
-            vel = Vector3.MoveTowards(vel, dir * run + Separation(), T.acceleration * 2f * dt);
+            Vector3 runDir = run > 0.05f && RouteDirection(out Vector3 runWay) ? runWay : dir;
+            vel = Vector3.MoveTowards(vel, runDir * run + Separation(), T.acceleration * 2f * dt);
             MoveAgent(vel * dt);
-            Face(dir, 360f);
+            Face(runDir, 360f);
             SendLocomotion(vel);
             if (d <= T.swipeRange) { clawRun = false; StartSwipe(); }
             else if (clawRunT > 2.5f) { clawRun = false; nextDecision = Time.time + T.decisionInterval; }
@@ -494,19 +532,21 @@ public class QuestionerCombatState : EnemyState
             strafeTimer = Random.Range(T.strafeSwitchMin, T.strafeSwitchMax);
         }
         float fwd = T.walkSpeed * Mathf.Clamp((d - T.hordeStopDistance) / 0.8f, -0.6f, 1f);
-        Vector3 desired = dir * fwd + right * (strafeDir * T.strafeSpeed * 0.5f) + Separation();
+        Vector3 way = Vector3.zero;
+        bool routing = fwd > 0.05f && RouteDirection(out way);
+        Vector3 desired = (routing ? way * T.walkSpeed : dir * fwd + right * (strafeDir * T.strafeSpeed * 0.5f)) + Separation();
         vel = Vector3.MoveTowards(vel, desired, T.acceleration * dt);
         MoveAgent(vel * dt);
-        Face(dir, T.turnSpeed);
+        Face(routing ? way : dir, T.turnSpeed);
         SendLocomotion(vel);
 
         if (Time.time < nextDecision) return;
         nextDecision = Time.time + T.decisionInterval;
         // facing a crowd of them for the first time: they all scream at once
-        if (q.TryHordeChorus()) return;
+        if (q.TryHordeChorus() || !q.HordeMayAttack) return;
         if (!q.HasLineOfSightToPlayer()) return;
         bool inFront = InFrontOfPlayer();
-        if (inFront && Time.time >= nextGrab && d >= T.hordeGrabMin && d <= T.hordeGrabMax && Random.value < T.grabChance && q.TryHordeGrab())
+        if (inFront && StraightLineClear && Time.time >= nextGrab && d >= T.hordeGrabMin && d <= T.hordeGrabMax && Random.value < T.grabChance && q.TryHordeGrab())
             StartGrab();
         else if (!inFront && d <= T.hordeClawRange && Random.value < T.grabChance && q.TryHordeClaw())
         {
@@ -543,12 +583,16 @@ public class QuestionerCombatState : EnemyState
     /// they don't move as one; `loud` = one of the few nearest that voice it, `big` = throws the huge shells.</summary>
     public void StartChorus(float delay, bool loud, bool big)
     {
-        if (phase != Phase.Free && phase != Phase.Release) return;
+        if (!CanJoinChorus) return;
         clawRun = false;
         chorus = true;
+        chorusInhaled = false;
         chorusLoud = loud;
         chorusBig = big;
-        StartScream(loud);
+        feintUntil = 0f;
+        vel = Vector3.zero;
+        nextScream = Time.time + Random.Range(T.hordeScreamCooldownMin, T.hordeScreamCooldownMax);
+        SetPhase(Phase.ScreamWindup, "Q_Locomotion", 0.1f);
         phaseT = -delay;
     }
 
@@ -731,6 +775,9 @@ public class QuestionerCombatState : EnemyState
 
     void UpdateSwipe(float dt, float d, Vector3 dir)
     {
+        // another Questioner has hold of Khalid: he's being bitten, claws on top of that would be unfair
+        if (Player.instance.isGrabbed) { EndMove(); return; }
+
         // lines up during the wind-up and creeps in a little, then commits
         if (phaseT < T.swipeWindup)
         {
@@ -787,6 +834,43 @@ public class QuestionerCombatState : EnemyState
         q.PlayCue(q.staggerSFX, 1.1f);
         vel = Vector3.zero;
         SetPhase(Phase.StaggerDown, "Q_StaggerDown", 0.1f);
+    }
+
+    // ---------------- getting round things ----------------
+
+    /// <summary>Is the navmesh in the way of a straight line to Khalid? Then this keeps a path around it. The fight's movement
+    /// doesn't pathfind, and while he can still see Khalid it doesn't hand back to the chase either, so without this anything
+    /// he can see past (a low bench, an empty space baked as solid) pinned him against its edge for good.</summary>
+    void UpdateRoute()
+    {
+        if (Time.time < nextRouteCheck) return;
+        nextRouteCheck = Time.time + (q.hordeMode ? 0.4f : 0.25f) * Random.Range(0.8f, 1.2f);
+        routeCornerCount = 0;
+        if (!q.agent.enabled || !q.agent.isOnNavMesh) return;
+        int mask = q.agent.areaMask;
+        if (!NavMesh.SamplePosition(PlayerT.position, out NavMeshHit target, 2f, mask)) return;
+        if (!NavMesh.Raycast(q.agent.nextPosition, target.position, out NavMeshHit _, mask)) return;
+        if (!q.agent.CalculatePath(target.position, routePath) || routePath.status == NavMeshPathStatus.PathInvalid) return;
+        routeCornerCount = routePath.GetCornersNonAlloc(routeCorners);
+        routeCorner = 1;
+    }
+
+    /// <summary>The flat direction to the next corner of the route, false when he's not on one.</summary>
+    bool RouteDirection(out Vector3 way)
+    {
+        while (routeCorner < routeCornerCount)
+        {
+            Vector3 to = routeCorners[routeCorner] - q.transform.position;
+            to.y = 0f;
+            if (to.sqrMagnitude > 0.09f)
+            {
+                way = to.normalized;
+                return true;
+            }
+            routeCorner++;
+        }
+        way = Vector3.zero;
+        return false;
     }
 
     // ---------------- helpers ----------------

@@ -1,0 +1,345 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!319 &31900000
+AvatarMask:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: SwitchRightArm
+  m_Mask: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+  m_Elements:
+  - m_Path: 
+    m_Weight: 0
+  - m_Path: char_grp
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_arrow_cross
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_arrow_twist
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_base_finger
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_box
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_circle_head
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_circle_squashed
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_curve
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_foot.l
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_foot.r
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_foot_roll
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_half_circle
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_hand
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_line
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_pos
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_sphere
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_spine
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_torus_02
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_torus_03
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_torus_04
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_user_c_arm_fk.l
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_user_c_arm_fk.r
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_user_c_arm_ik.r
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_user_c_leg_fk.l
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_user_c_leg_fk.r
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_user_c_shoulder.l
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_user_c_shoulder.r
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_user_c_spine_03.x
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_user_c_thigh_fk.l
+    m_Weight: 0
+  - m_Path: char_grp/cs_grp/cs_user_c_thigh_fk.r
+    m_Weight: 0
+  - m_Path: char_grp/rig
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/arm_stretch.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/arm_stretch.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x/root.x
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x/root.x/c_thigh_b.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x/root.x/c_thigh_b.l/c_thigh_fk.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x/root.x/c_thigh_b.l/c_thigh_fk.l/c_leg_fk.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x/root.x/c_thigh_b.l/c_thigh_fk.l/c_leg_fk.l/leg_fk.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x/root.x/c_thigh_b.l/c_thigh_fk.l/c_leg_fk.l/leg_fk.l/foot.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x/root.x/c_thigh_b.l/c_thigh_fk.l/c_leg_fk.l/leg_fk.l/foot.l/toes_01.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x/root.x/c_thigh_b.l/thigh_twist.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x/root.x/c_thigh_b.r
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x/root.x/c_thigh_b.r/c_thigh_fk.r
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x/root.x/c_thigh_b.r/c_thigh_fk.r/c_leg_fk.r
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x/root.x/c_thigh_b.r/c_thigh_fk.r/c_leg_fk.r/leg_fk.r
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x/root.x/c_thigh_b.r/c_thigh_fk.r/c_leg_fk.r/leg_fk.r/foot.r
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x/root.x/c_thigh_b.r/c_thigh_fk.r/c_leg_fk.r/leg_fk.r/foot.r/toes_01.r
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_root.x/root.x/c_thigh_b.r/thigh_twist.r
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x/c_spine_02.x
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x/c_spine_02.x/c_spine_03.x
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x/c_spine_02.x/c_spine_03.x/spine_03.x
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x/c_spine_02.x/c_spine_03.x/spine_03.x/c_neck.x
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x/c_spine_02.x/c_spine_03.x/spine_03.x/c_neck.x/neck.x
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x/c_spine_02.x/c_spine_03.x/spine_03.x/c_shoulder.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x/c_spine_02.x/c_spine_03.x/spine_03.x/c_shoulder.l/arm_twist.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x/c_spine_02.x/c_spine_03.x/spine_03.x/c_shoulder.l/arm_twist.l/c_arm_twist_offset.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x/c_spine_02.x/c_spine_03.x/spine_03.x/c_shoulder.l/shoulder.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x/c_spine_02.x/c_spine_03.x/spine_03.x/c_shoulder.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x/c_spine_02.x/c_spine_03.x/spine_03.x/c_shoulder.r/arm_twist.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x/c_spine_02.x/c_spine_03.x/spine_03.x/c_shoulder.r/arm_twist.r/c_arm_twist_offset.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x/c_spine_02.x/c_spine_03.x/spine_03.x/c_shoulder.r/shoulder.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x/c_spine_02.x/spine_02.x
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/c_root_master.x/c_spine_01.x/spine_01.x
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_index1_base.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_index1_base.l/index1_rot.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_index1_base.l/index1_rot.l/c_index1.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_index1_base.l/index1_rot.l/c_index1.l/index1.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_index1_base.l/index1_rot.l/c_index1.l/index1.l/index2_rot.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_index1_base.l/index1_rot.l/c_index1.l/index1.l/index2_rot.l/c_index2.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_index1_base.l/index1_rot.l/c_index1.l/index1.l/index2_rot.l/c_index2.l/index3_rot.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_index1_base.l/index1_rot.l/c_index1.l/index1.l/index2_rot.l/c_index2.l/index3_rot.l/c_index3.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_thumb1_base.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_thumb1_base.l/thumb1_rot.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_thumb1_base.l/thumb1_rot.l/c_thumb1.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_thumb1_base.l/thumb1_rot.l/c_thumb1.l/thumb1.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_thumb1_base.l/thumb1_rot.l/c_thumb1.l/thumb1.l/thumb2_rot.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_thumb1_base.l/thumb1_rot.l/c_thumb1.l/thumb1.l/thumb2_rot.l/c_thumb2.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_thumb1_base.l/thumb1_rot.l/c_thumb1.l/thumb1.l/thumb2_rot.l/c_thumb2.l/thumb3_rot.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.l/hand.l/c_thumb1_base.l/thumb1_rot.l/c_thumb1.l/thumb1.l/thumb2_rot.l/c_thumb2.l/thumb3_rot.l/c_thumb3.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_index1_base.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_index1_base.r/index1_rot.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_index1_base.r/index1_rot.r/c_index1.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_index1_base.r/index1_rot.r/c_index1.r/index1.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_index1_base.r/index1_rot.r/c_index1.r/index1.r/index2_rot.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_index1_base.r/index1_rot.r/c_index1.r/index1.r/index2_rot.r/c_index2.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_index1_base.r/index1_rot.r/c_index1.r/index1.r/index2_rot.r/c_index2.r/index3_rot.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_index1_base.r/index1_rot.r/c_index1.r/index1.r/index2_rot.r/c_index2.r/index3_rot.r/c_index3.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_thumb1_base.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_thumb1_base.r/thumb1_rot.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_thumb1_base.r/thumb1_rot.r/c_thumb1.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_thumb1_base.r/thumb1_rot.r/c_thumb1.r/thumb1.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_thumb1_base.r/thumb1_rot.r/c_thumb1.r/thumb1.r/thumb2_rot.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_thumb1_base.r/thumb1_rot.r/c_thumb1.r/thumb1.r/thumb2_rot.r/c_thumb2.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_thumb1_base.r/thumb1_rot.r/c_thumb1.r/thumb1.r/thumb2_rot.r/c_thumb2.r/thumb3_rot.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/c_thumb1_base.r/thumb1_rot.r/c_thumb1.r/thumb1.r/thumb2_rot.r/c_thumb2.r/thumb3_rot.r/c_thumb3.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Barrel
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Barrel_Lower
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Body_Groved_Button
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Bullet_Back_Shell1
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Bullet_Back_Shell1/Bullet_Back_Shell2
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Bullet_Back_Shell1/Bullet_Back_Shell3
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Bullet_Front_Shell1
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Bullet_Front_Shell1/Bullet_Front_Shell2
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Bullet_Front_Shell1/Bullet_Front_Shell3
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Front_Sight_
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Left__Body_Button
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Left_Body_Supporter
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Left_Magazine_Button
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Left_Mode_Changer
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Left_Trigger_Button
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Lower_Body
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Magazine
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Magazine_back_Part
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Magazine_Cap
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Magazine_Remover_Button
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Middle_Body_Support
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Rear_Sight
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Right__Body_Button
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Right_Body_Supporter
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Right_Mode_Changer
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Right_Trigger_Button
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Screw_1
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Screw_2
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Side_Grip
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Slide1
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Thruster
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/Pistol 2/Trigger
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/PistolEndPoint (1)
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/PistolEndPoint (1)/MuzzleFlashEffect
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/CartridgeEjectEffect
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/Pistol 2/CartridgeEjectEffect/Puff
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/MeleePipe
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/MeleePipe/Pipe
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/PainkillerProp
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/PainkillerProp/Bottle
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/MedKitProp
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/MedKitProp/Syringe
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/MedKitProp/Syringe/base
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/MedKitProp/Syringe/liquid
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm.r/hand.r/MedKitProp/Syringe/pump
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm_stretch.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm_stretch.l/forearm_twist.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm_stretch.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/forearm_stretch.r/forearm_twist.r
+    m_Weight: 1
+  - m_Path: char_grp/rig/c_pos/c_traj/head_scale_fix.x
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/head_scale_fix.x/c_head.x
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/head_scale_fix.x/c_head.x/head.x
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/leg_stretch.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/leg_stretch.l/leg_twist.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/leg_stretch.r
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/leg_stretch.r/leg_twist.r
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/thigh_stretch.l
+    m_Weight: 0
+  - m_Path: char_grp/rig/c_pos/c_traj/thigh_stretch.r
+    m_Weight: 0
+  - m_Path: SM_MainCharacter
+    m_Weight: 0

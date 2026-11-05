@@ -61,6 +61,12 @@ public class Lock : MonoBehaviour
         {
             SoundEffectManager.instance.PlaySFXAtPosition(destoryClip, transform.position);
         }
+        else if (destoryClip == null)
+        {
+            // a bag lock has no clip of its own: it bursts with the bag's mud splash
+            var bag = GetComponentInChildren<Projectile>(true);
+            if (bag != null) bag.PlayImpactSound();
+        }
         
         // Spawn particle effect
         if (destroyParticleEffect != null)

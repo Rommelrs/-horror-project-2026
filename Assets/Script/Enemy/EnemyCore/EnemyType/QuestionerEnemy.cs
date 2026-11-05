@@ -58,8 +58,10 @@ public class QuestionerEnemy : HeadshotEnemy
     static readonly List<QuestionerEnemy> all = new List<QuestionerEnemy>();
     static float nextHordeScream, nextHordeGrab, nextHordeClaw;
     static bool chorusDone, chorusLanded;
-    static float nextChorusCheck;
+    static float nextChorusCheck, chorusFirstEngage = -1f;
+    static bool chorusForced;
     static readonly List<QuestionerEnemy> chorusCrowd = new List<QuestionerEnemy>();
+    static readonly RaycastHit[] viewBuffer = new RaycastHit[16];
     /// <summary>Every enabled Questioner (cheap to walk every frame, unlike FindObjectsByType with a horde of them).</summary>
     public static List<QuestionerEnemy> All => all;
     public static QuestionerEnemy TokenHolder => tokenHolder;
@@ -196,7 +198,7 @@ public class QuestionerEnemy : HeadshotEnemy
     /// Khalid, and the horde's break after the last grab (hordeGrabGap) is over - without it the grabs came back to back.</summary>
     public bool TryHordeGrab()
     {
-        if (Time.time < nextHordeGrab || (Player.instance != null && Player.instance.isGrabbed)) return false;
+        if (Time.time < nextHordeGrab || (Player.instance != null && (Player.instance.isGrabbed || Player.instance.isKnockedDown))) return false;
         int grabbing = 0;
         foreach (var other in all)
             if (other != this && other.hordeMode && other.stateMachine.CurrentState == other.combatState && other.combatState.InGrabMove) grabbing++;
@@ -223,17 +225,37 @@ public class QuestionerEnemy : HeadshotEnemy
     public void HordeGrabEnded()
     {
         nextHordeGrab = Mathf.Max(nextHordeGrab, Time.time + Random.Range(tuning.hordeGrabGapMin, tuning.hordeGrabGapMax));
+        // no claws in his back the moment he has shoved one off
+        nextHordeClaw = Mathf.Max(nextHordeClaw, Time.time + tuning.hordeClawAfterGrab);
     }
 
     /// <summary>A new horde sequence (ItemPickupEnemySpawner starting): its chorus can happen again.</summary>
     public static void ResetHordeChorus()
     {
-        chorusDone = chorusLanded = false;
+        chorusDone = chorusLanded = chorusForced = false;
+        chorusFirstEngage = -1f;
     }
 
-    /// <summary>Horde, once per sequence: the first time a crowd of them has come close in front of Khalid (hordeChorusMin on
-    /// screen within hordeChorusTriggerRange), every horde Questioner within hordeChorusRange screams at once - The Question
-    /// as a chorus. True if it started.</summary>
+    /// <summary>One of the chorus line-up: stands still where the spawner put him, waiting for Khalid, until the chorus.</summary>
+    public bool InLineUp { get; private set; }
+    public void JoinLineUp() => InLineUp = true;
+
+    /// <summary>The chorus opens the fight: nobody in the horde screams, grabs or claws before it, so Khalid sees it with a clear
+    /// view and the normal camera. If it can't happen (too few of them get close) they start anyway after hordeChorusMaxHold.</summary>
+    public bool HordeMayAttack
+    {
+        get
+        {
+            if (chorusDone) return true;
+            if (chorusFirstEngage < 0f) chorusFirstEngage = Time.time;
+            return Time.time - chorusFirstEngage > tuning.hordeChorusMaxHold;
+        }
+    }
+
+    /// <summary>Horde, once per sequence. With a line-up (ItemPickupEnemySpawner put them on the road ahead of Khalid): when he
+    /// is within hordeChorusTriggerRange of it and can see hordeChorusMin of them, or within hordeChorusCloseRange whatever he
+    /// is looking at, or when he hits one. Without one: hordeChorusMin of the horde within hordeChorusTriggerRange. All of the
+    /// line-up and every other horde Questioner within hordeChorusRange then scream at once. True if it started.</summary>
     public bool TryHordeChorus()
     {
         if (chorusDone || Time.time < nextChorusCheck) return false;
@@ -241,25 +263,45 @@ public class QuestionerEnemy : HeadshotEnemy
         var cam = Camera.main;
         var p = Player.instance;
         if (cam == null || p == null || p.isGrabbed) return false;
+        Vector3 at = p.transform.position;
         float r2 = tuning.hordeChorusRange * tuning.hordeChorusRange;
         float trigger2 = tuning.hordeChorusTriggerRange * tuning.hordeChorusTriggerRange;
         chorusCrowd.Clear();
-        int seen = 0;
+        Vector3 lineUpAt = Vector3.zero;
+        int lineUp = 0, seen = 0, close = 0;
         foreach (var o in all)
         {
             if (!o.hordeMode || o.health == null || o.health.IsDead) continue;
-            float d2 = (o.transform.position - p.transform.position).sqrMagnitude;
+            bool free = o.stateMachine.CurrentState == o.chaseState
+                        || (o.stateMachine.CurrentState == o.combatState && o.combatState.CanJoinChorus);
+            if (o.InLineUp)
+            {
+                lineUp++;
+                lineUpAt += o.transform.position;
+                if (free) chorusCrowd.Add(o);
+                if (ClearlyInView(cam, o)) seen++;
+                continue;
+            }
+            float d2 = (o.transform.position - at).sqrMagnitude;
             if (d2 > r2) continue;
-            chorusCrowd.Add(o);
-            if (d2 > trigger2) continue;
-            Vector3 vp = cam.WorldToViewportPoint(o.transform.position + Vector3.up * 1.2f);
-            if (vp.z > 0f && vp.x > 0.03f && vp.x < 0.97f && vp.y > 0f && vp.y < 1f) seen++;
+            if (free) chorusCrowd.Add(o);
+            if (d2 <= trigger2) close++;
         }
-        if (seen < tuning.hordeChorusMin) return false;
+
+        bool fire;
+        if (lineUp > 0)
+        {
+            Vector3 toLineUp = lineUpAt / lineUp - at;
+            toLineUp.y = 0f;
+            float d = toLineUp.magnitude;
+            fire = chorusForced || (d <= tuning.hordeChorusTriggerRange && seen >= tuning.hordeChorusMin) || d <= tuning.hordeChorusCloseRange;
+        }
+        else fire = close >= tuning.hordeChorusMin;
+        if (!fire) return false;
 
         chorusDone = true;
         chorusLanded = false;
-        Vector3 at = p.transform.position;
+        foreach (var o in all) o.InLineUp = false;
         chorusCrowd.Sort((a, b) => (a.transform.position - at).sqrMagnitude.CompareTo((b.transform.position - at).sqrMagnitude));
         int loud = 0;
         foreach (var o in chorusCrowd)
@@ -267,11 +309,29 @@ public class QuestionerEnemy : HeadshotEnemy
             // the ones still walking up join in too
             if (o.stateMachine.CurrentState == o.chaseState) o.stateMachine.ChangeState(o.combatState);
             if (o.stateMachine.CurrentState != o.combatState) continue;
-            o.combatState.StartChorus(Random.Range(0f, tuning.hordeChorusSpread), loud < tuning.hordeChorusVoices, loud < tuning.hordeChorusWaves);
+            o.combatState.StartChorus(tuning.hordeChorusHold + Random.Range(0f, tuning.hordeChorusSpread), loud < tuning.hordeChorusVoices, loud < tuning.hordeChorusWaves);
             loud++;
         }
         // a moment of quiet after it before the usual screams pick up again
         nextHordeScream = Time.time + tuning.hordeChorusQuiet;
+        return true;
+    }
+
+    /// <summary>On screen with nothing solid between him and the camera.</summary>
+    static bool ClearlyInView(Camera cam, QuestionerEnemy o)
+    {
+        Vector3 chest = o.transform.position + Vector3.up * 1.2f;
+        Vector3 vp = cam.WorldToViewportPoint(chest);
+        if (vp.z <= 0f || vp.x < 0.02f || vp.x > 0.98f || vp.y < 0f || vp.y > 1f) return false;
+        Vector3 eye = cam.transform.position;
+        Vector3 dir = chest - eye;
+        int count = Physics.RaycastNonAlloc(eye, dir.normalized, viewBuffer, dir.magnitude, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < count; i++)
+        {
+            var c = viewBuffer[i].collider;
+            if (c == null || c.GetComponentInParent<Player>() != null || c.GetComponentInParent<Enemy>() != null) continue;
+            return false;
+        }
         return true;
     }
 
@@ -297,7 +357,8 @@ public class QuestionerEnemy : HeadshotEnemy
         tokenHolder = null;
         tokenFreeAt = 0f;
         nextHordeScream = nextHordeGrab = nextHordeClaw = nextChorusCheck = 0f;
-        chorusDone = chorusLanded = false;
+        chorusDone = chorusLanded = chorusForced = false;
+        chorusFirstEngage = -1f;
         all.Clear();
     }
 
@@ -342,6 +403,13 @@ public class QuestionerEnemy : HeadshotEnemy
     {
         if (!specMoveset) { base.CheckLeaveCondition(currentState); return; }
 
+        // the line-up waits in the fight state, standing still (see QuestionerCombatState.UpdateFree)
+        if (InLineUp && !health.IsDead && (currentState == idleState || currentState == chaseState))
+        {
+            stateMachine.ChangeState(combatState);
+            return;
+        }
+
         // wherever the old rules would start the old attack, the fight starts instead
         if ((currentState == idleState && stats.enemyType == EnemyType.Fixed) || currentState == enemyWanderState)
         {
@@ -380,6 +448,7 @@ public class QuestionerEnemy : HeadshotEnemy
     {
         if (!specMoveset) { base.TakeDamage(dmgValue); return; }
         if (health.IsDead) return;
+        if (InLineUp) chorusForced = true;     // Khalid started it
 
         // the action sequence's blast (DangerZone): the full damage and the old weakpoint knock-down (falls, lies, gets up),
         // not the kneeling hold-the-mouth stagger of the player's mouth shot
@@ -582,19 +651,24 @@ public class QuestionerTuning
     public float hordeClawRange = 4.5f, hordeClawRunSpeed = 2.6f;
     [Tooltip("After a horde claw attack ends no one in the horde claws for this long (s).")]
     public float hordeClawGapMin = 5f, hordeClawGapMax = 8f;
+    [Tooltip("After a horde grab ends no one in the horde claws for at least this long (s).")]
+    public float hordeClawAfterGrab = 3f;
     [Tooltip("Seconds between two horde screams starting (across the whole horde).")]
     public float hordeScreamSpacing = 0.6f;
     [Tooltip("Each horde Questioner's own scream cooldown (s).")]
     public float hordeScreamCooldownMin = 4f, hordeScreamCooldownMax = 8f;
-    [Tooltip("The chorus (once per sequence): when this many of the horde have come on screen within hordeChorusTriggerRange "
-           + "(m) - close, but before they reach hordeStopDistance - every one of them within hordeChorusRange (m) screams at "
-           + "once, each up to hordeChorusSpread (s) late; the nearest hordeChorusVoices voice it, the "
+    [Tooltip("The chorus (once per sequence, opens the fight): Khalid within hordeChorusTriggerRange (m) of the line-up and seeing "
+           + "this many of them, or within hordeChorusCloseRange (m) of it whatever he looks at (no line-up: this many of the horde "
+           + "within hordeChorusTriggerRange). The line-up and every other one within hordeChorusRange (m) scream at once, each "
+           + "hordeChorusHold (s) + up to hordeChorusSpread (s) late; the nearest hordeChorusVoices voice it, the "
            + "nearest hordeChorusWaves throw the huge shells; the scream reaches Khalid hordeChorusHitDelay (s) in (he sees the "
            + "waves first); then hordeChorusQuiet (s) of no screams.")]
-    public int hordeChorusMin = 6;
-    public float hordeChorusTriggerRange = 7f, hordeChorusRange = 14f, hordeChorusSpread = 0.1f;
+    public int hordeChorusMin = 8;
+    public float hordeChorusTriggerRange = 9f, hordeChorusCloseRange = 6f, hordeChorusRange = 14f, hordeChorusSpread = 0.1f, hordeChorusHold = 0.6f;
     public int hordeChorusVoices = 6, hordeChorusWaves = 24;
-    public float hordeChorusHitDelay = 0.6f, hordeChorusQuiet = 2.5f;
+    public float hordeChorusHitDelay = 0.02f, hordeChorusQuiet = 2.5f;
+    [Tooltip("No horde attacks before the chorus - unless it hasn't happened this long (s) after the first of them engaged.")]
+    public float hordeChorusMaxHold = 45f;
 
     [Header("Decisions")]
     public float firstMoveDelay = 0.6f;

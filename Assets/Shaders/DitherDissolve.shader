@@ -8,7 +8,10 @@ Shader "Custom/DitherDissolve"
         _Color ("Color", Color) = (1,1,1,1)
         _MainTex ("Albedo", 2D) = "white" {}
         _Glossiness ("Smoothness", Range(0,1)) = 0
+        _GlossFromAlpha ("Multiply smoothness by albedo alpha", Range(0,1)) = 0
         _Metallic ("Metallic", Range(0,1)) = 0
+        _BumpMap ("Normal map", 2D) = "bump" {}
+        _OcclusionMap ("Occlusion (G)", 2D) = "white" {}
         _Opacity ("Opacity", Range(0,1)) = 1
     }
     SubShader
@@ -18,9 +21,9 @@ Shader "Custom/DitherDissolve"
         #pragma surface surf Standard fullforwardshadows addshadow
         #pragma target 3.0
 
-        sampler2D _MainTex;
+        sampler2D _MainTex, _BumpMap, _OcclusionMap;
         fixed4 _Color;
-        half _Glossiness, _Metallic, _Opacity;
+        half _Glossiness, _GlossFromAlpha, _Metallic, _Opacity;
 
         struct Input
         {
@@ -37,8 +40,10 @@ Shader "Custom/DitherDissolve"
 
             fixed4 c = tex2D(_MainTex, IN.uv_MainTex) * _Color;
             o.Albedo = c.rgb;
+            o.Normal = UnpackNormal(tex2D(_BumpMap, IN.uv_MainTex));
+            o.Occlusion = tex2D(_OcclusionMap, IN.uv_MainTex).g;
             o.Metallic = _Metallic;
-            o.Smoothness = _Glossiness;
+            o.Smoothness = _Glossiness * lerp(1, c.a, _GlossFromAlpha);
             o.Alpha = 1;
         }
         ENDCG

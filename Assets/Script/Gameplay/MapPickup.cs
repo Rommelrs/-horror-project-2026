@@ -24,6 +24,8 @@ public class MapPickup : Interactable
         // Play pickup sound
         if (pickupSound != null && audioSource != null)
             audioSource.PlayOneShot(pickupSound);
+        else if (UISoundManager.instance != null)
+            UISoundManager.instance.PlayButtonHoverSound();
 
         // Mark as picked up for save system
         SaveablePickup saveablePickup = GetComponent<SaveablePickup>();

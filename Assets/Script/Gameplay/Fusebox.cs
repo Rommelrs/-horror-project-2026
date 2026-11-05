@@ -51,6 +51,13 @@ public class Fusebox : Interactable
         }
     }
     
+    /// <summary>Loaded from a save after the fuse went in (StoreBlackoutSequence decides that).</summary>
+    public void RestoreFuseInstalled()
+    {
+        useBlocked = false;
+        RestoreUsedState();
+    }
+
     private void RestoreUsedState()
     {
         hasEnergy = true;

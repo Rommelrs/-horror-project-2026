@@ -3,6 +3,7 @@ using UnityEngine.Playables;
 using UnityEngine.SceneManagement;
 using UnityEngine.Events;
 using System.Collections;
+using System.Collections.Generic;
 
 public class CutsceneTrigger : MonoBehaviour
 {
@@ -17,12 +18,22 @@ public class CutsceneTrigger : MonoBehaviour
     [Header("Debug")]
     [SerializeField] private bool enableDebugLogs = false;
     
-    private static bool hasPlayed = false;
+    // Per trigger, by object name (static so it survives the reload after dying). It used to be one flag shared by every trigger:
+    // the car crash set it, then the after-store cutscene thought it had already played and never froze the player.
+    private static readonly HashSet<string> played = new HashSet<string>();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetOnPlay() => played.Clear();
+
+    /// <summary>New game: every cutscene may play again.</summary>
+    public static void ResetPlayed() => played.Clear();
+
     private Player originalPlayer; // Store the player we disabled at the start
     
     // Store component states to restore later
     private bool wasMovementEnabled;
     private bool wasInputEnabled;
+    private bool holdingPipe;
     
     private void Start()
     {
@@ -35,12 +46,12 @@ public class CutsceneTrigger : MonoBehaviour
         SaveableTrigger saveableTrigger = GetComponent<SaveableTrigger>();
         if (saveableTrigger != null && saveableTrigger.WasAlreadyTriggered())
         {
-            hasPlayed = true;
+            played.Add(gameObject.name);
             return; // Already played in save
         }
         
         // Check if we should play the cutscene
-        if (playOnlyOnce && hasPlayed)
+        if (playOnlyOnce && played.Contains(gameObject.name))
         {
             // Already played, don't play again
             return;
@@ -53,7 +64,7 @@ public class CutsceneTrigger : MonoBehaviour
             if (lastScene == previousSceneName)
             {
                 PlayCutscene();
-                hasPlayed = true;
+                played.Add(gameObject.name);
             }
         }
     }
@@ -94,6 +105,11 @@ public class CutsceneTrigger : MonoBehaviour
                 doorInteraction.enabled = false;
         }
         
+        // With only the pipe he stands in its carry pose (his own Animator Controller, so no animation track for him on the timeline).
+        // It reads its input actions itself, so disabling PlayerInput above wouldn't stop him raising it mid cutscene.
+        holdingPipe = originalPlayer != null && PlayerMeleeWeapon.OwnsPipe && !originalPlayer.inventory.HasWeapon();
+        if (holdingPipe) PlayerMeleeWeapon.SetCutscene(PlayerMeleeWeapon.CutsceneHold.Carry);
+
         // Play timeline
         if (timeline != null)
             timeline.Play();
@@ -111,6 +127,8 @@ public class CutsceneTrigger : MonoBehaviour
         
         // Wait for delay to let things finish smoothly
         yield return new WaitForSeconds(delayBeforeDisabling);
+
+        if (holdingPipe) PlayerMeleeWeapon.SetCutscene(PlayerMeleeWeapon.CutsceneHold.None);
         
         // Re-enable all components on the ORIGINAL player we disabled
         if (originalPlayer != null && originalPlayer.gameObject.activeInHierarchy)

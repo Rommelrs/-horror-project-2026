@@ -10,6 +10,7 @@ public class PlayerStability : MonoBehaviour
     [SerializeField] UnityEngine.Rendering.PostProcessing.PostProcessVolume volume;
     [SerializeField] Image whiteVignetteOverlay;
     [SerializeField] float maxVignetteAlpha = 1f;
+    bool warnedNoOverlay;
     [SerializeField] float postProcessingSmoothness = 5;
     [SerializeField] Image stabilityFill;
     [SerializeField] TMP_Text stabilityTxt;
@@ -85,8 +86,10 @@ public class PlayerStability : MonoBehaviour
             
             whiteVignetteOverlay.color = c;
         }
-        else
+        else if (!warnedNoOverlay)
         {
+            // once: a warning every frame lags a build (the log is written to disk)
+            warnedNoOverlay = true;
             Debug.LogWarning("PlayerStability: whiteVignetteOverlay is not assigned!");
         }
 

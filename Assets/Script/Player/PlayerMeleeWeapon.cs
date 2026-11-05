@@ -25,6 +25,8 @@ public class PlayerMeleeWeapon : MonoBehaviour
     public static PlayerMeleeWeapon instance;
     /// <summary>The pipe is in his hand (instead of a gun).</summary>
     public static bool Equipped => instance != null && instance.equipped;
+    public static bool OwnsPipe => instance != null && instance.weaponItem != null && instance.inventory != null && instance.inventory.HasItem(instance.weaponItem);
+    public static float SwitchDuration => instance != null ? instance.switchTime : 1f;
     /// <summary>Raised or swinging: this component moves and turns him, PlayerMovement stays out of it.</summary>
     public static bool Ready => instance != null && instance.ready;
     public static bool Attacking => instance != null && instance.attacking;
@@ -52,6 +54,8 @@ public class PlayerMeleeWeapon : MonoBehaviour
     [Tooltip("Seconds to put one weapon away and take the other out.")]
     [SerializeField] float switchTime = 1f;
     [SerializeField] AudioClip gunDrawClip;
+    [Tooltip("Switching to the gun: the pipe disappears this far into the switch (0..1), ahead of the hand reaching his pocket.")]
+    [SerializeField, Range(0f, 0.47f)] float pipeHideAt = 0.22f;
     [SerializeField] Item weaponItem;
     [Tooltip("The pipe in his right hand.")]
     [SerializeField] GameObject pipe;
@@ -155,7 +159,9 @@ public class PlayerMeleeWeapon : MonoBehaviour
     PlayerWeaponEnabler enabler;
     CharacterController controller;
 
-    bool equipped, selected, ready, hiddenForUse, hiddenForGrab;
+    bool equipped, selected, ready, hiddenForUse, hiddenForGrab, hiddenForSwitch;
+    int switchLayer = -1;
+    float switchWeight;
     bool switching, putAway;
     float wheelReadyAt;
     int moveLayer = -1, carryLayer = -1, upperLayer = -1;
@@ -168,7 +174,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
 
     bool attacking;
     float attackT;          // normalized time in the attack clip
-    bool contactDone, strikeStarted, queued, returned;
+    bool contactDone, strikeStarted, queued, returned, battedThisSwing;
     readonly HashSet<Enemy> hitThisSwing = new HashSet<Enemy>();
 
     Transform hand, elbow, leftHand;
@@ -212,8 +218,10 @@ public class PlayerMeleeWeapon : MonoBehaviour
         enabler = GetComponent<PlayerWeaponEnabler>();
         controller = GetComponent<CharacterController>();
         if (animator == null) animator = GetComponentInChildren<Animator>();
-        enemyMask = LayerMask.GetMask("Enemy");
-        worldMask = ~LayerMask.GetMask("Enemy", "Player", "Ignore Raycast", "UI", "Projectile");
+        // NoPlayerCollision = an enemy mid-dash (EnemyDashAttackState): still an enemy, or the pipe reads him as a wall - no
+        // damage and a metal clang. Hitbox = limbs of the enemy, same.
+        enemyMask = LayerMask.GetMask("Enemy", "NoPlayerCollision");
+        worldMask = ~LayerMask.GetMask("Enemy", "NoPlayerCollision", "Hitbox", "Player", "Ignore Raycast", "UI", "Projectile");
         projectileMask = LayerMask.GetMask("Projectile");
         if (pipe != null)
         {
@@ -258,7 +266,10 @@ public class PlayerMeleeWeapon : MonoBehaviour
         moveLayer = animator.GetLayerIndex(moveLayerName);
         carryLayer = animator.GetLayerIndex(carryLayerName);
         upperLayer = animator.GetLayerIndex(upperLayerName);
+        switchLayer = animator.GetLayerIndex(SwitchState);
+        shootLayer = animator.GetLayerIndex("Shooting");
         if (moveLayer < 0) return;
+        SampleReloadRoot();
         float w = animator.GetLayerWeight(moveLayer);
         animator.SetLayerWeight(moveLayer, 1f);
         animator.SetFloat(MeleeX, 0f);
@@ -271,6 +282,46 @@ public class PlayerMeleeWeapon : MonoBehaviour
         animator.Update(0f);
     }
 
+    void SampleReloadRoot()
+    {
+        if (rootMaster == null || animator.runtimeAnimatorController == null) return;
+        AnimationClip clip = null;
+        foreach (var c in animator.runtimeAnimatorController.animationClips)
+            if (c != null && c.name == ReloadClipName) { clip = c; break; }
+        if (clip == null) return;
+        int n = Mathf.Max(2, Mathf.RoundToInt(clip.length * clip.frameRate) + 1);
+        reloadRootPos = new Vector3[n];
+        reloadRootRot = new Quaternion[n];
+        for (int i = 0; i < n; i++)
+        {
+            clip.SampleAnimation(animator.gameObject, clip.length * i / (n - 1));
+            reloadRootPos[i] = rootMaster.localPosition;
+            reloadRootRot[i] = rootMaster.localRotation;
+        }
+        // CaptureAttachments' Update(0) puts the pose back
+    }
+
+    // How much the reload clip is playing right now (its state on the Shooting layer, crossfades included) and where in it.
+    void UpdateReloadWeight()
+    {
+        reloadWeight = 0f;
+        if (shootLayer < 0 || reloadRootPos == null || player.IsDead() || player.isKnockedDown) return;
+        var current = animator.GetCurrentAnimatorStateInfo(shootLayer);
+        if (animator.IsInTransition(shootLayer))
+        {
+            var next = animator.GetNextAnimatorStateInfo(shootLayer);
+            float t = animator.GetAnimatorTransitionInfo(shootLayer).normalizedTime;
+            if (next.shortNameHash == ReloadState) { reloadWeight = t; reloadTime = next.normalizedTime; }
+            else if (current.shortNameHash == ReloadState) { reloadWeight = 1f - t; reloadTime = current.normalizedTime; }
+        }
+        else if (current.shortNameHash == ReloadState)
+        {
+            reloadWeight = 1f;
+            reloadTime = current.normalizedTime;
+        }
+        reloadWeight *= animator.GetLayerWeight(shootLayer);
+    }
+
     void OnEnable()
     {
         foreach (var a in new[] { selectInput, aimInput, shootInput, moveInput, lookInput, gunSelectInput, switchInput })
@@ -279,7 +330,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
 
     void OnDisable()
     {
-        if (instance == this) { ready = false; attacking = false; switching = putAway = false; Switching = false; }
+        if (instance == this) { ready = false; attacking = false; switching = putAway = hiddenForSwitch = false; Switching = false; }
     }
 
     void OnDestroy()
@@ -327,6 +378,15 @@ public class PlayerMeleeWeapon : MonoBehaviour
     Transform rootMaster, cTraj, spineBase;
     Transform[] upperFlat;
 
+    // The gun's reload plays under the same upper body mask, so it needs the same fix. Its clip moves the root master over
+    // time (the melee clips hold it still), so here's where the clip has it, sampled once along the clip.
+    const string ReloadClipName = "Khalid_Reload_Pistol";
+    static readonly int ReloadState = Animator.StringToHash("Reload");
+    int shootLayer = -1;
+    Vector3[] reloadRootPos;
+    Quaternion[] reloadRootRot;
+    float reloadWeight, reloadTime;
+
     /// <summary>Test switch: 0 = off, 2 = on.</summary>
     public static int reattachMode = 2;
 
@@ -336,42 +396,66 @@ public class PlayerMeleeWeapon : MonoBehaviour
         // The carry layer takes his spine (under c_root_master), arms and head (straight under c_traj) from the filmed carry,
         // and his root master from his own walk / run. The melee clips are baked with the root master at rest, so the arms
         // and head belong to a rest root master: move them by exactly how far his root master is from it.
-        float upperOn = Mathf.Max(carryLayer >= 0 ? animator.GetLayerWeight(carryLayer) : 0f, upperLayer >= 0 ? animator.GetLayerWeight(upperLayer) : 0f);
+        // A weapon switch poses only his right arm (its own layer and mask): the rest of him stays whatever he's doing, so only
+        // that arm is moved then, turned with his root master as it is, so that it rides his run.
+        // A reload is the same as the carry, measured from where its clip has the root master at this moment.
+        float upperOn = Mathf.Max(reloadWeight, Mathf.Max(carryLayer >= 0 ? animator.GetLayerWeight(carryLayer) : 0f, upperLayer >= 0 ? animator.GetLayerWeight(upperLayer) : 0f));
         float w = upperOn * (1f - layerWeight) * (1f - PlayerCloseCombat.LayerWeight);
-        if (hasCarryRoot && w > 0.001f && rootMaster != null && cTraj != null && spineBase != null)
+        float switchOn = switchLayer >= 0 ? animator.GetLayerWeight(switchLayer) : 0f;
+        float armW = Mathf.Max(w, switchOn * (1f - PlayerCloseCombat.LayerWeight));
+        bool reloading = reloadWeight > 0.001f;
+        if ((hasCarryRoot || reloading) && armW > 0.001f && rootMaster != null && cTraj != null && spineBase != null)
         {
+            Vector3 restPos = carryRootPos;
+            Quaternion restRot = carryRootRot;
+            if (reloading)
+            {
+                float f = Mathf.Clamp01(reloadTime) * (reloadRootPos.Length - 1);
+                int i = Mathf.Min((int)f, reloadRootPos.Length - 2);
+                restPos = Vector3.Lerp(reloadRootPos[i], reloadRootPos[i + 1], f - i);
+                restRot = Quaternion.Slerp(reloadRootRot[i], reloadRootRot[i + 1], f - i);
+            }
             // his walk / run moves and turns the root master. Keep its forward lean (pitch about his right axis - a run
             // leans well forward) and take out its sway (yaw / roll - that rocked his head), by turning the spine on its
             // base (rotation only: no clip animates its position, so Unity wouldn't rewrite a moved position); then put
             // the arms and head where that leaves the filmed upper body: turned by the kept lean, riding the spine base
-            Quaternion rest = cTraj.rotation * carryRootRot;
+            Quaternion rest = cTraj.rotation * restRot;
             Quaternion dR = rootMaster.rotation * Quaternion.Inverse(rest);
             Vector3 r = transform.right;
             Vector3 v = Vector3.Project(new Vector3(dR.x, dR.y, dR.z), r);
             Quaternion lean = new Quaternion(v.x, v.y, v.z, dR.w);
             float m = Mathf.Sqrt(lean.x * lean.x + lean.y * lean.y + lean.z * lean.z + lean.w * lean.w);
             lean = m > 1e-5f ? new Quaternion(lean.x / m, lean.y / m, lean.z / m, lean.w / m) : Quaternion.identity;
-            Matrix4x4 restM = cTraj.localToWorldMatrix * Matrix4x4.TRS(carryRootPos, carryRootRot, rootMaster.localScale);
+            Matrix4x4 restM = cTraj.localToWorldMatrix * Matrix4x4.TRS(restPos, restRot, rootMaster.localScale);
             Vector3 baseRest = restM.MultiplyPoint3x4(spineBase.localPosition);
             spineBase.rotation = Quaternion.Slerp(Quaternion.identity, lean * Quaternion.Inverse(dR), w) * spineBase.rotation;
             Vector3 baseNow = spineBase.position;
+            Quaternion armTurn = Quaternion.Slerp(dR, lean, armW > 0f ? w / armW : 1f);
             foreach (var t in upperFlat)
             {
-                Vector3 pos = baseNow + lean * (t.position - baseRest);
-                t.SetPositionAndRotation(Vector3.Lerp(t.position, pos, w), Quaternion.Slerp(t.rotation, lean * t.rotation, w));
+                bool rightArm = t.name.EndsWith(".r");
+                Quaternion turn = rightArm ? armTurn : lean;
+                float tw = rightArm ? armW : w;
+                Vector3 pos = baseNow + turn * (t.position - baseRest);
+                t.SetPositionAndRotation(Vector3.Lerp(t.position, pos, tw), Quaternion.Slerp(t.rotation, turn * t.rotation, tw));
             }
         }
-        // then joint by joint what mixing clips leaves (blend trees, crossfades): head on the neck, forearms on the elbows
+        // then joint by joint what mixing clips leaves (blend trees, crossfades): head on the neck, forearms on the elbows.
+        // A switch runs this with or without the pipe out, faded with the layers: cut at the swap, his head jumped 5 cm
+        float joints = equipped && !switching ? 1f : Mathf.Clamp01(Mathf.Max(upperOn, layerWeight));
         foreach (var a in attachments)
         {
             Vector3 d = a.anchor.TransformPoint(a.local) - a.joint.position;
             if (d.sqrMagnitude < 2.5e-7f) continue;                // under half a millimetre
-            foreach (var t in a.move) t.position += d;
+            float k = a.joint.name.EndsWith(".r") ? Mathf.Max(joints, switchOn) : joints;
+            foreach (var t in a.move) t.position += d * k;
         }
     }
 
     /// <summary>Takes the pipe out (as key 3 does) once it is in the inventory.</summary>
     public void Select() => selected = true;
+    /// <summary>The gun stays out when a cutscene that needed it hands back (no 1 s switch).</summary>
+    public static void SelectGun() { if (instance != null) instance.selected = false; }
 
     /// <summary>Hides the pipe while something else is in his hand (a healing item).</summary>
     public static void SetHiddenForUse(bool hidden)
@@ -407,12 +491,16 @@ public class PlayerMeleeWeapon : MonoBehaviour
             moveLayer = animator.GetLayerIndex(moveLayerName);
             carryLayer = animator.GetLayerIndex(carryLayerName);
             upperLayer = animator.GetLayerIndex(upperLayerName);
+            switchLayer = animator.GetLayerIndex(SwitchState);
         }
 
         UpdateShake();
         if (player.IsDead()) { if (equipped) SetEquipped(false); ApplyWeights(0f, true); return; }
         if (GameManager.IsPaused) return;
         if (cutscene != CutsceneHold.None) { UpdateCutscene(); return; }
+
+        // a reloaded scene still holds the dead life's inventory for a few frames: don't take the pipe out of it
+        if (CheckpointManager.IsLoadingCheckpoint) { ApplyWeights(0f, false); return; }
 
         UpdateSelection();
         if (!equipped) { ApplyWeights(0f, false); return; }
@@ -441,7 +529,8 @@ public class PlayerMeleeWeapon : MonoBehaviour
 
     void LateUpdate()
     {
-        if (equipped && reattachMode > 0) Reattach();
+        UpdateReloadWeight();
+        if ((equipped || upperWeight > 0.001f || switchWeight > 0.001f || reloadWeight > 0.001f) && reattachMode > 0) Reattach();
         if (equipped && pipe != null && pipe.activeSelf) AimPipe();
 
         // the gun object is switched back on by inventory updates (PlayerWeaponEnabler) - the pipe is out, keep it away
@@ -487,6 +576,8 @@ public class PlayerMeleeWeapon : MonoBehaviour
     // Putting one away and taking the other out: the hands drop the weapon that is out to his side, it is swapped there
     // (with the draw sound) and the new one comes up - the pipe into the two-handed carry, the gun hangs in his hand.
     // No aiming / raising until it is done.
+    const string SwitchState = "WeaponSwitch";
+
     IEnumerator Co_Switch(bool toPipe)
     {
         switching = true;
@@ -494,11 +585,23 @@ public class PlayerMeleeWeapon : MonoBehaviour
         OnSwitchStarted?.Invoke(toPipe);
         Lower();
         if (weapons != null && weapons.isAiming) weapons.ExitOutOfAiming();
-        float swapAt = switchTime * (toPipe ? 0.35f : 0.45f);
-        if (!toPipe) putAway = true;                 // the carry lets go: his arms bring the pipe down to his side
-        yield return new WaitForSeconds(swapAt);
+        // his right hand goes to the back pocket (Khalid_Switch_Draw on its own layer, right arm only): what he holds swaps there
+        if (animator != null && switchLayer >= 0) animator.Play(SwitchState, switchLayer, 0f);
+        float swapAt = switchTime * 0.47f;
+        if (!toPipe)
+        {
+            putAway = true;                          // the carry lets go
+            // the pipe is gone well before the hand gets there, rather than sinking into his back pocket
+            yield return new WaitForSeconds(switchTime * pipeHideAt);
+            hiddenForSwitch = true;
+            RefreshPipe();
+            yield return new WaitForSeconds(Mathf.Max(0f, swapAt - switchTime * pipeHideAt));
+        }
+        else yield return new WaitForSeconds(swapAt);
         putAway = false;
         SetEquipped(toPipe);
+        hiddenForSwitch = false;
+        RefreshPipe();
         if (!toPipe) Play2D(gunDrawClip, 0.8f);
         yield return new WaitForSeconds(switchTime - swapAt);
         switching = false;
@@ -545,7 +648,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
 
     void RefreshPipe()
     {
-        if (pipe != null) pipe.SetActive(equipped && !hiddenForUse && !hiddenForGrab);
+        if (pipe != null) pipe.SetActive(equipped && !hiddenForUse && !hiddenForGrab && !hiddenForSwitch);
     }
 
     bool CanRaise()
@@ -622,6 +725,13 @@ public class PlayerMeleeWeapon : MonoBehaviour
             animator.SetLayerWeight(upperLayer, upperWeight * upperWeight * (3f - 2f * upperWeight));
         }
 
+        // the weapon switch: his right arm to the back pocket and back
+        if (switchLayer >= 0)
+        {
+            switchWeight = instant ? (switching ? 1f : 0f) : Mathf.MoveTowards(switchWeight, switching ? 1f : 0f, Time.deltaTime / 0.12f);
+            animator.SetLayerWeight(switchLayer, switchWeight * switchWeight * (3f - 2f * switchWeight));
+        }
+
         // the upright two-handed carry, whenever the pipe is in his hands
         if (carryLayer >= 0)
         {
@@ -641,7 +751,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
         attacking = true;
         raising = false;
         attackT = 0f;
-        contactDone = strikeStarted = queued = returned = false;
+        contactDone = strikeStarted = queued = returned = battedThisSwing = false;
         hitThisSwing.Clear();
         // committed: he stops where he stands (the filmed swing carries its own step) and can't move until it's over
         velocity = Vector3.zero;
@@ -724,6 +834,9 @@ public class PlayerMeleeWeapon : MonoBehaviour
             return;
         }
 
+        // it already burst a bag: only the bag's own sound (a burst throws the boxes around it into the pipe's arc)
+        if (battedThisSwing) return;
+
         // does the pipe meet a wall along its arc?
         const float sweep = -1f;                  // the swing comes from his right
         for (int k = 0; k < 5; k++)
@@ -731,6 +844,15 @@ public class PlayerMeleeWeapon : MonoBehaviour
             Vector3 dir = Quaternion.AngleAxis(sweep * (60f - k * 30f), Vector3.up) * transform.forward;
             if (Physics.Raycast(origin, dir, out var wall, 1.35f, worldMask, QueryTriggerInteraction.Ignore))
             {
+                // cardboard: its own thud, no metal ring or sparks
+                var box = wall.collider.GetComponentInParent<Box>();
+                if (box != null)
+                {
+                    box.Collide();
+                    Shake(shakeIntensity * 0.5f, shakeDuration);
+                    break;
+                }
+
                 WallHits++;
                 if (SoundEffectManager.instance != null) SoundEffectManager.instance.PlaySFXAtPosition(Pick(wallHitClips), wall.point, wallVolume);
                 if (sparkEffect != null) Destroy(Instantiate(sparkEffect, wall.point, Quaternion.LookRotation(wall.normal)), 3f);
@@ -782,6 +904,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
             if (to.magnitude > 0.6f && Vector3.Angle(transform.forward, to) > hitArc * 0.5f) continue;
 
             ProjectileHits++;
+            battedThisSwing = true;
             projectile.DestoryProjectile(damage);         // its own burst sound, as when it's shot
             if (HitstopManager.instance != null) HitstopManager.instance.FreezeTime(hitstop * 0.6f);
             Shake(shakeIntensity * 0.6f, shakeDuration);

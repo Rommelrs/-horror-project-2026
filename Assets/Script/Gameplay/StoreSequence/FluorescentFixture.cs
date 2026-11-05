@@ -122,6 +122,13 @@ public class FluorescentFixture : MonoBehaviour
         SetMode(restoredMode, true);
     }
 
+    /// <summary>Loaded from a save: straight to its 'restoredMode', without the ballast stutter and tick.</summary>
+    public void RestoreInstant()
+    {
+        if (isActiveAndEnabled) SetMode(restoredMode, false);
+        else mode = restoredMode;       // OnEnable applies it
+    }
+
     public void SetMode(Mode m, bool startup)
     {
         stutterOverride = -1f;

@@ -537,6 +537,7 @@ public class SaveManager : MonoBehaviour
         runtimeUsedInteractables.Clear();
         runtimeCurrentMusicTrack = "";
         StoryFlags.ResetSession();
+        CutsceneTrigger.ResetPlayed();
 
         // Reset playtime for new game
         playtimeSeconds = 0;

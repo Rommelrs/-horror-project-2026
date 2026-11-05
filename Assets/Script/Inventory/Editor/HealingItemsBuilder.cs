@@ -60,8 +60,8 @@ public static class HealingItemsBuilder
         var mkModel = MedKitModel(kit, mkMat);
 
         // icons
-        var pkIcon = SaveIcon(PainkillerIconPath, RenderIcon(pkModel, new Vector3(24f, -28f, 0f)));
-        var mkIcon = SaveIcon(MedKitIconPath, RenderIcon(mkModel, new Vector3(16f, -32f, 0f)));
+        var pkIcon = IconOrRender(PainkillerIconPath, pkModel, new Vector3(24f, -28f, 0f));
+        var mkIcon = IconOrRender(MedKitIconPath, mkModel, new Vector3(16f, -32f, 0f));
         SetIcon(PainkillerItemPath, pkIcon);
         SetIcon(MedKitItemPath, mkIcon);
 
@@ -724,6 +724,14 @@ public static class HealingItemsBuilder
         small.SetPixels(final);
         small.Apply();
         return small;
+    }
+
+    // Keeps an existing icon: this builder has to be rerun per scene, and renders with a game scene open have come out black.
+    // Delete the png to render a new one on purpose.
+    static Sprite IconOrRender(string path, GameObject model, Vector3 viewEuler)
+    {
+        var existing = AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        return existing != null ? existing : SaveIcon(path, RenderIcon(model, viewEuler));
     }
 
     internal static Sprite SaveIcon(string path, Texture2D tex)

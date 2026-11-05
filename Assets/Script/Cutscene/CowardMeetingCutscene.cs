@@ -550,7 +550,11 @@ public class CowardMeetingCutscene : MonoBehaviour
         khalidAnim.Update(0f);
     }
 
-    void OnDestroy() => cPose?.Dispose();
+    void OnDestroy()
+    {
+        cPose?.Dispose();
+        if (running) IsPlaying = false;     // static: quitting mid-cutscene must not leave it set for the next run
+    }
 
     // ───────────────────────── per frame ─────────────────────────
 

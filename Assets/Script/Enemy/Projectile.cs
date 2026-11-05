@@ -224,6 +224,12 @@ public class Projectile : MonoBehaviour, IPoolable
         return angle;
     }
 
+    public void PlayImpactSound()
+    {
+        if (SoundEffectManager.instance == null || hitImpactSoundEffects == null || hitImpactSoundEffects.Length == 0) return;
+        SoundEffectManager.instance.PlaySFXAtPosition(hitImpactSoundEffects[Random.Range(0, hitImpactSoundEffects.Length)], transform.position);
+    }
+
     public void DestoryProjectile(int damage)
     {
         canCollide = false;
