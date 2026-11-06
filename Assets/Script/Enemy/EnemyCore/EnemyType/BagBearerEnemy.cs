@@ -168,6 +168,9 @@ public class BagBearerEnemy : Enemy
         EnemyType oldType = stats.enemyType;
         stats.enemyType = newType;
         
+        // Never woken up (see Enemy.ChangeEnemyType): he starts with this type when his group comes on
+        if (stateMachine == null) return;
+
         // Clean up any active reload state before changing type
         if (stateMachine.CurrentState == enemyReloadState)
         {

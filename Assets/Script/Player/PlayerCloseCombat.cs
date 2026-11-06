@@ -368,6 +368,15 @@ public class PlayerCloseCombat : MonoBehaviour
         }
     }
 
+    /// <summary>Ends what a scream left on him at once (the ringing, blur, aim sway and slow): a cutscene is taking over.</summary>
+    public void ClearScream()
+    {
+        if (ringSource != null) ringSource.Stop();
+        if (echo != null) echo.Stop();
+        swayUntil = 0f;
+        slowUntil = 0f;
+    }
+
     void UpdateRinging()
     {
         if (ringSource == null || !ringSource.isPlaying) return;

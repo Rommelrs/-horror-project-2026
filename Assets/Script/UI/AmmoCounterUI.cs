@@ -109,7 +109,9 @@ public class AmmoCounterUI : MonoBehaviour
         // the pipe that is out (or about to be): its icon only
         bool pipe = PlayerMeleeWeapon.Switching ? switchingToPipe : PlayerMeleeWeapon.Equipped;
         bool allowed = weapon != null && Enabled && (weapon.weaponIsEnabled || pipe) && Player.instance != null
-            && !Player.instance.IsDead() && !GameManager.IsPaused;
+            && !Player.instance.IsDead() && !GameManager.IsPaused
+            && !Player.instance.isKnockedDown      // the table knockdown's gun never runs out: no number to read
+            && !PlayerMeleeWeapon.InCutscene;      // a cutscene raising the pipe isn't the player preparing an attack
 
         if (weaponIcon != null)
         {

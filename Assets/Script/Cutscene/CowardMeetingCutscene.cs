@@ -143,6 +143,12 @@ public class CowardMeetingCutscene : MonoBehaviour
     [Tooltip("The cutscene starts by fading to black and back in on its first shot (seconds each way).")]
     public float startFade = 0.5f;
 
+    [Header("Gameplay music")]
+    [Tooltip("Whatever is playing on the Music mixer group fades out over this long at the start, then pauses (seconds).")]
+    public float gameplayMusicFadeOut = 1f;
+    [Tooltip("When the cutscene ends (or is skipped) it carries on from the same spot, fading back in over this long (seconds).")]
+    public float gameplayMusicFadeIn = 3f;
+
     [Header("Debug")]
     [Tooltip("Ignore the knife-handle / already-played checks (for testing in the editor).")]
     public bool ignoreConditions;
@@ -175,6 +181,8 @@ public class CowardMeetingCutscene : MonoBehaviour
     Spring torsoPitch, torsoRoll, headPitch, headRoll, armSwing;
     float shakeClock;
     Collider trigger;
+    readonly List<(AudioSource source, float volume)> pausedMusic = new List<(AudioSource, float)>();
+    Coroutine musicFade;
 
     void Awake()
     {
@@ -238,6 +246,7 @@ public class CowardMeetingCutscene : MonoBehaviour
         if (player.controller != null) player.controller.enabled = false;
         if (player.health != null) player.health.Invincible = true;
         if (CameraSystem.Instance != null) CameraSystem.Instance.ForceShowPlayer = true;
+        PauseGameplayMusic();
 
         gameplayCameraSnapped = false;
         startPos = player.transform.position;
@@ -509,12 +518,71 @@ public class CowardMeetingCutscene : MonoBehaviour
         if (CameraSystem.Instance != null) CameraSystem.Instance.ForceShowPlayer = false;
         if (CutsceneSkipper.Instance != null) CutsceneSkipper.Instance.HideHint();
         skipHeld = 0f;
+        ResumeGameplayMusic();
 
         running = false; IsPlaying = false; current = null; currentPhase = -1;
 
         // a checkpoint where the meeting leaves him: the done flag only reached disk at the next checkpoint / manual save,
         // so quitting before that and continuing (back at the knife handle) played the meeting again
         if (CheckpointManager.instance != null) CheckpointManager.instance.TriggerCheckpoint("Coward meeting");
+    }
+
+    // ───────────────────────── gameplay music ─────────────────────────
+
+    // The exploration music plays right through Alley 1: it would run on under the dialogue and the cutscene's own music.
+    // Paused, not stopped, so it carries on from the same spot. (The cutscene's own Music source isn't playing yet here.)
+    void PauseGameplayMusic()
+    {
+        pausedMusic.Clear();
+        foreach (var a in FindObjectsByType<AudioSource>(FindObjectsSortMode.None))
+            if (a.isPlaying && a.outputAudioMixerGroup != null && a.outputAudioMixerGroup.name == "Music")
+                pausedMusic.Add((a, a.volume));
+        if (musicFade != null) StopCoroutine(musicFade);
+        musicFade = StartCoroutine(Co_FadeGameplayMusic(false, gameplayMusicFadeOut));
+    }
+
+    void ResumeGameplayMusic()
+    {
+        foreach (var (a, _) in pausedMusic) if (a != null) a.UnPause();
+        if (musicFade != null) StopCoroutine(musicFade);
+        musicFade = StartCoroutine(Co_FadeGameplayMusic(true, gameplayMusicFadeIn));
+    }
+
+    // Real time: the subtitles can hold timeScale at 0. In or out from wherever it is, so a skip mid-fade doesn't jump.
+    IEnumerator Co_FadeGameplayMusic(bool fadeIn, float seconds)
+    {
+        var from = new float[pausedMusic.Count];
+        for (int i = 0; i < from.Length; i++) if (pausedMusic[i].source != null) from[i] = pausedMusic[i].source.volume;
+
+        for (float t = 0f; t < seconds; t += Time.unscaledDeltaTime)
+        {
+            for (int i = 0; i < from.Length; i++)
+                if (pausedMusic[i].source != null)
+                    pausedMusic[i].source.volume = Mathf.Lerp(from[i], fadeIn ? pausedMusic[i].volume : 0f, t / seconds);
+            yield return null;
+        }
+
+        foreach (var (a, volume) in pausedMusic)
+        {
+            if (a == null) continue;
+            a.volume = fadeIn ? volume : 0f;
+            if (!fadeIn) a.Pause();
+        }
+        musicFade = null;
+        if (fadeIn) pausedMusic.Clear();
+    }
+
+    // a coroutine dies with this object: never leave the music silent or half faded if it's switched off
+    void OnDisable()
+    {
+        musicFade = null;
+        foreach (var (a, volume) in pausedMusic)
+        {
+            if (a == null) continue;
+            a.volume = volume;
+            a.UnPause();
+        }
+        pausedMusic.Clear();
     }
 
     // Where in his walk cycle the timeline has Khalid now (0-1), or -1 if he isn't walking.

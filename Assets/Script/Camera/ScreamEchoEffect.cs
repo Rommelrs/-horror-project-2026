@@ -41,6 +41,11 @@ public class ScreamEchoEffect : MonoBehaviour
         strength = Mathf.Clamp01(strength01);
     }
 
+    public void Stop()
+    {
+        start = -99f;
+    }
+
     void OnRenderImage(RenderTexture src, RenderTexture dst)
     {
         float a = Amount;

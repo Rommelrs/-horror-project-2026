@@ -179,10 +179,10 @@ public static class QuestionerProbe
             {
                 // the hit should land as he's ~1.9 m out (counter) / when he's already on Khalid (late)
                 float landAt = test == "counter" ? 1.9f : 0.6f;
-                if (phase == "GrabRush" && ready && step == 0 && d - q.tuning.rushSpeed * contactDelay <= landAt)
+                if (phase == "GrabRush" && ready && step == 0 && d - q.combatState.RushSpeed * contactDelay <= landAt)
                 {
                     step = 1;
-                    Swing(string.Format("rush at d={0:F2}, lands ~{1:F2}", d, d - q.tuning.rushSpeed * contactDelay));
+                    Swing(string.Format("rush {0:F2} m/s at d={1:F2}, lands ~{2:F2}", q.combatState.RushSpeed, d, d - q.combatState.RushSpeed * contactDelay));
                 }
                 if (phase != "GrabRush" && phase != "GrabWindup") step = 0;
                 break;

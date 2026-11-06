@@ -49,6 +49,8 @@ public class CameraSystem : MonoBehaviour
     [SerializeField] float teleportSnapDistance = 4f;
 
     [Header("Free Camera (optional)")]
+    [Tooltip("How long (seconds) the free camera takes to catch up with the player. Keep it very low: the classic camera's lag lets the player run off-centre while the mouse orbits around him.")]
+    [SerializeField] float freeCameraPositionSmoothTime = 0.06f;
     [Tooltip("Key that switches between the classic tank camera and the free (mouse-controlled) camera. The choice is remembered between sessions.")]
     [SerializeField] Key toggleFreeCameraKey = Key.C;
     [Tooltip("Base look speed multiplier in free camera mode. The 'Free Camera Speed' slider in the Options menu multiplies this. Independent of the aim sensitivity setting.")]
@@ -132,9 +134,9 @@ public class CameraSystem : MonoBehaviour
     [Tooltip("Hide the player's body (it still casts a shadow) when the camera is squeezed so close that it would be inside the model.")]
     [SerializeField] bool hidePlayerWhenCameraClose = true;
     [Tooltip("The body is hidden once the camera is closer than this (metres) to the player's head.")]
-    [SerializeField] float hidePlayerDistance = 0.68f;
+    [SerializeField] float hidePlayerDistance = 0.33f;
     [Tooltip("The body reappears once the camera is farther than this. Keep it a bit larger than the hide distance so it doesn't flicker.")]
-    [SerializeField] float showPlayerDistance = 0.85f;
+    [SerializeField] float showPlayerDistance = 0.4f;
 
     float wallYaw;           // sideways swing currently applied to the camera (degrees)
     float wallYawVelocity;
@@ -543,7 +545,7 @@ public class CameraSystem : MonoBehaviour
         // SmoothDamp gives the camera its own independent momentum instead of being
         // rigidly glued to the player's position every frame.
         targetFollowPosition = followTarget.position;
-        m_CameraTransform.position = Vector3.SmoothDamp(m_CameraTransform.position, targetFollowPosition, ref camPositionVelocity, tankCameraPositionSmoothTime);
+        m_CameraTransform.position = Vector3.SmoothDamp(m_CameraTransform.position, targetFollowPosition, ref camPositionVelocity, FreeCameraEnabled ? freeCameraPositionSmoothTime : tankCameraPositionSmoothTime);
         debugPositionLag = Vector3.Distance(m_CameraTransform.position, targetFollowPosition);
     }
 

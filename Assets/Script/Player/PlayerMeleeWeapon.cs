@@ -26,7 +26,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
     /// <summary>The pipe is in his hand (instead of a gun).</summary>
     public static bool Equipped => instance != null && instance.equipped;
     public static bool OwnsPipe => instance != null && instance.weaponItem != null && instance.inventory != null && instance.inventory.HasItem(instance.weaponItem);
-    public static float SwitchDuration => instance != null ? instance.switchTime : 1f;
+    public static float SwitchDuration => instance != null ? instance.CurrentSwitchTime : 1f;
     /// <summary>Raised or swinging: this component moves and turns him, PlayerMovement stays out of it.</summary>
     public static bool Ready => instance != null && instance.ready;
     public static bool Attacking => instance != null && instance.attacking;
@@ -53,6 +53,8 @@ public class PlayerMeleeWeapon : MonoBehaviour
     [SerializeField] InputActionReference switchInput;
     [Tooltip("Seconds to put one weapon away and take the other out.")]
     [SerializeField] float switchTime = 1f;
+    [Tooltip("Shaking hands: the weapon switch takes this many times longer at 0 stability. Full speed from the Stable tier up, in between it scales.")]
+    [SerializeField] float switchSlowAtNoStability = 2.5f;
     [SerializeField] AudioClip gunDrawClip;
     [Tooltip("Switching to the gun: the pipe disappears this far into the switch (0..1), ahead of the hand reaching his pocket.")]
     [SerializeField, Range(0f, 0.47f)] float pipeHideAt = 0.22f;
@@ -268,8 +270,11 @@ public class PlayerMeleeWeapon : MonoBehaviour
         upperLayer = animator.GetLayerIndex(upperLayerName);
         switchLayer = animator.GetLayerIndex(SwitchState);
         shootLayer = animator.GetLayerIndex("Shooting");
+        useItemLayer = animator.GetLayerIndex("UseItem");
         if (moveLayer < 0) return;
-        SampleReloadRoot();
+        reloadRoot = SampleRoot(ReloadClipName);
+        painkillerRoot = SampleRoot(PainkillerClipName);
+        medKitRoot = SampleRoot(MedKitClipName);
         float w = animator.GetLayerWeight(moveLayer);
         animator.SetLayerWeight(moveLayer, 1f);
         animator.SetFloat(MeleeX, 0f);
@@ -282,44 +287,61 @@ public class PlayerMeleeWeapon : MonoBehaviour
         animator.Update(0f);
     }
 
-    void SampleReloadRoot()
+    ClipRoot SampleRoot(string clipName)
     {
-        if (rootMaster == null || animator.runtimeAnimatorController == null) return;
+        if (rootMaster == null || animator.runtimeAnimatorController == null) return null;
         AnimationClip clip = null;
         foreach (var c in animator.runtimeAnimatorController.animationClips)
-            if (c != null && c.name == ReloadClipName) { clip = c; break; }
-        if (clip == null) return;
+            if (c != null && c.name == clipName) { clip = c; break; }
+        if (clip == null) return null;
         int n = Mathf.Max(2, Mathf.RoundToInt(clip.length * clip.frameRate) + 1);
-        reloadRootPos = new Vector3[n];
-        reloadRootRot = new Quaternion[n];
+        var root = new ClipRoot { pos = new Vector3[n], rot = new Quaternion[n] };
         for (int i = 0; i < n; i++)
         {
             clip.SampleAnimation(animator.gameObject, clip.length * i / (n - 1));
-            reloadRootPos[i] = rootMaster.localPosition;
-            reloadRootRot[i] = rootMaster.localRotation;
+            root.pos[i] = rootMaster.localPosition;
+            root.rot[i] = rootMaster.localRotation;
         }
         // CaptureAttachments' Update(0) puts the pose back
+        return root;
     }
 
-    // How much the reload clip is playing right now (its state on the Shooting layer, crossfades included) and where in it.
-    void UpdateReloadWeight()
+    // How much a state is playing right now on its layer (crossfades and the layer's weight included) and where in it.
+    float StateWeight(int layer, int state, out float time)
     {
-        reloadWeight = 0f;
-        if (shootLayer < 0 || reloadRootPos == null || player.IsDead() || player.isKnockedDown) return;
-        var current = animator.GetCurrentAnimatorStateInfo(shootLayer);
-        if (animator.IsInTransition(shootLayer))
+        time = 0f;
+        float weight = 0f;
+        var current = animator.GetCurrentAnimatorStateInfo(layer);
+        if (animator.IsInTransition(layer))
         {
-            var next = animator.GetNextAnimatorStateInfo(shootLayer);
-            float t = animator.GetAnimatorTransitionInfo(shootLayer).normalizedTime;
-            if (next.shortNameHash == ReloadState) { reloadWeight = t; reloadTime = next.normalizedTime; }
-            else if (current.shortNameHash == ReloadState) { reloadWeight = 1f - t; reloadTime = current.normalizedTime; }
+            var next = animator.GetNextAnimatorStateInfo(layer);
+            float t = animator.GetAnimatorTransitionInfo(layer).normalizedTime;
+            if (next.shortNameHash == state) { weight = t; time = next.normalizedTime; }
+            else if (current.shortNameHash == state) { weight = 1f - t; time = current.normalizedTime; }
         }
-        else if (current.shortNameHash == ReloadState)
+        else if (current.shortNameHash == state)
         {
-            reloadWeight = 1f;
-            reloadTime = current.normalizedTime;
+            weight = 1f;
+            time = current.normalizedTime;
         }
-        reloadWeight *= animator.GetLayerWeight(shootLayer);
+        return weight * animator.GetLayerWeight(layer);
+    }
+
+    // The clips that play under the upper body mask and move the root master themselves: the gun's reload and the two heals.
+    void UpdateClipRootWeight()
+    {
+        clipRootWeight = 0f;
+        activeClipRoot = null;
+        if (animator == null || player.IsDead() || player.isKnockedDown) return;
+        void Check(int layer, int state, ClipRoot root)
+        {
+            if (layer < 0 || root == null) return;
+            float w = StateWeight(layer, state, out float time);
+            if (w > clipRootWeight) { clipRootWeight = w; clipRootTime = time; activeClipRoot = root; }
+        }
+        Check(shootLayer, ReloadState, reloadRoot);
+        Check(useItemLayer, PainkillerState, painkillerRoot);
+        Check(useItemLayer, MedKitState, medKitRoot);
     }
 
     void OnEnable()
@@ -378,14 +400,18 @@ public class PlayerMeleeWeapon : MonoBehaviour
     Transform rootMaster, cTraj, spineBase;
     Transform[] upperFlat;
 
-    // The gun's reload plays under the same upper body mask, so it needs the same fix. Its clip moves the root master over
-    // time (the melee clips hold it still), so here's where the clip has it, sampled once along the clip.
+    // The gun's reload and the heals play under the same upper body mask, so they need the same fix. Their clips move the root
+    // master over time (the melee clips hold it still), so here's where each clip has it, sampled once along the clip.
+    class ClipRoot { public Vector3[] pos; public Quaternion[] rot; }
     const string ReloadClipName = "Khalid_Reload_Pistol";
+    const string PainkillerClipName = "Khalid_UsePainkiller";
+    const string MedKitClipName = "Khalid_UseMedKit";
     static readonly int ReloadState = Animator.StringToHash("Reload");
-    int shootLayer = -1;
-    Vector3[] reloadRootPos;
-    Quaternion[] reloadRootRot;
-    float reloadWeight, reloadTime;
+    static readonly int PainkillerState = Animator.StringToHash("UsePainkiller");
+    static readonly int MedKitState = Animator.StringToHash("UseMedKit");
+    int shootLayer = -1, useItemLayer = -1;
+    ClipRoot reloadRoot, painkillerRoot, medKitRoot, activeClipRoot;
+    float clipRootWeight, clipRootTime;
 
     /// <summary>Test switch: 0 = off, 2 = on.</summary>
     public static int reattachMode = 2;
@@ -398,22 +424,27 @@ public class PlayerMeleeWeapon : MonoBehaviour
         // and head belong to a rest root master: move them by exactly how far his root master is from it.
         // A weapon switch poses only his right arm (its own layer and mask): the rest of him stays whatever he's doing, so only
         // that arm is moved then, turned with his root master as it is, so that it rides his run.
-        // A reload is the same as the carry, measured from where its clip has the root master at this moment.
-        float upperOn = Mathf.Max(reloadWeight, Mathf.Max(carryLayer >= 0 ? animator.GetLayerWeight(carryLayer) : 0f, upperLayer >= 0 ? animator.GetLayerWeight(upperLayer) : 0f));
+        // A reload or a heal is the same as the carry, measured from where its clip has the root master at this moment.
+        float carryOn = carryLayer >= 0 ? animator.GetLayerWeight(carryLayer) : 0f;
+        float upperOn = Mathf.Max(clipRootWeight, Mathf.Max(carryOn, upperLayer >= 0 ? animator.GetLayerWeight(upperLayer) : 0f));
         float w = upperOn * (1f - layerWeight) * (1f - PlayerCloseCombat.LayerWeight);
         float switchOn = switchLayer >= 0 ? animator.GetLayerWeight(switchLayer) : 0f;
         float armW = Mathf.Max(w, switchOn * (1f - PlayerCloseCombat.LayerWeight));
-        bool reloading = reloadWeight > 0.001f;
-        if ((hasCarryRoot || reloading) && armW > 0.001f && rootMaster != null && cTraj != null && spineBase != null)
+        bool clipRootOn = clipRootWeight > 0.001f && activeClipRoot != null;
+        if ((hasCarryRoot || clipRootOn) && armW > 0.001f && rootMaster != null && cTraj != null && spineBase != null)
         {
             Vector3 restPos = carryRootPos;
             Quaternion restRot = carryRootRot;
-            if (reloading)
+            if (clipRootOn)
             {
-                float f = Mathf.Clamp01(reloadTime) * (reloadRootPos.Length - 1);
-                int i = Mathf.Min((int)f, reloadRootPos.Length - 2);
-                restPos = Vector3.Lerp(reloadRootPos[i], reloadRootPos[i + 1], f - i);
-                restRot = Quaternion.Slerp(reloadRootRot[i], reloadRootRot[i + 1], f - i);
+                float f = Mathf.Clamp01(clipRootTime) * (activeClipRoot.pos.Length - 1);
+                int i = Mathf.Min((int)f, activeClipRoot.pos.Length - 2);
+                Vector3 clipPos = Vector3.Lerp(activeClipRoot.pos[i], activeClipRoot.pos[i + 1], f - i);
+                Quaternion clipRot = Quaternion.Slerp(activeClipRoot.rot[i], activeClipRoot.rot[i + 1], f - i);
+                // the carry layer sits above these: while a heal takes over from the carry (the pipe going away), the carry still shows
+                float carryShare = hasCarryRoot ? carryOn : 0f;
+                restPos = Vector3.Lerp(clipPos, carryRootPos, carryShare);
+                restRot = Quaternion.Slerp(clipRot, carryRootRot, carryShare);
             }
             // his walk / run moves and turns the root master. Keep its forward lean (pitch about his right axis - a run
             // leans well forward) and take out its sway (yaw / roll - that rocked his head), by turning the spine on its
@@ -426,6 +457,10 @@ public class PlayerMeleeWeapon : MonoBehaviour
             Quaternion lean = new Quaternion(v.x, v.y, v.z, dR.w);
             float m = Mathf.Sqrt(lean.x * lean.x + lean.y * lean.y + lean.z * lean.z + lean.w * lean.w);
             lean = m > 1e-5f ? new Quaternion(lean.x / m, lean.y / m, lean.z / m, lean.w / m) : Quaternion.identity;
+            // that also took out what makes a run look alive: put back a sway driven by his actual feet, for the body and
+            // the hands. The head keeps looking ahead, so the view of him doesn't rock.
+            Quaternion steadyLean = lean;
+            lean = CarrySway() * lean;
             Matrix4x4 restM = cTraj.localToWorldMatrix * Matrix4x4.TRS(restPos, restRot, rootMaster.localScale);
             Vector3 baseRest = restM.MultiplyPoint3x4(spineBase.localPosition);
             spineBase.rotation = Quaternion.Slerp(Quaternion.identity, lean * Quaternion.Inverse(dR), w) * spineBase.rotation;
@@ -434,10 +469,11 @@ public class PlayerMeleeWeapon : MonoBehaviour
             foreach (var t in upperFlat)
             {
                 bool rightArm = t.name.EndsWith(".r");
+                bool head = t.name.ToLowerInvariant().Contains("head") || t.name.ToLowerInvariant().Contains("neck");
                 Quaternion turn = rightArm ? armTurn : lean;
                 float tw = rightArm ? armW : w;
                 Vector3 pos = baseNow + turn * (t.position - baseRest);
-                t.SetPositionAndRotation(Vector3.Lerp(t.position, pos, tw), Quaternion.Slerp(t.rotation, turn * t.rotation, tw));
+                t.SetPositionAndRotation(Vector3.Lerp(t.position, pos, tw), Quaternion.Slerp(t.rotation, (head ? steadyLean : turn) * t.rotation, tw));
             }
         }
         // then joint by joint what mixing clips leaves (blend trees, crossfades): head on the neck, forearms on the elbows.
@@ -450,6 +486,42 @@ public class PlayerMeleeWeapon : MonoBehaviour
             float k = a.joint.name.EndsWith(".r") ? Mathf.Max(joints, switchOn) : joints;
             foreach (var t in a.move) t.position += d * k;
         }
+    }
+
+    [Header("Carry Sway (running with the pipe down)")]
+    [Tooltip("Shoulders twist against the legs (degrees either way at full speed).")]
+    [SerializeField] float carrySwayTwist = 11f;
+    [Tooltip("Body leans over the foot he is standing on (degrees either way at full speed).")]
+    [SerializeField] float carrySwayLean = 4.5f;
+    [Tooltip("Speed (m/s) where the sway reaches full size. Slower = smaller.")]
+    [SerializeField] float carrySwayFullSpeed = 3.5f;
+    [SerializeField] float carrySwaySmooth = 0.05f;
+
+    Transform footL, footR;
+    bool footsLooked;
+    float swayTwist, swayLean, swayTwistVel, swayLeanVel;
+
+    Quaternion CarrySway()
+    {
+        float targetTwist = 0f, targetLean = 0f;
+        if (!footsLooked)
+        {
+            footsLooked = true;
+            footL = CutsceneFootsteps.FindFoot(animator, true);
+            footR = CutsceneFootsteps.FindFoot(animator, false);
+        }
+        if (footL != null && footR != null && equipped && !ready && !attacking && !switching && player.playerMovement != null)
+        {
+            float amount = Mathf.Clamp01(player.playerMovement.CurrentSpeed / Mathf.Max(0.1f, carrySwayFullSpeed));
+            Vector3 d = footL.position - footR.position;
+            // left foot ahead: right shoulder ahead, so he twists to the left
+            targetTwist = -Mathf.Clamp(Vector3.Dot(d, transform.forward) / 0.6f, -1f, 1f) * carrySwayTwist * amount;
+            // right foot higher: he is standing on the left one and leans onto it
+            targetLean = Mathf.Clamp(-d.y / 0.18f, -1f, 1f) * carrySwayLean * amount;
+        }
+        swayTwist = Mathf.SmoothDamp(swayTwist, targetTwist, ref swayTwistVel, carrySwaySmooth);
+        swayLean = Mathf.SmoothDamp(swayLean, targetLean, ref swayLeanVel, carrySwaySmooth);
+        return Quaternion.AngleAxis(swayTwist, transform.up) * Quaternion.AngleAxis(swayLean, transform.forward);
     }
 
     /// <summary>Takes the pipe out (as key 3 does) once it is in the inventory.</summary>
@@ -470,6 +542,9 @@ public class PlayerMeleeWeapon : MonoBehaviour
     /// a cutscene clip poses him, so the pipe just hangs along his forearm and the carry layer fixes stay off.</summary>
     public enum CutsceneHold { None, Away, Carry, Raised, Timeline }
     CutsceneHold cutscene;
+
+    /// <summary>A cutscene holds the pipe: nothing the player is doing, so no HUD or prompts for it.</summary>
+    public static bool InCutscene => instance != null && instance.cutscene != CutsceneHold.None;
 
     public static void SetCutscene(CutsceneHold hold)
     {
@@ -516,9 +591,11 @@ public class PlayerMeleeWeapon : MonoBehaviour
         {
             if (shootInput != null && shootInput.action.WasPressedThisFrame())
             {
-                if (!attacking) StartAttack();
-                else if (attackT >= bufferFrom) queued = true;
+                // not until the raise has played: a press during it is remembered and swings as soon as he's ready
+                if (!attacking && StanceReady) StartAttack();
+                else if (!attacking || attackT >= bufferFrom) queued = true;
             }
+            if (!attacking && queued && StanceReady && aimHeld) StartAttack();
             if (attacking) UpdateAttack(aimHeld);
             UpdateFacing();
             UpdateMovement();
@@ -529,8 +606,8 @@ public class PlayerMeleeWeapon : MonoBehaviour
 
     void LateUpdate()
     {
-        UpdateReloadWeight();
-        if ((equipped || upperWeight > 0.001f || switchWeight > 0.001f || reloadWeight > 0.001f) && reattachMode > 0) Reattach();
+        UpdateClipRootWeight();
+        if ((equipped || upperWeight > 0.001f || switchWeight > 0.001f || clipRootWeight > 0.001f) && reattachMode > 0) Reattach();
         if (equipped && pipe != null && pipe.activeSelf) AimPipe();
 
         // the gun object is switched back on by inventory updates (PlayerWeaponEnabler) - the pipe is out, keep it away
@@ -578,24 +655,43 @@ public class PlayerMeleeWeapon : MonoBehaviour
     // No aiming / raising until it is done.
     const string SwitchState = "WeaponSwitch";
 
+    float CurrentSwitchTime
+    {
+        get
+        {
+            var s = player != null ? player.playerStability : null;
+            if (s == null) return switchTime;
+            float steady = Mathf.Clamp01(s.stability / (float)PlayerStability.StableFrom);
+            return switchTime * Mathf.Lerp(Mathf.Max(1f, switchSlowAtNoStability), 1f, steady);
+        }
+    }
+
+    float activeSwitchTime = 1f;
+    static readonly int SwitchSpeedParam = Animator.StringToHash("SwitchSpeed");
+
     IEnumerator Co_Switch(bool toPipe)
     {
+        float slowed = activeSwitchTime = CurrentSwitchTime;   // held for the whole switch, even if stability changes halfway
         switching = true;
         Switching = true;
         OnSwitchStarted?.Invoke(toPipe);
         Lower();
         if (weapons != null && weapons.isAiming) weapons.ExitOutOfAiming();
         // his right hand goes to the back pocket (Khalid_Switch_Draw on its own layer, right arm only): what he holds swaps there
-        if (animator != null && switchLayer >= 0) animator.Play(SwitchState, switchLayer, 0f);
-        float swapAt = switchTime * 0.47f;
+        if (animator != null && switchLayer >= 0)
+        {
+            animator.SetFloat(SwitchSpeedParam, switchTime / slowed);   // the hand goes to the pocket just as slowly
+            animator.Play(SwitchState, switchLayer, 0f);
+        }
+        float swapAt = slowed * 0.47f;
         if (!toPipe)
         {
             putAway = true;                          // the carry lets go
             // the pipe is gone well before the hand gets there, rather than sinking into his back pocket
-            yield return new WaitForSeconds(switchTime * pipeHideAt);
+            yield return new WaitForSeconds(slowed * pipeHideAt);
             hiddenForSwitch = true;
             RefreshPipe();
-            yield return new WaitForSeconds(Mathf.Max(0f, swapAt - switchTime * pipeHideAt));
+            yield return new WaitForSeconds(Mathf.Max(0f, swapAt - slowed * pipeHideAt));
         }
         else yield return new WaitForSeconds(swapAt);
         putAway = false;
@@ -603,7 +699,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
         hiddenForSwitch = false;
         RefreshPipe();
         if (!toPipe) Play2D(gunDrawClip, 0.8f);
-        yield return new WaitForSeconds(switchTime - swapAt);
+        yield return new WaitForSeconds(slowed - swapAt);
         switching = false;
         Switching = false;
     }
@@ -662,10 +758,14 @@ public class PlayerMeleeWeapon : MonoBehaviour
 
     // ---------------- raise / lower ----------------
 
+    /// <summary>The raise has finished: the pipe is up in the stance and he can swing.</summary>
+    bool StanceReady => !raising && layerProgress >= 0.999f;
+
     void Raise()
     {
         ready = true;
         attacking = false;
+        queued = false;
         velocity = transform.forward * Mathf.Min(player.playerMovement.CurrentSpeed, forwardSpeed);
         target = null;
         yawVelocity = 0f;
@@ -736,7 +836,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
         if (carryLayer >= 0)
         {
             float want = equipped && !hiddenForUse && !putAway && !player.IsDead() && cutscene != CutsceneHold.Timeline ? 1f : 0f;
-            float blend = switching ? switchTime * 0.45f : carryBlend;
+            float blend = switching ? activeSwitchTime * 0.45f : carryBlend;
             carryWeight = instant ? want : Mathf.MoveTowards(carryWeight, want, Time.deltaTime / Mathf.Max(0.01f, blend));
             animator.SetLayerWeight(carryLayer, carryWeight * carryWeight * (3f - 2f * carryWeight));
         }

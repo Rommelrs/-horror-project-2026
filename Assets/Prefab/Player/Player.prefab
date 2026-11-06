@@ -22658,6 +22658,7 @@ MonoBehaviour:
   isRolling: 0
   isScared: 0
   isGrabbed: 0
+  isKnockedDown: 0
   fuseBoxInRange: 0
   hasMap: 0
   currentFuseboxInRange: {fileID: 0}
@@ -22848,8 +22849,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 0
   groundCheckDistance: 1.5
-  footstepVolume: 0.3
-  backFootstepVolume: 0.135
+  footstepVolume: 0.8
+  backFootstepVolume: 0.36
   backFootstepPitch: 0.82
   backFootstepPitchVariation: 0.04
   backFootstepLowPass: 2800
@@ -23028,7 +23029,7 @@ MonoBehaviour:
   cartridgeEjectionTP: {fileID: 7137560933500811137}
   weaponAmmoItem: {fileID: 11400000, guid: a7479e0e1c2ca94448049d1a75360233, type: 2}
   ammoTxt: {fileID: 0}
-  currentAmmo: 10
+  currentAmmo: 0
   maxAmmoCapacity: 10
   reloadDuration: 1.3
   isReloading: 0
@@ -23096,6 +23097,8 @@ MonoBehaviour:
   volume: {fileID: 3020657284142676019}
   whiteVignetteOverlay: {fileID: 0}
   maxVignetteAlpha: 1
+  vignetteAlphaGain: 2.5
+  veinsRevealCurve: 1.8
   postProcessingSmoothness: 0.5
   stabilityFill: {fileID: 0}
   stabilityTxt: {fileID: 0}
@@ -23198,7 +23201,9 @@ MonoBehaviour:
   switchInput: {fileID: -6607558110830027163, guid: 5b380c80d4897454e9a01e859512909f,
     type: 3}
   switchTime: 1
+  switchSlowAtNoStability: 2.5
   gunDrawClip: {fileID: 8300000, guid: 726fbe2a70559164085593af871f8e63, type: 3}
+  pipeHideAt: 0.22
   weaponItem: {fileID: 11400000, guid: 3c84af34d2b5615418d6136448475e4f, type: 2}
   pipe: {fileID: 30975931321088045}
   animator: {fileID: 7686741397361916901}
@@ -23271,6 +23276,10 @@ MonoBehaviour:
   hasCarryRoot: 1
   oneHandCarryTilt: 15
   oneHandGrip: 0.12
+  carrySwayTwist: 11
+  carrySwayLean: 4.5
+  carrySwayFullSpeed: 3.5
+  carrySwaySmooth: 0.05
 --- !u!114 &2601698654427394912
 MonoBehaviour:
   m_ObjectHideFlags: 0

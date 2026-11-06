@@ -17,6 +17,9 @@ public class ItemPickupEnemySpawner : MonoBehaviour
     [SerializeField] private bool spawnContinuously = false;
     [SerializeField] private float delayBetweenWaves = 3f;
     [SerializeField] private int maxWaves = 0; // 0 = infinite
+    [Tooltip("At most this many enemies from this spawner alive at once (the line-up counts): it waits at the limit and carries "
+           + "on as they die. Hundreds at once drop the frame rate hard. 0 = no limit.")]
+    [SerializeField] private int maxAliveEnemies = 0;
 
     [Header("Other Enemies")]
     [Tooltip("While the sequence runs, any other enemy (not spawned by this spawner) within this distance (m) of a spawned "
@@ -144,6 +147,8 @@ public class ItemPickupEnemySpawner : MonoBehaviour
                 {
                 if (spawnPoint.enemyPrefab != null && spawnPoint.spawnPosition != null && spawnPoint.spawnPosition.gameObject.activeInHierarchy)
                 {
+                    while (AtEnemyLimit()) yield return new WaitForSeconds(0.25f);
+
                     GameObject spawnedEnemy = Instantiate(spawnPoint.enemyPrefab, spawnPoint.spawnPosition.position, spawnPoint.spawnPosition.rotation);
                     spawnedEnemies.Add(spawnedEnemy);
                 }
@@ -163,6 +168,19 @@ public class ItemPickupEnemySpawner : MonoBehaviour
         } while (spawnContinuously && (maxWaves == 0 || waveCount < maxWaves));
         
         onSpawningCompleted?.Invoke();
+    }
+
+    private bool AtEnemyLimit()
+    {
+        if (maxAliveEnemies <= 0) return false;
+        spawnedEnemies.RemoveAll(e => e == null);
+        int alive = 0;
+        foreach (var e in spawnedEnemies)
+        {
+            var enemy = e.GetComponent<Enemy>();
+            if (e.activeInHierarchy && (enemy == null || enemy.health == null || !enemy.health.IsDead)) alive++;
+        }
+        return alive >= maxAliveEnemies;
     }
 
     private void SpawnLineUp()

@@ -4,8 +4,8 @@
 #   Q_Hiss            - the swipe wind-up: short throat hiss
 #   Q_Claw_1..2       - the claw swipes: fast light whoosh
 #   Q_Bite            - teeth crunch + wet layer (BulletFlesh) + low thump
-#   Q_GrabCue         - the grab wind-up: cloth rustle + a low grunt (Zombie_4 vocal pitched down)
-#   Q_Muffled_1..3    - stagger: his cry through the hands clamped over his mouth (zombie vocals, low-passed)
+#   Q_GrabCue         - the grab wind-up: cloth rustle + a low grunt (the opening burst of his own Questioner_Attack2)
+#   Q_Muffled_1,2,5   - stagger: his cry through the hands clamped over his mouth (Monster hurt sounds, slowed + low-passed)
 #   Q_Whisper         - the hold: 2 s cut of Wall Whisper.mp3 (placeholder until the real "وين أبوك؟" line is recorded)
 #   Q_ScreamRing      - the scream in Khalid's ears: a high ringing (tinnitus) that swells in, holds and dies away over ~6.5 s
 #   python AnimationTools/questioner/make_questioner_sounds.py [name name ...]     (needs ffmpeg on PATH; no names = all)
@@ -30,11 +30,12 @@ def save(name, x, peak):
 
 
 def load(path, start=0.0, dur=None, rate=1.0):
-    """any audio file -> mono float at SR via ffmpeg; rate < 1 = pitched + slowed down (resampled)"""
+    """any audio file -> mono float at SR via ffmpeg; start + dur are in source seconds; rate < 1 = pitched + slowed down
+    (resampled to more samples, played back at SR)"""
     tmp = tempfile.mktemp(suffix=".wav")
     cmd = ["ffmpeg", "-v", "error", "-y", "-ss", str(start), "-i", path]
-    if dur: cmd += ["-t", str(dur / rate)]
-    cmd += ["-ac", "1", "-ar", str(int(SR * rate)), "-sample_fmt", "s16", tmp]
+    if dur: cmd += ["-t", str(dur)]
+    cmd += ["-ac", "1", "-ar", str(int(SR / rate)), "-sample_fmt", "s16", tmp]
     subprocess.run(cmd, check=True)
     with wave.open(tmp) as w:
         x = np.frombuffer(w.readframes(w.getnframes()), np.int16).astype(np.float64) / 32768
@@ -130,15 +131,21 @@ def grab_cue(seed=4):
     n = rng.standard_normal(len(t))
     gate = lowpass(np.abs(rng.standard_normal(len(t))), 25) * 3.0
     cloth = bandpass_tv(n, np.full(len(t), 3000.0), 0.8) * gate * np.clip(1 - t / dur, 0, 1)
-    grunt = load(AUD + "ZombieSounds/Vocals/Zombie_4-03.wav", rate=0.78)
-    grunt = lowpass(grunt, 1800)[:len(t)]
+    grunt = load(AUD + "Enemies/Questioner/Questioner_Attack2.mp3", start=0.03, dur=0.27, rate=0.9)
+    grunt = fade(lowpass(grunt, 1800), 0.005, 0.06) * 0.65   # louder source than the cloth was balanced against
     grunt = np.pad(grunt, (int(0.08 * SR), 0))[:len(t)]
     grunt = np.pad(grunt, (0, len(t) - len(grunt)))
     return fade(cloth * 0.55 + grunt * 1.0, 0.01, 0.12)
 
 
+# (hurt sound, rate): slowed well below the Monster hurt sound that plays at the same moment, so the cry sits under it
+# and rings on after it instead of doubling it
+MUFFLED = {1: (1, 0.80), 2: (2, 0.85), 5: (2, 0.72)}
+
+
 def muffled(i):
-    v = load(AUD + "ZombieSounds/Vocals/Zombie_4-0%d.wav" % i, rate=0.9)
+    src, rate = MUFFLED[i]
+    v = load(AUD + "MonsterHunt/Monster hurt sound %d.mp3" % src, rate=rate)
     v = lowpass(v, 520, passes=2) * 3.0                    # hands clamped over the mouth
     return fade(v, 0.01, 0.08)
 

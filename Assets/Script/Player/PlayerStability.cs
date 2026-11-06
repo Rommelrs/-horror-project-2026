@@ -11,6 +11,12 @@ public class PlayerStability : MonoBehaviour
     [SerializeField] Image whiteVignetteOverlay;
     [SerializeField] float maxVignetteAlpha = 1f;
     bool warnedNoOverlay;
+    [Tooltip("How quickly the veins go solid as stability drops (alpha = how far it dropped x this).")]
+    [SerializeField] float vignetteAlphaGain = 2.5f;
+    [Tooltip("How far in the veins grow at the very lowest stability (0 = not at all, 1 = the whole texture, right across the screen). Keep it low: they belong at the screen edges.")]
+    [SerializeField, Range(0f, 1f)] float veinsMaxReveal = 0.2f;
+    static readonly int RevealId = Shader.PropertyToID("_Reveal");
+    Material veinsMaterial;
     [SerializeField] float postProcessingSmoothness = 5;
     [SerializeField] Image stabilityFill;
     [SerializeField] TMP_Text stabilityTxt;
@@ -81,10 +87,18 @@ public class PlayerStability : MonoBehaviour
         {
             Color c = whiteVignetteOverlay.color;
             
-            float targetAlpha = LowHealthEffect.isLowHealth ? 0f : Mathf.Min(currentWeightValue, maxVignetteAlpha);
+            float targetAlpha = LowHealthEffect.isLowHealth ? 0f : Mathf.Min(currentWeightValue * vignetteAlphaGain, maxVignetteAlpha);
             c.a = Mathf.Lerp(c.a, targetAlpha, Time.deltaTime * postProcessingSmoothness);
             
             whiteVignetteOverlay.color = c;
+
+            // the veins creep in from the screen edges as stability drops (own copy: the material asset stays as it is)
+            if (veinsMaterial == null && whiteVignetteOverlay.material != null && whiteVignetteOverlay.material.HasProperty(RevealId))
+            {
+                veinsMaterial = new Material(whiteVignetteOverlay.material);
+                whiteVignetteOverlay.material = veinsMaterial;
+            }
+            if (veinsMaterial != null) veinsMaterial.SetFloat(RevealId, currentWeightValue * veinsMaxReveal);
         }
         else if (!warnedNoOverlay)
         {

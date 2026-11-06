@@ -158,10 +158,16 @@ public static class CowardMeetingBuilder
         var windGust = Source(audioRoot, "WindGust", Vector3.zero, false, WindGustVolume, ambGroup);
         var drone = Source(audioRoot, "Drone", Vector3.zero, false, DroneVolume, ambGroup);
         var music = Source(audioRoot, "Music", Vector3.zero, false, MusicVolume, Group("Music", "Ambience", "Ambient", "Master"));
-        // in that window, close by: loud and placed (it was 20 m off up the alley)
-        var glass = Source(audioRoot, "Glass", mGlass.position, true, 1f, sfxGroup);
-        glass.minDistance = 3f; glass.maxDistance = 45f; glass.rolloffMode = AudioRolloffMode.Logarithmic;
-        var reverb = glass.gameObject.AddComponent<AudioReverbFilter>(); reverb.reverbPreset = AudioReverbPreset.Cave;
+        // somewhere far off up the alley, past the window he looks up at: still placed (ahead, on his left), but distant -
+        // no high end and mostly its echo. (No doppler: the camera cuts during it, and a cut reads as a huge speed.)
+        var glass = Source(audioRoot, "Glass", mGlass.position + GlassFarOffset, true, 1f, sfxGroup);
+        glass.minDistance = GlassMinDistance; glass.maxDistance = 45f; glass.rolloffMode = AudioRolloffMode.Logarithmic;
+        glass.dopplerLevel = 0f;
+        var reverb = glass.gameObject.AddComponent<AudioReverbFilter>();
+        reverb.reverbPreset = AudioReverbPreset.User;
+        reverb.dryLevel = GlassDryLevel; reverb.room = -1000f; reverb.roomHF = -600f; reverb.decayTime = 2.91f; reverb.decayHFRatio = 0.6f;
+        reverb.reflectionsLevel = -602f; reverb.reflectionsDelay = 0.03f; reverb.reverbLevel = -302f; reverb.reverbDelay = 0.04f;
+        glass.gameObject.AddComponent<AudioLowPassFilter>().cutoffFrequency = GlassCutoff;
 
         // ── cameras ──
         var cams = Child(root.transform, "Cameras");
@@ -583,6 +589,11 @@ public static class CowardMeetingBuilder
     // left, the coward freezes, Khalid stops, looks up at it and back ahead, and walks on; "You're insane..." - a beat -
     // and the coward bolts north
     const float GlassTime = 2.3f, LookUpTime = 2.65f, LookBackTime = 4.2f, InsaneTime = 5.4f, BoltTime = 7.3f;
+    // the glass sound, from the window mark (he looks at the mark, it isn't where the sound is)
+    static readonly Vector3 GlassFarOffset = new Vector3(14f, 0f, 12f);
+    // measured at the listener: the crash peaks ~0.17 over a ~0.07 bed, high end ~20 dB under the old close-by one.
+    // (Cutoff 1800 + min distance 3 lost it in the bed - glass has most of its energy above 3 kHz.)
+    const float GlassCutoff = 2500f, GlassDryLevel = -300f, GlassMinDistance = 8f;
 
     static void BuildEnd(PlayableDirector d, Ctx c, CinemachineVirtualCameraBase[] v)
     {

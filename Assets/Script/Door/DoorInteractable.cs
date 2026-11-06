@@ -50,6 +50,8 @@ public class DoorInteractable : MonoBehaviour
     [Header("Custom Sounds (Optional)")]
     public AudioClip customOpenClip;
     public AudioClip customCloseClip;
+    [Tooltip("No closing sound at all (not a real door: squeezing between blocks and so on).")]
+    public bool silentClose;
     public AudioClip customLockedClip;
 
     public UnityEvent OnInteracted;

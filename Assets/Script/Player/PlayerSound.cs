@@ -7,6 +7,8 @@ public class SurfaceFootstepSounds
 {
     public SurfaceType surfaceType;
     public AudioClip[] footstepSounds;
+    [Tooltip("This surface's steps relative to the normal footstep volume, for recordings that came out quieter than the rest.")]
+    public float volumeScale = 1f;
 }
 
 public class PlayerSound : MonoBehaviour
@@ -35,8 +37,13 @@ public class PlayerSound : MonoBehaviour
     PlayerEventHandler playerEventHandler;
     AudioSource backStepSource;
 
+    public static PlayerSound instance;
+    public float FootstepVolume => footstepVolume;
+    public AudioSource Source => audioSource;
+
     private void Awake()
     {
+        instance = this;
         audioSource = GetComponent<AudioSource>();
         CreateBackStepSource();
         playerHealth = GetComponent<Health>();
@@ -84,7 +91,7 @@ public class PlayerSound : MonoBehaviour
         if (clips != null && clips.Length > 0)
         {
             int randomIndex = Random.Range(0, clips.Length);
-            audioSource.PlayOneShot(clips[randomIndex], footstepVolume);
+            audioSource.PlayOneShot(clips[randomIndex], footstepVolume * lastSurfaceVolume);
         }
     }
 
@@ -96,7 +103,7 @@ public class PlayerSound : MonoBehaviour
         if (clips != null && clips.Length > 0 && backStepSource != null)
         {
             backStepSource.pitch = backFootstepPitch + Random.Range(-backFootstepPitchVariation, backFootstepPitchVariation);
-            backStepSource.PlayOneShot(clips[Random.Range(0, clips.Length)], backFootstepVolume);
+            backStepSource.PlayOneShot(clips[Random.Range(0, clips.Length)], backFootstepVolume * lastSurfaceVolume);
         }
     }
 
@@ -120,17 +127,27 @@ public class PlayerSound : MonoBehaviour
         lowPass.cutoffFrequency = backFootstepLowPass;
     }
 
+    float lastSurfaceVolume = 1f;
+
     AudioClip[] GetFootstepSoundsForCurrentSurface()
     {
+        return GetFootstepsAt(transform.position, out lastSurfaceVolume);
+    }
+
+    /// <summary>The step sounds for whatever ground is under this point, and that surface's volume scale. Cutscene actors use it too.</summary>
+    public AudioClip[] GetFootstepsAt(Vector3 from, out float volumeScale)
+    {
+        volumeScale = 1f;
+
         // Raycast down to detect ground
         bool didHit;
         RaycastHit hit;
         
         // If ground layer is set, use it. Otherwise raycast on all layers.
         if (groundLayer != 0)
-            didHit = Physics.Raycast(transform.position, Vector3.down, out hit, groundCheckDistance, groundLayer);
+            didHit = Physics.Raycast(from, Vector3.down, out hit, groundCheckDistance, groundLayer);
         else
-            didHit = Physics.Raycast(transform.position, Vector3.down, out hit, groundCheckDistance);
+            didHit = Physics.Raycast(from, Vector3.down, out hit, groundCheckDistance);
         
         if (didHit)
         {
@@ -144,6 +161,7 @@ public class PlayerSound : MonoBehaviour
                 {
                     if (surfaceFootstepSounds[i].surfaceType == groundType.surfaceType)
                     {
+                        if (surfaceFootstepSounds[i].volumeScale > 0f) volumeScale = surfaceFootstepSounds[i].volumeScale;
                         return surfaceFootstepSounds[i].footstepSounds;
                     }
                 }

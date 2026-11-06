@@ -3,7 +3,8 @@ using UnityEngine;
 using UnityEngine.Playables;
 
 // One-off weapon hints shown after picking up the first weapon. Hook StartTutorial() to the pickup's OnInteracted event.
-//  Gun:   with the pipe in his hands, first "Press [2] or [wheel] to switch weapons" until the gun is out; then
+//  Gun:   with the pipe in his hands, first "Press [2] or [wheel] to switch weapons" until the gun is out; the gun comes
+//         empty, so "Press [R] to Reload" once there's spare ammo for it (nothing until then); then
 //         "Press [RMB] to Aim" until the player aims, then "Press [LMB] to Shoot" while aiming, until the first shot
 //         (or until he lowers the gun without shooting).
 //  Melee: "Hold [RMB] to Prepare your attack" until the pipe is raised, then "Press [LMB] to attack" while it is
@@ -23,6 +24,8 @@ public class GunTutorialPrompts : MonoBehaviour
     [SerializeField] InteractPromptUI shootPrompt;
     [Tooltip("Gun only: shown first while the pipe is still out (switch to the gun).")]
     [SerializeField] InteractPromptUI switchPrompt;
+    [Tooltip("Gun only: shown while the gun is empty and there's spare ammo to load (before aim / shoot).")]
+    [SerializeField] InteractPromptUI reloadPrompt;
 
     [Tooltip("Cutscene that plays after the pickup. The prompts wait until it has finished before showing.")]
     [SerializeField] PlayableDirector waitForCutscene;
@@ -33,7 +36,7 @@ public class GunTutorialPrompts : MonoBehaviour
     [Tooltip("How long the second prompt stays after the first shot / swing before fading out.")]
     [SerializeField] float hideDelayAfterShot = 0.5f;
 
-    enum State { None, Switch, Aim, Shoot }
+    enum State { None, Switch, Reload, Aim, Shoot }
 
     Coroutine routine;
     bool shotFired;
@@ -89,7 +92,10 @@ public class GunTutorialPrompts : MonoBehaviour
             if (kind == WeaponKind.Gun && switchPrompt != null && (PlayerMeleeWeapon.Equipped || PlayerMeleeWeapon.Switching))
                 wanted = CanShowSwitchPrompt() ? State.Switch : State.None;
             else if (CanShowPrompts())
-                wanted = IsAiming() ? State.Shoot : State.Aim;
+            {
+                if (GunEmpty()) wanted = !weapon.isReloading && weapon.GetReserveAmmo() > 0 ? State.Reload : State.None;
+                else wanted = IsAiming() ? State.Shoot : State.Aim;
+            }
 
             // gun: aiming and lowering it again without shooting means the player chose not to - the hint is done
             if (kind == WeaponKind.Gun && shown == State.Shoot && wanted == State.Aim)
@@ -100,6 +106,7 @@ public class GunTutorialPrompts : MonoBehaviour
                 shown = wanted;
 
                 if (switchPrompt != null) { if (shown == State.Switch) switchPrompt.ShowPrompt(); else switchPrompt.HidePrompt(); }
+                if (reloadPrompt != null) { if (shown == State.Reload) reloadPrompt.ShowPrompt(); else reloadPrompt.HidePrompt(); }
                 if (shown == State.Aim) aimPrompt.ShowPrompt(); else aimPrompt.HidePrompt();
                 if (shown == State.Shoot) shootPrompt.ShowPrompt(); else shootPrompt.HidePrompt();
             }
@@ -108,11 +115,18 @@ public class GunTutorialPrompts : MonoBehaviour
         }
 
         if (switchPrompt != null) switchPrompt.HidePrompt();
+        if (reloadPrompt != null) reloadPrompt.HidePrompt();
         aimPrompt.HidePrompt();
         if (shotFired) shootPrompt.HidePrompt(hideDelayAfterShot); else shootPrompt.HidePrompt();
 
         weapon.OnShotFired -= OnShotFired;
         routine = null;
+    }
+
+    // nothing to shoot yet: aim / shoot would only click. (No prompt to show it with: the old hints, as before.)
+    bool GunEmpty()
+    {
+        return kind == WeaponKind.Gun && reloadPrompt != null && weapon.currentAmmo <= 0 && !weapon.infiniteAmmo;
     }
 
     bool IsAiming()
@@ -144,6 +158,7 @@ public class GunTutorialPrompts : MonoBehaviour
     // the pipe is out (or on its way out / back): the gun can't be aimed yet
     bool CanShowSwitchPrompt()
     {
+        if (PlayerMeleeWeapon.InCutscene) return false;
         if (PlayerMeleeWeapon.Switching) return false;
         if (Player.instance.IsDead()) return false;
         if (GameManager.IsPaused) return false;
@@ -154,6 +169,7 @@ public class GunTutorialPrompts : MonoBehaviour
 
     bool CanShowPrompts()
     {
+        if (PlayerMeleeWeapon.InCutscene) return false;
         if (kind == WeaponKind.Melee ? !PlayerMeleeWeapon.Equipped : !weapon.weaponIsEnabled || PlayerMeleeWeapon.Equipped || PlayerMeleeWeapon.Switching) return false;
         if (Player.instance.IsDead()) return false;
         if (GameManager.IsPaused) return false;

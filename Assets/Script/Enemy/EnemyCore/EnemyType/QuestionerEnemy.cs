@@ -455,7 +455,14 @@ public class QuestionerEnemy : HeadshotEnemy
         if (pendingEnvironmentHit)
         {
             pendingMeleeHit = false;
-            base.TakeDamage(dmgValue);
+            if (stateMachine.CurrentState == combatState && combatState.IsSwiping)
+            {
+                // mid claws: the damage counts, the knock-down doesn't (the claws always finish)
+                ConsumeKnockbackScale();
+                PlaySoundEffect(stats.takeDamageSFX);
+                Flinch(flinchAngle);
+            }
+            else base.TakeDamage(dmgValue);
             health.isDamageByWeakpointHit = false;
             return;
         }
@@ -691,7 +698,10 @@ public class QuestionerTuning
 
     [Header("Grab")]
     public float grabMin = 4f, grabMax = 6f, grabCooldown = 8f;
-    public float grabWindup = 0.6f, rushSpeed = 4f, rushMaxDistance = 6f;
+    public float grabWindup = 0.6f, rushMaxDistance = 6f;
+    [Tooltip("Each rush picks its speed (m/s) at random in this range the moment he launches, so it has to be read and reacted "
+           + "to. Keep the minimum above Khalid's sprint (3.2). Above about 6 there's too little time left to swing the pipe.")]
+    public float rushSpeedMin = 3.5f, rushSpeedMax = 6f;
     public float grabContact = 0.95f;
     public int biteDamage = 25;
     [Tooltip("Caught: holds him (s), then screams into his face (the scream lands at grabScreamAt, the clip runs grabScreamTime).")]
@@ -702,7 +712,7 @@ public class QuestionerTuning
     public float pushOffDistance = 1.4f;
     public float holdDistance = 0.62f;
     public float stumbleTime = 1.0f, grabMissRecovery = 0.9f;
-    [Tooltip("The counter: a pipe strike landing in the last part of the wind-up (s) or in the rush knocks him back this far (m).")]
+    [Tooltip("The counter: a pipe strike landing in the last part of the wind-up (s) or in the rush knocks him back this far (m). A strike earlier in the wind-up spends it: that grab can't be countered any more.")]
     public float counterWindow = 0.3f, counterPushDistance = 1.3f;
     [Tooltip("He runs into the swing: extra pipe reach (m) while the counter window is open.")]
     public float counterReachBonus = 0.35f;
@@ -711,6 +721,11 @@ public class QuestionerTuning
     public float swipeRange = 1.5f;
     public float swipeWindup = 0.4f, swipeGap = 0.3f, swipeRecovery = 0.7f;
     public int swipeDamage = 10;
+    [Tooltip("Claws within burstClawWindow seconds of a burst: he holds his hands up this much longer (s) before the strike and stays planted, so there's time to back off. First claw lands at swipeWindup + this.")]
+    public float burstClawHold = 0.5f;
+    public float burstClawWindow = 1f;
+    [Tooltip("Where in the claw clip (s) he holds still for burstClawHold: the raised hands, just before the strike.")]
+    public float clawHoldAt = 0.3f;
     public float swipeReach = 1.85f, swipeArc = 110f;
 
     [Header("Stagger (a gun shot in the mouth: the melee window)")]
@@ -718,12 +733,41 @@ public class QuestionerTuning
     [Tooltip("Damage of the mouth shot that staggers him (spec: no extra damage; a body shot is 25). Never kills.")]
     public int staggerShotDamage = 25;
 
-    [Header("Hurt (a pipe strike between moves or in the claws)")]
+    [Header("Hurt (a pipe strike between moves)")]
     [Tooltip("The recoil (s), then always the feint into the grab (never the claws).")]
     public float hurtTime = 0.45f;
     [Tooltip("The feint: backs off and drifts sideways for a random time (s) to a random distance (m), then grabs.")]
     public float feintTimeMin = 0.8f, feintTimeMax = 2.4f;
     public float feintDistMin = 2.2f, feintDistMax = 4.8f;
+
+    [Header("Unpredictable (not the horde)")]
+    [Tooltip("Every paceGapMin-Max seconds, within stillRangeMin m to engageRange with Khalid in sight, this chance he stops dead and stares.")]
+    public float paceGapMin = 3f, paceGapMax = 7f;
+    [Range(0f, 1f)] public float stillChance = 0.6f;
+    public float stillRangeMin = 2.5f;
+    [Tooltip("How long he stares (s).")]
+    public float stillTimeMin = 1f, stillTimeMax = 2.5f;
+    [Tooltip("When the stare ends: this chance he bursts forward, this chance he attacks at once. Otherwise he slowly walks on.")]
+    [Range(0f, 1f)] public float stillEndsInBurst = 0.45f, stillEndsInAttack = 0.3f;
+    [Tooltip("The burst: fast walk at Khalid, at most burstMaxTime seconds. Keep burstSpeed below Khalid's sprint (3.2).")]
+    public float burstSpeed = 3f, burstAcceleration = 12f, burstMaxTime = 1.4f, burstCooldown = 4f;
+    [Tooltip("Each grab wind-up holds the hunch for a random time (s) in this range. The horde keeps grabWindup.")]
+    public float grabHoldMin = 0.4f, grabHoldMax = 1.1f;
+    [Tooltip("He never uses the same move more than this many times in a row (the grab after a pipe strike is exempt). Too close for anything but the claws: he backs off.")]
+    public int maxSameMoveInARow = 2;
+    [Tooltip("Khalid backing away for this long (s): grabs get this likely, the grab cooldown is cut by this share, and beyond grab range he bursts after him.")]
+    public float retreatAfter = 1.2f;
+    [Range(0f, 1f)] public float retreatGrabChance = 0.9f, retreatCooldownCut = 0.5f;
+    [Tooltip("Khalid holding his aim on him for this long (s): this chance he rushes him instead of screaming.")]
+    public float aimPunishAfter = 2.5f;
+    [Range(0f, 1f)] public float aimPunishChance = 0.6f;
+
+    [Header("Rushing him with the pipe (not the horde)")]
+    [Tooltip("He recoils from this many pipe strikes in a row; the next one, instead of recoiling, he answers with a fast grab that can't be countered. No strike for poiseWindow seconds starts the count again.")]
+    public int maxRecoilsInARow = 2;
+    public float poiseWindow = 4f;
+    [Tooltip("Wind-up of that fast grab (s). Short enough to land while Khalid is still recovering from his swing.")]
+    public float poiseGrabWindup = 0.3f;
 
     [Header("Backing off")]
     [Tooltip("After hurting Khalid he circles without attacking for this long (s): time to recover and get ready.")]

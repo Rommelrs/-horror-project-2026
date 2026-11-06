@@ -66,6 +66,13 @@ public class AutoPickupCutscene : MonoBehaviour
             yield return Co_WalkToPosition(player, playerMovement);
         }
 
+        // Picked up by hand on the way (its E prompt shows as he walks into range): nothing left to do.
+        if (targetPickup == null)
+        {
+            player.pauseMovement = false;
+            yield break;
+        }
+
         // Smoothly turn the player to face the item's interact point (or its own transform
         // if no interact point is assigned).
         Transform lookTarget = targetPickup.interactPoint != null ? targetPickup.interactPoint : targetPickup.transform;
@@ -89,6 +96,12 @@ public class AutoPickupCutscene : MonoBehaviour
         }
 
         yield return new WaitForSeconds(pauseBeforePickup);
+
+        if (targetPickup == null)
+        {
+            player.pauseMovement = false;
+            yield break;
+        }
 
         PickUpItem();
 
@@ -218,6 +231,9 @@ public class AutoPickupCutscene : MonoBehaviour
             else
                 AudioSource.PlayClipAtPoint(targetPickup.pckupClip, targetPickup.transform.position);
         }
+        // same as a pickup by hand: no clip of its own = the menu hover, notes stay silent
+        else if (targetPickup.itemToPickup.itemType != ItemType.Note && UISoundManager.instance != null)
+            UISoundManager.instance.PlayButtonHoverSound();
 
         Player.instance.SetLastInteractionTime(Time.unscaledTime);
 

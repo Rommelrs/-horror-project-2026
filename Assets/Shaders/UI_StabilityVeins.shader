@@ -1,0 +1,73 @@
+// Stability overlay: black veins that creep in from the screen edges as stability drops.
+// The texture's alpha is the vein shape, its red channel the moment each pixel appears (0 = first, at the edges; 1 = last).
+Shader "UI/StabilityVeins"
+{
+    Properties
+    {
+        [PerRendererData] _MainTex ("Veins (A = shape, R = order)", 2D) = "white" {}
+        _Color ("Tint", Color) = (1,1,1,1)
+        _Reveal ("Reveal", Range(0,1)) = 0
+        _Soft ("Edge softness", Range(0.005,0.2)) = 0.05
+
+        // what Unity UI expects of any UI shader
+        _StencilComp ("Stencil Comparison", Float) = 8
+        _Stencil ("Stencil ID", Float) = 0
+        _StencilOp ("Stencil Operation", Float) = 0
+        _StencilWriteMask ("Stencil Write Mask", Float) = 255
+        _StencilReadMask ("Stencil Read Mask", Float) = 255
+        _ColorMask ("Color Mask", Float) = 15
+    }
+
+    SubShader
+    {
+        Tags { "Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent" "PreviewType"="Plane" "CanUseSpriteAtlas"="True" }
+        Stencil
+        {
+            Ref [_Stencil]
+            Comp [_StencilComp]
+            Pass [_StencilOp]
+            ReadMask [_StencilReadMask]
+            WriteMask [_StencilWriteMask]
+        }
+        Cull Off
+        Lighting Off
+        ZWrite Off
+        ZTest [unity_GUIZTestMode]
+        Blend SrcAlpha OneMinusSrcAlpha
+        ColorMask [_ColorMask]
+
+        Pass
+        {
+            CGPROGRAM
+            #pragma vertex vert
+            #pragma fragment frag
+            #include "UnityCG.cginc"
+
+            struct appdata { float4 vertex : POSITION; float4 color : COLOR; float2 uv : TEXCOORD0; };
+            struct v2f { float4 pos : SV_POSITION; fixed4 color : COLOR; float2 uv : TEXCOORD0; };
+
+            sampler2D _MainTex;
+            float4 _MainTex_ST;
+            fixed4 _Color;
+            float _Reveal;
+            float _Soft;
+
+            v2f vert (appdata v)
+            {
+                v2f o;
+                o.pos = UnityObjectToClipPos(v.vertex);
+                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                o.color = v.color * _Color;
+                return o;
+            }
+
+            fixed4 frag (v2f i) : SV_Target
+            {
+                fixed4 t = tex2D(_MainTex, i.uv);
+                float shown = smoothstep(t.r - _Soft, t.r + _Soft * 0.25, _Reveal * (1.0 + _Soft));
+                return fixed4(0, 0, 0, t.a * shown * i.color.a);
+            }
+            ENDCG
+        }
+    }
+}

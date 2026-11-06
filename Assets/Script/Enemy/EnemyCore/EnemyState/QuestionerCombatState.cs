@@ -17,7 +17,7 @@ using UnityEngine.AI;
 ///             off - all on the over-the-shoulder grab camera. A pipe strike landing in the lunge (the last 0.3 s of the
 ///             wind-up or the rush) counters it: he's knocked back and stumbles.
 ///  Swipe    - wind-up 0.4 / two claw swipes 0.3 s apart, 10 each / recovery 0.7.
-///  Hurt     - a pipe strike between moves or during the claws: a short recoil (0.45 s), then always the feint (never the
+///  Hurt     - a pipe strike between moves (the claws finish whatever hits him): a short recoil (0.45 s), then always the feint (never the
 ///             scream or the claws) - backs off and drifts left or right to a random distance, for a random time, then the
 ///             grab (a test of patience). Strikes during the scream only hurt him (damage + flinch); it carries on.
 ///  Stagger  - mouth hit: knees, hands over the mouth 4 s, stands up 0.8. Melee does double, a second mouth hit kills.
@@ -41,6 +41,10 @@ public class QuestionerCombatState : EnemyState
     float nextDecision, nextScream, nextGrab, freeSince;
     float noSightTime;
     Vector3 rushDir, rushStart;
+    // Q_GrabRush (at its speed in the controller) matches this ground speed: the animator follows the rolled speed from it
+    const float RushClipSpeed = 4f;
+    /// <summary>This rush's speed (m/s), rolled when he launches.</summary>
+    public float RushSpeed { get; private set; }
     float blockedTime;
     int swipeHits;
     bool landedFirst;
@@ -59,8 +63,26 @@ public class QuestionerCombatState : EnemyState
     int routeCornerCount, routeCorner;
     float nextRouteCheck;
     bool StraightLineClear => routeCornerCount == 0;
+    // Q_Locomotion's fastest walk matches this ground speed: the animator follows the burst's speed from it
+    const float WalkClipSpeed = 1.9f;
+    enum Pace { Normal, Still, Burst }
+    Pace pace;
+    float paceUntil, nextPaceChange, nextBurstAt;
+    enum Move { None, Scream, Grab, Swipe }
+    Move lastMove;
+    int sameInARow;
+    bool backedOff;
+    float aimHeld, retreatHeld;
+    /// <summary>This grab's wind-up (s), rolled when he hunches: he holds the pose for as long as it lasts.</summary>
+    public float GrabWindupNow { get; private set; }
+    public string PaceName => pace.ToString();
 
     public bool IsStaggered => phase == Phase.StaggerDown || phase == Phase.StaggerLoop || phase == Phase.StaggerUp;
+    /// <summary>Mid claw attack: once started it always finishes (only death stops it).</summary>
+    public bool IsSwiping => phase == Phase.Swipe;
+    bool staggerAfterSwipe;
+    // claws right after a burst: extra seconds he holds his hands up before the strike
+    float swipeHold, burstEndedAt = float.NegativeInfinity;
     public bool IsGrabbing => phase == Phase.GrabHold || phase == Phase.GrabScream || phase == Phase.Bite;
     /// <summary>Anywhere in the grab, wind-up to bite.</summary>
     public bool InGrabMove => phase == Phase.GrabWindup || phase == Phase.GrabRush || IsGrabbing;
@@ -69,7 +91,11 @@ public class QuestionerCombatState : EnemyState
     /// <summary>Free to drop what he's doing for the chorus (not in a grab, a claw swing, a recoil or a stagger).</summary>
     public bool CanJoinChorus => phase == Phase.Free || phase == Phase.Release || phase == Phase.ScreamWindup || phase == Phase.ScreamActive || phase == Phase.ScreamRecover;
     /// <summary>The grab lunge: a pipe strike landing now knocks him back (the end of the wind-up and the rush).</summary>
-    public bool IsCounterable => phase == Phase.GrabRush || (phase == Phase.GrabWindup && phaseT >= T.grabWindup - T.counterWindow);
+    public bool IsCounterable => !counterSpent && (phase == Phase.GrabRush || (phase == Phase.GrabWindup && phaseT >= GrabWindupNow - T.counterWindow));
+    // a swing too early in this grab's wind-up (or the fast grab that answers rushing him): this grab can't be countered
+    bool counterSpent;
+    int recoilsInARow;
+    float lastPipeHit = float.NegativeInfinity;
     public string PhaseName => phase.ToString();
 
     static readonly int MoveX = Animator.StringToHash("MoveX");
@@ -117,6 +143,7 @@ public class QuestionerCombatState : EnemyState
         nextDecision = now + T.firstMoveDelay;
         nextScream = Mathf.Max(nextScream, now + T.firstMoveDelay);
         nextGrab = Mathf.Max(nextGrab, now + T.firstMoveDelay);
+        nextPaceChange = Mathf.Max(nextPaceChange, now + T.paceGapMin);
         // a horde arrives together: stagger their first screams
         if (q.hordeMode) nextScream = Mathf.Max(nextScream, now + Random.Range(T.firstMoveDelay, T.hordeScreamCooldownMax));
         noSightTime = 0f;
@@ -130,6 +157,9 @@ public class QuestionerCombatState : EnemyState
     public override void Exit()
     {
         chorus = false;
+        EndPace();
+        staggerAfterSwipe = false;
+        EndSwipeHold();
         if (wasInGrab && q.hordeMode) q.HordeGrabEnded();
         if (wasInClaw && q.hordeMode) q.HordeClawEnded();
         wasInGrab = wasInClaw = clawRun = false;
@@ -137,6 +167,7 @@ public class QuestionerCombatState : EnemyState
         q.SetWeakpointScale(1f);
         q.ResetMouth();
         q.ReleaseToken();
+        if (phase == Phase.GrabRush) q.anim.speed = 1f;
         q.agent.updateRotation = true;
         if (q.agent.isOnNavMesh) q.agent.isStopped = false;
         q.anim.SetFloat(MoveX, 0f);
@@ -146,6 +177,9 @@ public class QuestionerCombatState : EnemyState
 
     void SetPhase(Phase p, string animState = null, float fade = 0.15f)
     {
+        if (phase == Phase.GrabRush) q.anim.speed = 1f;
+        EndPace();
+        EndSwipeHold();
         phase = p;
         phaseT = 0f;
         if (animState != null) q.anim.CrossFadeInFixedTime(animState, fade, 0);
@@ -166,6 +200,7 @@ public class QuestionerCombatState : EnemyState
         Vector3 toP = ToPlayerFlat();
         float d = toP.magnitude;
         Vector3 dir = d > 0.01f ? toP / d : q.transform.forward;
+        if (!q.hordeMode) TrackHabits(dt, dir);
 
         switch (phase)
         {
@@ -245,13 +280,16 @@ public class QuestionerCombatState : EnemyState
 
             case Phase.GrabWindup:
                 Brake(dt); Face(dir, 400f);
-                if (phaseT >= T.grabWindup)
+                if (phaseT >= GrabWindupNow)
                 {
                     rushDir = dir;
                     rushStart = q.transform.position;
                     blockedTime = 0f;
-                    vel = rushDir * T.rushSpeed * 0.6f;
+                    // rolled here and not at the wind-up, so nothing gives the speed away before he goes
+                    RushSpeed = Random.Range(T.rushSpeedMin, T.rushSpeedMax);
+                    vel = rushDir * RushSpeed * 0.6f;
                     SetPhase(Phase.GrabRush, "Q_GrabRush", 0.08f);
+                    q.anim.speed = RushSpeed / RushClipSpeed;
                     q.SetMouth(0.7f);
                 }
                 break;
@@ -412,6 +450,8 @@ public class QuestionerCombatState : EnemyState
         if (token && !hadToken) nextDecision = Mathf.Max(nextDecision, Time.time + T.firstMoveDelay);
         hadToken = token;
         bool repositioning = Time.time < repositionUntil;
+        if (!token || Feinting || repositioning || Player.instance.isGrabbed) EndPace();
+        else if (UpdatePace(dt, d, dir)) return;
         if (token && Feinting)
         {
             // shook off a pipe strike: backs off and drifts to one side, making Khalid wait for the grab
@@ -481,8 +521,19 @@ public class QuestionerCombatState : EnemyState
             return;
         }
 
+        // Khalid has held his aim on him too long: instead of the usual answer he rushes him
+        if (PlayerAiming && sight && !repositioning && aimHeld >= T.aimPunishAfter)
+        {
+            aimHeld = 0f;
+            if (Random.value < T.aimPunishChance)
+            {
+                if (CanStartGrabAt(d)) { StartGrab(); return; }
+                if (CanBurst(d)) { BeginBurst(); return; }
+            }
+        }
+
         // Khalid aims down the sights at him: he answers with The Question (even while backing off - it doesn't hurt)
-        if (PlayerAiming && sight && Time.time >= nextScream && d <= T.screamAimRange && Random.value < T.adsScreamChance)
+        if (PlayerAiming && sight && Time.time >= nextScream && d <= T.screamAimRange && MoveAllowed(Move.Scream) && Random.value < T.adsScreamChance)
         {
             StartScream();
             return;
@@ -490,15 +541,42 @@ public class QuestionerCombatState : EnemyState
         // letting Khalid recover after hurting him: no attacks at all
         if (repositioning) return;
 
+        // the claws twice in a row and Khalid is still on him: backs off into grab range, so it's something else next.
+        // If Khalid follows him in (or nothing else can land, like Khalid on the floor at the table) the claws are fair again.
+        if (d <= T.swipeRange && !MoveAllowed(Move.Swipe))
+        {
+            if (backedOff || (!CanGrabKhalid && Time.time < nextScream))
+            {
+                backedOff = false;
+                lastMove = Move.None;
+                sameInARow = 0;
+            }
+            else
+            {
+                backedOff = true;
+                float target = Random.Range(T.grabMin + 0.3f, T.grabMax - 0.5f);
+                float seconds = Mathf.Clamp((target - d) / T.walkSpeed + 0.3f, 2f, 4f);
+                nextGrab = Mathf.Min(nextGrab, Time.time + seconds);
+                BeginReposition(seconds, target);
+                return;
+            }
+        }
+        // Khalid keeps backing out of reach: after him
+        if (sight && Retreating && d > T.grabMax && CanBurst(d))
+        {
+            BeginBurst();
+            return;
+        }
+
         if (d <= T.swipeRange)
         {
             StartSwipe();
         }
-        else if (sight && StraightLineClear && CanGrabKhalid && Time.time >= nextGrab && d >= T.grabMin && d <= T.grabMax && Random.value < T.grabChance)
+        else if (sight && CanStartGrabAt(d) && Random.value < (Retreating || backedOff ? T.retreatGrabChance : T.grabChance))
         {
             StartGrab();
         }
-        else if (sight && Time.time >= nextScream && d >= T.screamMin && d <= T.screamMax && Random.value < T.screamChance)
+        else if (sight && Time.time >= nextScream && d >= T.screamMin && d <= T.screamMax && MoveAllowed(Move.Scream) && Random.value < T.screamChance)
         {
             StartScream();
         }
@@ -573,7 +651,10 @@ public class QuestionerCombatState : EnemyState
     void StartGrab()
     {
         feintUntil = 0f;
+        NoteMove(Move.Grab);
         nextGrab = Time.time + T.grabCooldown;
+        GrabWindupNow = q.hordeMode ? T.grabWindup : Random.Range(T.grabHoldMin, T.grabHoldMax);
+        counterSpent = false;
         SetPhase(Phase.GrabWindup, "Q_GrabWindup", 0.15f);
         q.PlayCue(q.grabCueSFX);
         q.SetMouth(0.45f);
@@ -599,6 +680,7 @@ public class QuestionerCombatState : EnemyState
     void StartScream(bool cue = true)
     {
         feintUntil = 0f;
+        NoteMove(Move.Scream);
         nextScream = Time.time + (q.hordeMode ? Random.Range(T.hordeScreamCooldownMin, T.hordeScreamCooldownMax) : T.screamCooldown);
         SetPhase(Phase.ScreamWindup, "Q_ScreamWindup", 0.15f);
         if (cue) q.PlayCue(q.inhaleSFX);
@@ -662,7 +744,7 @@ public class QuestionerCombatState : EnemyState
     }
 
     /// <summary>A pipe strike (the damage + flinch are already done). Timed into the grab lunge it counters the grab: he's
-    /// knocked back and stumbles. Between moves or in the claws he recoils (Hurt), backs off and grabs. During the scream or
+    /// knocked back and stumbles. Between moves he recoils (Hurt), backs off and grabs. During the claws, the scream or
     /// the early grab wind-up it only hurts him: the move carries on.</summary>
     public void OnMeleeHit()
     {
@@ -673,10 +755,17 @@ public class QuestionerCombatState : EnemyState
             BeginStumble(T.counterPushDistance);
             return;
         }
-        // the claws are interrupted too: every pipe strike that isn't a counter sends him back for the grab
-        if (phase != Phase.Free && phase != Phase.Release && phase != Phase.Swipe) return;
+        // swung too early: he isn't stopped, and this grab can't be countered any more (a blind swing mustn't win by luck)
+        if (phase == Phase.GrabWindup && !q.hordeMode) counterSpent = true;
+        // between moves a pipe strike that isn't a counter sends him back for the grab
+        if (phase != Phase.Free && phase != Phase.Release) return;
         clawRun = false;
         chorus = false;
+        if (!q.hordeMode && OutOfRecoils())
+        {
+            AnswerRush();
+            return;
+        }
         // he'd just hurt Khalid and was backing off - Khalid is back at him, so no more waiting
         hurtPlayer = false;
         repositionUntil = 0f;
@@ -685,6 +774,39 @@ public class QuestionerCombatState : EnemyState
         q.ResetMouth();
         vel = Vector3.zero;
         SetPhase(Phase.Hurt, "Q_Hurt", 0.06f);
+    }
+
+    /// <summary>Counts this pipe strike: he only recoils from so many in a row (a pause of poiseWindow seconds starts the count again).</summary>
+    bool OutOfRecoils()
+    {
+        if (Time.time - lastPipeHit > T.poiseWindow) recoilsInARow = 0;
+        lastPipeHit = Time.time;
+        if (recoilsInARow >= T.maxRecoilsInARow)
+        {
+            recoilsInARow = 0;
+            return true;
+        }
+        recoilsInARow++;
+        return false;
+    }
+
+    /// <summary>Khalid keeps rushing him and swinging: he doesn't recoil, he hisses and grabs at once, while Khalid is still in
+    /// the recovery of that swing. If Khalid can't be grabbed (on the floor at the table) it's the claws.</summary>
+    void AnswerRush()
+    {
+        hurtPlayer = false;
+        repositionUntil = 0f;
+        vel = Vector3.zero;
+        q.SetWeakpointScale(1f);
+        q.ResetMouth();
+        q.PlayCue(q.hissSFX);
+        if (CanGrabKhalid && StraightLineClear)
+        {
+            StartGrab();
+            GrabWindupNow = T.poiseGrabWindup;
+            counterSpent = true;
+        }
+        else StartSwipe();
     }
 
     /// <summary>Khalid hit him while it was another Questioner's turn: he has taken the turn and comes straight at him (a pipe
@@ -696,11 +818,104 @@ public class QuestionerCombatState : EnemyState
         if (phase == Phase.Free && !Feinting) nextDecision = Time.time;
     }
 
+    // ---------------- unpredictable: rhythm + memory (not the horde) ----------------
+
+    /// <summary>His turn, between moves: sometimes he stops dead and stares, and the stare ends in a burst at Khalid, an attack
+    /// at once, or just walking on. True while the pace has this frame's movement.</summary>
+    bool UpdatePace(float dt, float d, Vector3 dir)
+    {
+        switch (pace)
+        {
+            case Pace.Still:
+                vel = Vector3.MoveTowards(vel, Vector3.zero, T.burstAcceleration * dt);
+                MoveAgent(vel * dt);
+                Face(dir, 150f);
+                SendLocomotion(vel);
+                if (Time.time < paceUntil) return true;
+                float roll = Random.value;
+                EndPace();
+                if (roll < T.stillEndsInBurst && CanBurst(d)) { BeginBurst(); return true; }
+                if (roll < T.stillEndsInBurst + T.stillEndsInAttack) nextDecision = Time.time;
+                return false;
+
+            case Pace.Burst:
+                if (Time.time >= paceUntil || d <= T.swipeRange || !StraightLineClear)
+                {
+                    EndPace();
+                    nextDecision = Time.time;
+                    return false;
+                }
+                vel = Vector3.MoveTowards(vel, dir * T.burstSpeed + Separation(), T.burstAcceleration * dt);
+                MoveAgent(vel * dt);
+                Face(dir, 360f);
+                SendLocomotion(vel);
+                return true;
+        }
+
+        // backed off to change moves: no stare or burst carrying him straight back into the claws
+        if (backedOff || Time.time < nextPaceChange) return false;
+        nextPaceChange = Time.time + Random.Range(T.paceGapMin, T.paceGapMax);
+        if (d < T.stillRangeMin || d > T.engageRange || !q.HasLineOfSightToPlayer() || Random.value >= T.stillChance) return false;
+        pace = Pace.Still;
+        paceUntil = Time.time + Random.Range(T.stillTimeMin, T.stillTimeMax);
+        return true;
+    }
+
+    void BeginBurst()
+    {
+        pace = Pace.Burst;
+        paceUntil = Time.time + T.burstMaxTime;
+        q.anim.speed = T.burstSpeed / WalkClipSpeed;
+        q.PlayCue(q.hissSFX, 0.8f);     // the warning: he never closes this fast in silence
+    }
+
+    void EndPace()
+    {
+        if (pace == Pace.Normal) return;
+        if (pace == Pace.Burst)
+        {
+            q.anim.speed = 1f;
+            nextBurstAt = Time.time + T.burstCooldown;
+            burstEndedAt = Time.time;
+        }
+        pace = Pace.Normal;
+        nextPaceChange = Mathf.Max(nextPaceChange, Time.time + Random.Range(T.paceGapMin, T.paceGapMax));
+    }
+
+    bool CanBurst(float d) => !backedOff && Time.time >= nextBurstAt && StraightLineClear && d > T.swipeRange + 1f && d <= T.engageRange;
+
+    bool Retreating => retreatHeld >= T.retreatAfter;
+
+    /// <summary>Khalid backing away cuts what's left of the grab cooldown.</summary>
+    bool CanStartGrabAt(float d)
+    {
+        float ready = Retreating ? nextGrab - T.grabCooldown * T.retreatCooldownCut : nextGrab;
+        return StraightLineClear && CanGrabKhalid && Time.time >= ready && d >= T.grabMin && d <= T.grabMax && MoveAllowed(Move.Grab);
+    }
+
+    void TrackHabits(float dt, Vector3 dir)
+    {
+        aimHeld = PlayerAiming ? aimHeld + dt : 0f;
+        var cc = Player.instance.controller;
+        Vector3 v = cc != null ? cc.velocity : Vector3.zero;
+        v.y = 0f;
+        retreatHeld = Vector3.Dot(v, dir) > 0.5f ? retreatHeld + dt : Mathf.Max(0f, retreatHeld - dt * 2f);
+    }
+
+    bool MoveAllowed(Move m) => q.hordeMode || lastMove != m || sameInARow < T.maxSameMoveInARow;
+
+    void NoteMove(Move m)
+    {
+        if (m != lastMove) backedOff = false;
+        sameInARow = lastMove == m ? sameInARow + 1 : 1;
+        lastMove = m;
+    }
+
     // ---------------- grab ----------------
 
     void UpdateRush(float dt, float d, Vector3 dir)
     {
-        vel = Vector3.MoveTowards(vel, rushDir * T.rushSpeed, 30f * dt);
+        vel = Vector3.MoveTowards(vel, rushDir * RushSpeed, 30f * dt);
         Vector3 before = q.transform.position;
         MoveAgent(vel * dt);
         float moved = (q.transform.position - before).magnitude;
@@ -766,9 +981,12 @@ public class QuestionerCombatState : EnemyState
     void StartSwipe()
     {
         feintUntil = 0f;
+        NoteMove(Move.Swipe);
         swipeHits = 0;
         landedFirst = false;
         SetPhase(Phase.Swipe, "Q_Swipe", 0.1f);
+        // he has just rushed in: hands up and a real warning, or the rush into the claws can't be answered at all
+        swipeHold = Time.time - burstEndedAt <= T.burstClawWindow ? T.burstClawHold : 0f;
         q.PlayCue(q.hissSFX);
         q.SetMouth(0.55f);
     }
@@ -776,27 +994,49 @@ public class QuestionerCombatState : EnemyState
     void UpdateSwipe(float dt, float d, Vector3 dir)
     {
         // another Questioner has hold of Khalid: he's being bitten, claws on top of that would be unfair
-        if (Player.instance.isGrabbed) { EndMove(); return; }
+        if (Player.instance.isGrabbed) { EndSwipe(); return; }
 
         // lines up during the wind-up and creeps in a little, then commits
-        if (phaseT < T.swipeWindup)
+        // the hold: the clip stops on the raised hands, and carries on into the strike when it's over
+        if (swipeHold > 0f) q.anim.speed = phaseT >= T.clawHoldAt && phaseT < T.clawHoldAt + swipeHold ? 0f : 1f;
+
+        if (phaseT < T.swipeWindup + swipeHold)
         {
             Face(dir, 360f);
-            Vector3 step = d > 1.0f ? dir * 0.6f : Vector3.zero;
-            vel = Vector3.MoveTowards(vel, step, 6f * dt);
+            Vector3 step = swipeHold <= 0f && d > 1.0f ? dir * 0.6f : Vector3.zero;     // planted during the hold: backing off works
+            // (the burst's speed must not carry him in during the hold: he plants his feet)
+            vel = Vector3.MoveTowards(vel, step, (swipeHold > 0f ? 60f : 6f) * dt);
         }
         else vel = Vector3.MoveTowards(vel, Vector3.zero, 6f * dt);
         MoveAgent(vel * dt);
         SendLocomotion(Vector3.zero);
 
-        float hitAt = T.swipeWindup + swipeHits * T.swipeGap;
+        float hitAt = T.swipeWindup + swipeHold + swipeHits * T.swipeGap;
         if (swipeHits < 2 && phaseT >= hitAt)
         {
             swipeHits++;
             q.PlayCue(q.swipeSFX, 0.9f);
             TrySwipeHit();
+            // planted through the hold, the first claw shoves Khalid out of reach: if it connected he steps after him for the second
+            if (swipeHold > 0f && swipeHits == 1 && landedFirst) vel = dir * 2f;
         }
-        if (phaseT >= T.swipeWindup + T.swipeGap + T.swipeRecovery) EndMove();
+        if (phaseT >= T.swipeWindup + swipeHold + T.swipeGap + T.swipeRecovery) EndSwipe();
+    }
+
+    void EndSwipeHold()
+    {
+        if (swipeHold <= 0f) return;
+        swipeHold = 0f;
+        q.anim.speed = 1f;
+    }
+
+    void EndSwipe()
+    {
+        if (!staggerAfterSwipe) { EndMove(); return; }
+        // shot in the mouth during the claws: it lands now
+        staggerAfterSwipe = false;
+        phase = Phase.Free;
+        BeginStagger();
     }
 
     void TrySwipeHit()
@@ -823,6 +1063,11 @@ public class QuestionerCombatState : EnemyState
 
     public void BeginStagger()
     {
+        if (phase == Phase.Swipe)
+        {
+            staggerAfterSwipe = true;       // the claws finish first (EndSwipe)
+            return;
+        }
         feintUntil = 0f;
         clawRun = false;
         chorus = false;

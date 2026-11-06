@@ -441,6 +441,7 @@ MonoBehaviour:
   damageForceMultiplier: 0
   pendingKnockbackScale: 1
   pendingMeleeHit: 0
+  pendingEnvironmentHit: 0
   chaseStartDelayEnabled: 1
   playerDetected: 0
   onPlayerDetected:
@@ -509,10 +510,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 800029f8080ce2a499cf38d07bc52fe2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemDrops:
-  - itemPrefab: {fileID: 6478322687340471994, guid: 607227a4a095c6c44a9c9cfe30614098,
-      type: 3}
-    dropChance: 100
+  itemDrops: []
   dropOffset: {x: 0, y: 0.5, z: 0}
 --- !u!114 &-206212997843875335
 MonoBehaviour:

@@ -18,6 +18,14 @@ public class SavePoint : MonoBehaviour
     [Header("Subtitle")]
     [SerializeField] private SubtitleTrigger subtitleTrigger;
     
+    [Header("Not While Questioners Are Here")]
+    [Tooltip("Refuses to open while a living, awake Questioner is within this many metres. 0 = never refuses.")]
+    [SerializeField] private float blockedByQuestionersWithin = 0f;
+    [Tooltip("A sleeping (Fixed) one only counts this close: one stood beside the save point refuses it, one asleep a street away doesn't.")]
+    [SerializeField] private float blockedBySleepingWithin = 12f;
+    [Tooltip("Said instead of opening the save menu.")]
+    [SerializeField] private UnityEngine.Localization.LocalizedString blockedLine;
+
     [Header("Stability Restoration")]
     [SerializeField] private bool restoreStability = true;
     [SerializeField] [Range(0f, 1f)] private float stabilityRestorePercent = 0.5f;
@@ -46,10 +54,29 @@ public class SavePoint : MonoBehaviour
         if (playerInRange && !isInteracting && Input.GetKeyDown(KeyCode.E))
         {
             Debug.Log("E pressed at save point!");
+            if (QuestionersAreHere())
+            {
+                if (blockedLine != null && !blockedLine.IsEmpty)
+                    SubtitleManager.ShowSubtitle(blockedLine, false);
+                return;
+            }
             ActivateSavePoint();
         }
     }
     
+    // only looked up when E is pressed, so a horde costs nothing the rest of the time. Fixed ones are asleep.
+    private bool QuestionersAreHere()
+    {
+        if (blockedByQuestionersWithin <= 0f) return false;
+        foreach (var q in FindObjectsByType<QuestionerEnemy>(FindObjectsSortMode.None))
+        {
+            if (q.stats == null || q.health == null || q.health.IsDead) continue;
+            float limit = q.stats.enemyType == EnemyType.Fixed ? blockedBySleepingWithin : blockedByQuestionersWithin;
+            if ((q.transform.position - transform.position).sqrMagnitude <= limit * limit) return true;
+        }
+        return false;
+    }
+
     private void CheckPlayerInRange()
     {
         // Check for Player instance directly (simpler approach)

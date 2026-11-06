@@ -71,6 +71,8 @@ public class StoreFootstepsSequence : MonoBehaviour
     [Tooltip("Pause after the click before he runs, so the player can try the door.")]
     [SerializeField] float afterLockSeconds = 2.5f;
     [SerializeField] float runSpeed = 7.5f;
+    [Tooltip("Once he is this far from the camera he has gone into the fog (the camera can't see that far): the rest of the run is skipped so the player isn't left waiting.")]
+    [SerializeField] float vanishBeyondCamera = 16f;
     [SerializeField] float farFootstepsDelay = 4.5f;
     [SerializeField] float farRunSpeed = 7f;
     [SerializeField] float farStepInterval = 0.26f;
@@ -198,7 +200,7 @@ public class StoreFootstepsSequence : MonoBehaviour
         // 4. he runs off into the fog
         if (actor != null) actor.Run();
         Debug.Log("[Footsteps] running away");
-        yield return Co_MoveAlong(runAwayPoints, runSpeed, runStepLength, runVolume, runPitch);
+        yield return Co_MoveAlong(runAwayPoints, runSpeed, runStepLength, runVolume, runPitch, vanishBeyondCamera);
         if (actor != null) actor.gameObject.SetActive(false);
         onActorGone?.Invoke();
 
@@ -278,7 +280,7 @@ public class StoreFootstepsSequence : MonoBehaviour
         }
     }
 
-    IEnumerator Co_MoveAlong(Transform[] points, float speed, float stepLength, float volume, Vector2 pitch)
+    IEnumerator Co_MoveAlong(Transform[] points, float speed, float stepLength, float volume, Vector2 pitch, float stopBeyondCamera = 0f)
     {
         if (actor == null || points == null) yield break;
         float sinceStep = 0f;
@@ -292,6 +294,7 @@ public class StoreFootstepsSequence : MonoBehaviour
                 Vector3 flat = new Vector3(target.x - pos.x, 0f, target.z - pos.z);
                 float dist = flat.magnitude;
                 if (dist < 0.1f) break;
+                if (stopBeyondCamera > 0f && Camera.main != null && (pos - Camera.main.transform.position).sqrMagnitude > stopBeyondCamera * stopBeyondCamera) yield break;
 
                 float step = Mathf.Min(dist, speed * Time.deltaTime);
                 Vector3 next = pos + flat.normalized * step;

@@ -637,6 +637,10 @@ public class Enemy : MonoBehaviour, IPoolable
         EnemyType oldType = stats.enemyType;
         stats.enemyType = newType;
         
+        // Never woken up (his parent group is still off, so Awake hasn't run): he starts with this type when it comes on.
+        // Without this the null state machine threw, and an aggro trigger left every enemy after him in its list Fixed.
+        if (stateMachine == null) return;
+
         // If type actually changed, adjust state accordingly
         if (oldType != newType)
         {

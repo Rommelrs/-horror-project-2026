@@ -239,8 +239,11 @@ public class DoorInteractionHandler : MonoBehaviour
         yield return new WaitForSeconds(1f);
 
         //Play Door Close SFX
-        AudioClip closeClip = doorInteractable.customCloseClip != null ? doorInteractable.customCloseClip : doorCloseClip;
-        audioSource.PlayOneShot(closeClip);
+        if (!doorInteractable.silentClose)
+        {
+            AudioClip closeClip = doorInteractable.customCloseClip != null ? doorInteractable.customCloseClip : doorCloseClip;
+            audioSource.PlayOneShot(closeClip);
+        }
 
         yield return new WaitForSeconds(1f);
 

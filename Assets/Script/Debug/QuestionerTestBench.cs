@@ -112,7 +112,7 @@ public class QuestionerTestBench : MonoBehaviour
     int playerDamageTaken, playerHitsTaken;
     bool damageHooked;
     float scenarioStartTime;
-    bool showPanel = true;
+    bool showPanel = false;     // false = the small panel, F1 = the full list and keys
     bool infiniteAmmo;
     bool useNoRunningVariant;
     bool noSidestep, noAdvancedPath, noDynamicSpeed, aiFrozen;
@@ -676,7 +676,7 @@ public class QuestionerTestBench : MonoBehaviour
     void BuildStyles()
     {
         float s = Mathf.Max(1f, Screen.height / 1080f);
-        int fs = Mathf.RoundToInt(14 * s);
+        int fs = Mathf.RoundToInt(12 * s);
         if (labelStyle != null && labelStyle.fontSize == fs) return;
 
         var bg = new Texture2D(1, 1);
@@ -706,7 +706,7 @@ public class QuestionerTestBench : MonoBehaviour
 
         if (!showPanel)
         {
-            GUI.Label(new Rect(8 * s, 8 * s, 420 * s, 24 * s), "<color=#9fe>Enemy test bench (" + page + " page) - F1 for help</color>", labelStyle);
+            DrawSmallPanel(s);
             return;
         }
 
@@ -727,7 +727,7 @@ public class QuestionerTestBench : MonoBehaviour
         sb.AppendLine();
         sb.AppendLine("<b>PLAYER</b>   F6 / F7 stability -10 / +10 (Shift = 50)  |  F8 give gun + ammo (Shift = shotgun + shells, 1 / 2 switch)  |  F9 infinite ammo  |  F10 invincible mode  |  F12 HP -25 (Shift = full)  |  Home melee duel (pipe: 3 take out, hold Aim raise, Shoot swing)");
         sb.AppendLine("<b>ENEMY</b>   Num/ sidestep  |  Num* offset pathfinding  |  Num- dynamic speed  |  Num. freeze AI  |  F3 running / no-running variant");
-        sb.AppendLine("<b>MISC</b>   F1 hide panel  |  F2 hide other gym enemies  |  F4 slow-mo");
+        sb.AppendLine("<b>MISC</b>   F1 small panel  |  F2 hide other gym enemies  |  F4 slow-mo");
         sb.AppendLine();
 
         var p = Player.instance;
@@ -771,12 +771,47 @@ public class QuestionerTestBench : MonoBehaviour
             sb.AppendLine("<color=#bde>Press a scenario key to teleport into a scenario. Until then the gym is untouched.</color>");
         }
 
-        float w2 = 760 * s;
+        float w2 = 620 * s;
         var content = new GUIContent(sb.ToString());
         float h = labelStyle.CalcHeight(content, w2 - 16 * s) + 16 * s;
         var rect = new Rect(8 * s, 8 * s, w2, h);
         GUI.Box(rect, GUIContent.none, boxStyle);
         GUI.Label(new Rect(rect.x + 8 * s, rect.y + 8 * s, rect.width - 16 * s, rect.height - 16 * s), content, labelStyle);
+    }
+
+    // what's needed while fighting: where you are, the enemies' timings and your state, in a corner of the screen
+    void DrawSmallPanel(float s)
+    {
+        var sb = new StringBuilder();
+        sb.Append("<b><color=#9fe>" + page.ToString().ToUpper() + "</color></b>   F1 list + keys");
+        if (current >= 0 && current < scenarios.Count)
+        {
+            var sc = scenarios[current];
+            sb.Append("\n<b><color=#ffd24a>" + LocalNumber(current) + ". " + sc.name + "</color></b>   t = " + (Time.time - scenarioStartTime).ToString("0.0") + "s");
+            int n = 0;
+            foreach (var l in live)
+            {
+                n++;
+                if (l.enemy == null) sb.Append("\nenemy " + n + ": destroyed");
+                else if (l.kind == EnemyKind.BagBearer) sb.Append("\nenemy " + n + ": 1st throw@" + Fmt(l.firstThrowTime) + "  throws " + l.throws);
+                else sb.Append("\nenemy " + n + ": 1st attack@" + Fmt(l.firstAttackTime) + "  attacks " + l.attacks);
+            }
+        }
+
+        var p = Player.instance;
+        if (p != null && p.playerWeaponSystem != null)
+        {
+            var w = p.playerWeaponSystem;
+            string ammo = w.weaponIsEnabled ? (infiniteAmmo ? "inf" : w.currentAmmo + "/" + w.maxAmmoCapacity) : "no gun";
+            sb.Append("\nAmmo " + ammo + "   Invincible " + OnOff(godMode));
+        }
+
+        float width = 300 * s;
+        var content = new GUIContent(sb.ToString());
+        float height = labelStyle.CalcHeight(content, width - 12 * s) + 12 * s;
+        var rect = new Rect(8 * s, 8 * s, width, height);
+        GUI.Box(rect, GUIContent.none, boxStyle);
+        GUI.Label(new Rect(rect.x + 6 * s, rect.y + 6 * s, rect.width - 12 * s, rect.height - 12 * s), content, labelStyle);
     }
 
     void DrawButtonTag()
