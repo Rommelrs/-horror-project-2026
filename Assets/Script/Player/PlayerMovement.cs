@@ -31,6 +31,32 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Backward movement speed multiplier (classic tank controls can't sprint backward and walk slower in reverse).")]
     [SerializeField] [Range(0.1f, 1f)] float tankBackwardSpeedMultiplier = 0.5f;
 
+    [Header("Turning In Place (standing still)")]
+    [Tooltip("How quickly he gets up to full turning speed while A/D is held (degrees per second, per second). A tap turns him a little, holding turns him smoothly at Tank Turn Speed.")]
+    [SerializeField] float turnAcceleration = 600f;
+    [Tooltip("How quickly he stops turning once A/D is let go (degrees per second, per second).")]
+    [SerializeField] float turnDeceleration = 900f;
+    [Tooltip("Degrees turned LEFT for one full cycle of the turn animation (Khalid_TurnLeft90: 90). The animation plays only as far as he really turns, so a tap shows part of it.")]
+    [SerializeField] float turnDegreesPerCycle = 90f;
+    [Tooltip("Same for turning RIGHT (Khalid_TurnRight90's mocap turns 102.6 deg).")]
+    [SerializeField] float turnDegreesPerCycleRight = 102.6f;
+    [Tooltip("Where in the turn clip a foot lands (0-1): a footstep (surface sound, like walking) plays as the turn passes it. Played from here, not as clip events: a clip whose time follows a parameter fires its events twice when it wraps round.")]
+    [SerializeField] float[] turnStepsLeft = { 0.38f, 0.85f };
+    [SerializeField] float[] turnStepsRight = { 0.27f, 0.90f };
+    PlayerEventHandler turnStepEvents;
+
+    void TurnFootsteps(float from, float to, float[] steps)
+    {
+        if (steps == null || PlayerMeleeWeapon.Ready) return;      // pipe raised: the turn clip isn't playing
+        if (turnStepEvents == null) turnStepEvents = GetComponentInChildren<PlayerEventHandler>();
+        if (turnStepEvents == null) return;
+        foreach (float s in steps)
+        {
+            bool passed = to >= from ? (s > from && s <= to) : (s > from || s <= to);   // the second case wraps round 1 -> 0
+            if (passed) turnStepEvents.Footstep();
+        }
+    }
+
     private Vector2 moveInput;
     private float Gravity = -20.0f;
 
@@ -62,6 +88,14 @@ public class PlayerMovement : MonoBehaviour
     // Used to measure how fast the player is really moving (see GetMeasuredHorizontalSpeed)
     Vector3 lastAnimPosition;
     bool hasLastAnimPosition;
+
+    // turning in place: current turn speed (deg/s, + = right) and how far through the turn animation's cycle he is
+    float turnVelocity;
+    float turnPhase;
+    bool turningInPlace;
+    bool tankMovedThisFrame;
+    static readonly int TurnPhaseParam = Animator.StringToHash("TurnPhase");
+    bool hasTurnPhaseParam, checkedTurnPhaseParam;
 
     private void OnEnable()
     {
@@ -110,7 +144,10 @@ public class PlayerMovement : MonoBehaviour
     private void Update()
     {
         HandleGravity();
+        tankMovedThisFrame = false;
         HandleMovement();
+        // anything that stopped normal movement this frame (aiming, a cutscene, an attack, a grab...) drops the turn
+        if (!tankMovedThisFrame) { turnVelocity = 0f; turningInPlace = false; }
         HandleAnimation();
         HandleAutoRotation();
     }
@@ -269,8 +306,32 @@ public class PlayerMovement : MonoBehaviour
     // Backward movement is slower and can never sprint, matching classic tank-control feel.
     private void HandleTankMovement()
     {
-        if (Mathf.Abs(moveInput.x) > 0.1f)
-            transform.Rotate(0f, moveInput.x * tankTurnSpeed * Time.deltaTime, 0f);
+        tankMovedThisFrame = true;
+        bool standing = Mathf.Abs(moveInput.y) <= 0.1f;
+        bool turnInput = Mathf.Abs(moveInput.x) > 0.1f;
+        float target = turnInput ? moveInput.x * tankTurnSpeed : 0f;
+        if (standing)
+        {
+            // like a person: he builds up into the turn and settles out of it, so a tap is a small turn and holding is a smooth one
+            bool speedingUp = turnInput && Mathf.Sign(target) == Mathf.Sign(turnVelocity) && Mathf.Abs(target) > Mathf.Abs(turnVelocity);
+            bool fromRest = turnInput && Mathf.Abs(turnVelocity) < 0.01f;
+            float rate = speedingUp || fromRest ? turnAcceleration : turnDeceleration;
+            turnVelocity = Mathf.MoveTowards(turnVelocity, target, rate * Time.deltaTime);
+        }
+        else
+            turnVelocity = target;     // walking: steering answers at once, as before
+        float turned = turnVelocity * Time.deltaTime;
+        if (Mathf.Abs(turned) > 0f) transform.Rotate(0f, turned, 0f);
+        turningInPlace = standing && Mathf.Abs(turnVelocity) > 1f;
+        // each new turn starts the step from its beginning; the clip advances by the degrees really turned (its mocap turned
+        // turnDegreesPerCycle left / turnDegreesPerCycleRight right, with the body's own turn taken out - the transform does that)
+        if (turningInPlace)
+        {
+            float before = turnPhase;
+            turnPhase = Mathf.Repeat(turnPhase + Mathf.Abs(turned) / Mathf.Max(1f, turned > 0f ? turnDegreesPerCycleRight : turnDegreesPerCycle), 1f);
+            TurnFootsteps(before, turnPhase, turned > 0f ? turnStepsRight : turnStepsLeft);
+        }
+        else turnPhase = 0f;
 
         moveDirection = transform.forward;
 
@@ -341,7 +402,7 @@ public class PlayerMovement : MonoBehaviour
         // No strafing - pure left/right input rotates the character in place, which uses the
         // "turn in place" animation instead of a strafe blend.
         // (melee pipe raised: A/D strafe on the melee layer, not a turn)
-        bool pureTurnInPlace = Mathf.Abs(moveInput.y) < 0.1f && Mathf.Abs(moveInput.x) > 0.1f && !PlayerMeleeWeapon.Ready;
+        bool pureTurnInPlace = turningInPlace && !PlayerMeleeWeapon.Ready;
 
         //Set Animation
         if (pureTurnInPlace)
@@ -350,7 +411,15 @@ public class PlayerMovement : MonoBehaviour
             player.animator.SetFloat("x", Mathf.MoveTowards(currentX, 0, speed * Time.deltaTime));
             player.animator.SetFloat("y", Mathf.MoveTowards(currentY, 0, speed * Time.deltaTime));
 
-            player.animator.SetInteger("TurningDirection", moveInput.x > 0.1 ? 0 : 1);
+            // the turn animation plays as far as he has really turned (its states use TurnPhase as their time)
+            if (!checkedTurnPhaseParam)
+            {
+                checkedTurnPhaseParam = true;
+                foreach (var p in player.animator.parameters) if (p.nameHash == TurnPhaseParam) hasTurnPhaseParam = true;
+            }
+            if (hasTurnPhaseParam) player.animator.SetFloat(TurnPhaseParam, turnPhase);
+
+            player.animator.SetInteger("TurningDirection", turnVelocity > 0f ? 0 : 1);
             player.animator.SetBool("Turning", true);
         }
         else

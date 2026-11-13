@@ -15,39 +15,35 @@ public class MusicStopOnEnemiesDead : MonoBehaviour
     [Header("Events")]
     public UnityEvent OnAllEnemiesDead;
 
-    int enemiesAlive;
+    bool done;
+    readonly HashSet<Enemy> died = new HashSet<Enemy>();
 
     private void Start()
     {
-        enemiesAlive = enemies.Count;
-
         foreach (Enemy enemy in enemies)
-        {
             if (enemy != null)
-                enemy.OnEnemyDied.AddListener(OnEnemyKilled);
-        }
+            {
+                Enemy e = enemy;
+                enemy.OnEnemyDied.AddListener(() => died.Add(e));
+            }
     }
 
-    private void OnDestroy()
+    // Checks the living ones every frame instead of counting deaths: an enemy that was already dead in the loaded save or
+    // checkpoint is destroyed at load (SaveableEnemy) and never reports a death, which used to leave the music on for good.
+    // One that isn't switched on yet is alive (it reads 0 health until it wakes up, so its health can't be trusted then).
+    bool Alive(Enemy e) => e != null && !died.Contains(e) && (!e.gameObject.activeInHierarchy || e.health == null || !e.health.IsDead);
+
+    private void Update()
     {
+        if (done) return;
         foreach (Enemy enemy in enemies)
-        {
-            if (enemy != null)
-                enemy.OnEnemyDied.RemoveListener(OnEnemyKilled);
-        }
-    }
+            if (Alive(enemy))
+                return;
 
-    void OnEnemyKilled()
-    {
-        enemiesAlive--;
-
-        if (enemiesAlive <= 0)
-        {
-            OnAllEnemiesDead?.Invoke();
-
-            if (musicSource != null)
-                StartCoroutine(Co_FadeOutMusic());
-        }
+        done = true;
+        OnAllEnemiesDead?.Invoke();
+        if (musicSource != null && musicSource.isActiveAndEnabled)
+            StartCoroutine(Co_FadeOutMusic());
     }
 
     IEnumerator Co_FadeOutMusic()

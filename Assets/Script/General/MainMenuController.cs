@@ -115,7 +115,12 @@ public class MainMenuController : MonoBehaviour
         
         // Clear HasMap flag for new game
         PlayerPrefs.SetInt("HasMap", 0);
-        
+        // both maps and any scene-transition spawn point left by an earlier run (an old build left "FromStore" behind and a
+        // new game started at the Store exit)
+        PlayerPrefs.DeleteKey("HasMap1");
+        PlayerPrefs.DeleteKey("HasMap2");
+        PlayerPrefs.DeleteKey("TargetSpawnPoint");
+
         PlayerPrefs.Save();
     }
     

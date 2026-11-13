@@ -21,6 +21,8 @@ public class DoorInteractable : MonoBehaviour
     [Header("Unlock Step (needs 'Requires Key')")]
     [Tooltip("Off: having the key just lets the door open. On: without the key the door says it is locked; with the key the first E only unlocks it (sound + 'It's unlocked'), and a second E goes through. The unlocked state is saved: this object needs a UniqueID and a SaveableInteractable.")]
     public bool unlockStepWithKey = false;
+    [Tooltip("On (with 'Unlock Step With Key'): the key leaves the inventory once it has unlocked this door - for a key that opens nothing else. The door stays unlocked (saved).")]
+    public bool consumeKeyOnUnlock = false;
     [Tooltip("Shown when the player tries the door without the key.")]
     public LocalizedString lockedLine;
     [Tooltip("Shown when the key unlocks the door.")]

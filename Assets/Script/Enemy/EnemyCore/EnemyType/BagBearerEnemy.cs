@@ -19,6 +19,10 @@ public class BagBearerEnemy : Enemy
     [Header("Bag Bearer Setup")]
     [SerializeField] Projectile projectilePrefab;
     [SerializeField] float positionOffset = 0.8f;
+    [Tooltip("Throw flat down at the player instead of lobbing the bag up into the air, whenever he's above the player (e.g. on a roof). For a spot where the player can't aim high, like the table knockdown.")]
+    [SerializeField] bool lowThrows = false;
+    [Tooltip("Launch angle of those throws, degrees above horizontal (0 = straight out of his hand, never rising).")]
+    [SerializeField] float lowThrowAngle = 0f;
     public BagBearerReloadGroup []bagBearerReloadGroup;
     
     [Header("Hidden Tutorial: Start Without Bags")]
@@ -238,8 +242,65 @@ public class BagBearerEnemy : Enemy
     }
     
 
+    float attackHoldUntil;
+
+    /// <summary>Until this time (Time.time) he moves but never starts a throw or a reload: a scripted sequence gives the player a
+    /// moment first (e.g. the table knockdown). Setting an earlier time shortens a hold.</summary>
+    public void SetAttackHold(float untilTime) => attackHoldUntil = untilTime;
+
+    float throwGap;
+
+    /// <summary>After each bag, wait at least this long (seconds) before the next one. 0 = his normal rhythm. A scripted sequence
+    /// sets it while the player can't move (the table knockdown) and puts it back to 0 after.</summary>
+    public void SetThrowGap(float seconds) => throwGap = Mathf.Max(0f, seconds);
+
+    [Header("Backing off for a Questioner")]
+    [Tooltip("While a living Questioner is within this distance of the player, he throws far less often (the two together were unfair).")]
+    [SerializeField] float questionerNearPlayer = 8f;
+    [Tooltip("Seconds between his bags while a Questioner is that close.")]
+    [SerializeField] float throwGapNearQuestioner = 7f;
+    float myLastThrow = -999f;
+
+    static QuestionerEnemy[] questioners = new QuestionerEnemy[0];
+    static float questionersScannedAt = -999f;
+
+    /// <summary>The player is held by a Questioner, or one is close to him and this bearer threw recently: no new bag yet.</summary>
+    bool BackingOffForQuestioner()
+    {
+        var p = Player.instance;
+        if (p == null) return false;
+        if (p.isGrabbed) return true;
+        if (Time.time >= myLastThrow + throwGapNearQuestioner) return false;
+        if (Time.time > questionersScannedAt + 1f)
+        {
+            questionersScannedAt = Time.time;
+            questioners = FindObjectsByType<QuestionerEnemy>(FindObjectsSortMode.None);
+        }
+        float r2 = questionerNearPlayer * questionerNearPlayer;
+        foreach (var q in questioners)
+            if (q != null && q.isActiveAndEnabled && q.health != null && !q.health.IsDead &&
+                (q.transform.position - p.transform.position).sqrMagnitude < r2)
+                return true;
+        return false;
+    }
+
     public override void CheckLeaveCondition(EnemyState currentState)
     {
+        if (Time.time < attackHoldUntil || BackingOffForQuestioner())
+        {
+            // a hold that starts mid-attack (the gap after a bag): finish this throw, then no second bag until it's over
+            if (currentState == attackState && currentState.canLeave)
+            {
+                if (EnemyAttackCoordinator.Instance != null) EnemyAttackCoordinator.Instance.ReleaseToken(this);
+                if (currentAttacker == this) currentAttacker = null;
+                stateMachine.ChangeState(chaseState);
+                return;
+            }
+            if (currentState == idleState && currentState.canLeave && stats.enemyType == EnemyType.Aggressive)
+                stateMachine.ChangeState(chaseState);
+            return;
+        }
+
         // Hidden tutorial: the first time the empty-handed bag bearer has the player in sight and close enough, he reloads
         if (firstReloadPending && (currentState == idleState || currentState == enemyWanderState || currentState == chaseState)
             && Player.instance != null && PlayerInRange(firstReloadDistance) && HasLineOfSightToPlayer())
@@ -675,13 +736,15 @@ public class BagBearerEnemy : Enemy
             {
                 //Spawn a projectile and throw at the player
                 lastThrowTime = Time.time;
+                myLastThrow = Time.time;
+                if (throwGap > 0f) attackHoldUntil = Mathf.Max(attackHoldUntil, Time.time + throwGap);
                 if (currentAttacker == this) currentAttacker = null; // Release slot after throwing
                 Vector3 direction = transform.position - Player.instance.transform.position;
                 Vector3 targetPosition = Player.instance.transform.position + direction.normalized * positionOffset;
 
                 GameObject projectileObj = projectilePrefab.gameObject.Reuse(bagBearerReloadGroup[i].projectileSpawnPoint.position, Quaternion.identity);
                 Projectile projectile = projectileObj.GetComponent<Projectile>();
-                projectile.ShootProjectile(targetPosition, this);
+                projectile.ShootProjectile(targetPosition, this, lowThrows ? lowThrowAngle : float.NaN);
 
                 bagBearerReloadGroup[i].isReloaded = false;
                 bagBearerReloadGroup[i].reloadObject.SetActive(false);

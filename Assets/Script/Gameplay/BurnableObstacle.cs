@@ -8,6 +8,8 @@ public class BurnableObstacle : MonoBehaviour
     
     [Header("Burn Settings")]
     [SerializeField] private ItemType requiredItemType = ItemType.Lighter;
+    [Tooltip("On: the item leaves the inventory once this is done - for an item that has no other use (the lighter on the only rope). Leave off for items the inventory already removes (wooden plank) or that are needed later (knife).")]
+    [SerializeField] private bool consumeItem = false;
     [SerializeField] private GameObject obstacleObject; // The object to burn/destroy
     [SerializeField] private GameObject[] additionalObjectsToDestroy;
     
@@ -174,11 +176,15 @@ public class BurnableObstacle : MonoBehaviour
     private void Burn()
     {
         hasBeenBurned = true;
-        
+
         // Mark as used in save system
         if (saveableInteractable != null)
             saveableInteractable.MarkAsUsed();
-        
+
+        if (consumeItem && Player.instance != null && Player.instance.inventory != null)
+            foreach (var stack in Player.instance.inventory.GetItems())
+                if (stack.item != null && stack.item.itemType == requiredItemType) { Player.instance.inventory.RemoveItem(stack.item); break; }
+
         StartCoroutine(Co_Burn());
     }
     

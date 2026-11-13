@@ -289,6 +289,7 @@ public class QuestionerCombatState : EnemyState
                     RushSpeed = Random.Range(T.rushSpeedMin, T.rushSpeedMax);
                     vel = rushDir * RushSpeed * 0.6f;
                     SetPhase(Phase.GrabRush, "Q_GrabRush", 0.08f);
+                    rushPrevPhase = -1f;
                     q.anim.speed = RushSpeed / RushClipSpeed;
                     q.SetMouth(0.7f);
                 }
@@ -341,9 +342,14 @@ public class QuestionerCombatState : EnemyState
                 if (!bitten && phaseT >= T.biteLandTime)
                 {
                     bitten = true;
+                    q.StopVoice();
                     q.PlayCue(q.biteSFX, 1.1f);
-                    if (PlayerCloseCombat.instance != null) PlayerCloseCombat.instance.OnBitten();
-                    Player.instance.health.Damage(T.biteDamage, true);
+                    if (PlayerCloseCombat.instance != null)
+                    {
+                        PlayerCloseCombat.instance.OnBitten();
+                        PlayerCloseCombat.instance.DamageFromGrabber(T.biteDamage);
+                    }
+                    else Player.instance.health.Damage(T.biteDamage, true);
                     hurtPlayer = true;
                     q.SetMouth(0.45f, 0.4f);
                 }
@@ -391,7 +397,8 @@ public class QuestionerCombatState : EnemyState
                 Brake(dt);
                 if (phaseT >= T.staggerRecovery)
                 {
-                    q.RestoreWeakpoint();
+                    // the mouth weak point is gone for good once it's been shot: one stagger per Questioner
+                    // (it only comes back when the pool reuses him as a fresh one, QuestionerEnemy.OnPool)
                     EndMove();
                 }
                 break;
@@ -751,7 +758,9 @@ public class QuestionerCombatState : EnemyState
         if (IsStaggered || IsGrabbing) return;
         if (IsCounterable)
         {
-            q.PlayCue(q.staggerSFX, 0.9f);
+            q.StopVoice();
+            if (q.counterSFX != null && q.counterSFX.Length > 0) q.PlayCue(q.counterSFX);
+            else q.PlayCue(q.staggerSFX, 0.9f);
             BeginStumble(T.counterPushDistance);
             return;
         }
@@ -913,6 +922,22 @@ public class QuestionerCombatState : EnemyState
 
     // ---------------- grab ----------------
 
+    // Q_GrabRush has no footstep events (it's a Blender export): where its feet land in the loop (measured from the foot
+    // bones: right 0.23, left 0.47, right 0.73, left 0.985). Played as his rush passes them, so they follow its speed.
+    static readonly float[] RushFootfalls = { 0.23f, 0.47f, 0.73f, 0.985f };
+    float rushPrevPhase = -1f;
+
+    void RushFootsteps()
+    {
+        var st = q.anim.GetCurrentAnimatorStateInfo(0);
+        if (!st.IsName("Q_GrabRush")) { rushPrevPhase = -1f; return; }
+        float f = Mathf.Repeat(st.normalizedTime, 1f);
+        if (rushPrevPhase >= 0f)
+            foreach (float c in RushFootfalls)
+                if (f >= rushPrevPhase ? (c > rushPrevPhase && c <= f) : (c > rushPrevPhase || c <= f)) q.PlayFootstep();
+        rushPrevPhase = f;
+    }
+
     void UpdateRush(float dt, float d, Vector3 dir)
     {
         vel = Vector3.MoveTowards(vel, rushDir * RushSpeed, 30f * dt);
@@ -921,6 +946,7 @@ public class QuestionerCombatState : EnemyState
         float moved = (q.transform.position - before).magnitude;
         blockedTime = moved < vel.magnitude * dt * 0.35f ? blockedTime + dt : 0f;
         Face(rushDir, 90f);
+        RushFootsteps();
 
         // contact: Khalid in front of him and close
         Vector3 toP = PlayerT.position - q.transform.position;
@@ -1055,6 +1081,7 @@ public class QuestionerCombatState : EnemyState
         if (hp.GetHealthValue() < before)
         {
             hurtPlayer = true;
+            q.PlayCue(q.clawHitSFX);
             if (pc != null) pc.Knockback(toP.normalized, T.swipePushPlayer, 0.22f);
         }
     }

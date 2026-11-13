@@ -102,7 +102,8 @@ public class PlayerQuickHeal : MonoBehaviour
     bool CanAct()
     {
         var player = Player.instance;
-        if (player == null || player.IsDead() || GameManager.IsPaused || Using || PlayerMeleeWeapon.Ready) return false;
+        // never while a Questioner holds him
+        if (player == null || player.IsDead() || player.isGrabbed || GameManager.IsPaused || Using || PlayerMeleeWeapon.Ready) return false;
         var weapon = player.playerWeaponSystem;
         return weapon == null || (!weapon.isAiming && !weapon.isReloading);
     }
@@ -153,6 +154,8 @@ public class PlayerQuickHeal : MonoBehaviour
         while (t < duration)
         {
             if (player.IsDead()) break;
+            // grabbed mid-use: the item is dropped from the hand unused (nothing is consumed before the heal moment)
+            if (player.isGrabbed && !healed) break;
             t += Time.deltaTime;
             SetLayerWeight(Mathf.Min(Mathf.Clamp01(t / layerBlendIn), Mathf.Clamp01((duration - t) / layerBlendOut)));
 

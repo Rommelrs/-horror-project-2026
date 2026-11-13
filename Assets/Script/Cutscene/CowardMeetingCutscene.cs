@@ -255,6 +255,7 @@ public class CowardMeetingCutscene : MonoBehaviour
         DespawnAlleyEnemies();
         UseVersion(PlaysB ? "B" : "A");
         BindKhalid(player);
+        StopLocomotion();
         SetupHeadLook(player);
 
         StartCoroutine(Co_Run());
@@ -605,6 +606,20 @@ public class CowardMeetingCutscene : MonoBehaviour
     // on the same clip at the same point of the stride (holding W walks straight on, letting go eases into the idle).
     // Otherwise (a skip, under the fade) standing.
     const string WalkClipName = "Walk_SH";
+
+    // PlayerMovement is switched off mid-stride, so his controller kept the speed it had: run into the trigger and its run
+    // state played on under the timeline the whole cutscene, firing its Footstep events (steps heard all the time).
+    // Stand it still (under the opening fade).
+    void StopLocomotion()
+    {
+        if (khalidAnim == null) return;
+        khalidAnim.SetFloat("Velocity", 0f);
+        khalidAnim.SetFloat("x", 0f);
+        khalidAnim.SetFloat("y", 0f);
+        khalidAnim.SetBool("Turning", false);
+        khalidAnim.Play("WalkMove", 0, 0f);
+        khalidAnim.Update(0f);
+    }
 
     void HandOverAnimation(float walkPhase)
     {

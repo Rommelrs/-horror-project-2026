@@ -1,13 +1,13 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Saves the active state of UI Image child GameObjects
+/// Saves which map markers (child UI images) have been revealed.
 /// IMPORTANT: Put this on an ALWAYS-ACTIVE GameObject (e.g. GameManager, EventSystem, or a dedicated MapMarkerManager)
 /// NOT on the map UI parent (which may be inactive)
-/// Each CHILD marker gets tracked individually with its own save data
-/// When a child is enabled via OnPlayerTrigger, it saves to PlayerPrefs
-/// On load, it restores each child's state
+/// Each marker is recorded in the save system's progress (SaveManager's used-interactables, as "mapmarker:&lt;id&gt;"), so it
+/// belongs to the save slot / checkpoint it was revealed in: continuing from an earlier checkpoint or loading an older slot
+/// shows exactly the markers you had then, and New Game clears them with the rest of the progress. (They used to live in
+/// PlayerPrefs, shared by every slot and never rolled back.)
 /// </summary>
 public class SaveableUIImage : MonoBehaviour
 {
@@ -17,128 +17,110 @@ public class SaveableUIImage : MonoBehaviour
         public GameObject marker;
         [Tooltip("Unique ID for this marker - MUST be unique and never change!")]
         public string uniqueID;
+        [Tooltip("Optional: once this other marker is on the map, this one goes away (a rough circle replaced by the real drawing).")]
+        public GameObject hiddenBy;
         [HideInInspector] public bool lastKnownState = false;
     }
-    
+
     [Header("Markers")]
     [Tooltip("Add all child UI Image GameObjects here (each one starts disabled)")]
     public MarkerData[] markers;
-    
+
     private bool hasInitialized = false;
-    
+    int page = -1;
+
+    /// <summary>Which map page these markers are drawn on: 1 under the chalk map (MapMiddleGroup_2), else 0 (the street map).</summary>
+    int Page
+    {
+        get
+        {
+            if (page < 0)
+            {
+                page = 0;
+                for (var t = transform; t != null; t = t.parent)
+                    if (t.name == "MapMiddleGroup_2") { page = 1; break; }
+            }
+            return page;
+        }
+    }
+
+    static string Key(MarkerData m) => "mapmarker:" + m.uniqueID;
+
     private void Start()
     {
         InitializeMarkers();
     }
-    
-    private void Awake()
-    {
-        // Register all marker IDs so they can be cleared on new game
-        RegisterMarkerIDs();
-    }
-    
-    private void RegisterMarkerIDs()
-    {
-        if (markers == null || markers.Length == 0)
-            return;
-        
-        // Build a comma-separated list of all marker IDs
-        string existingRegistry = PlayerPrefs.GetString("MarkerIDRegistry", "");
-        System.Collections.Generic.List<string> allIDs = new System.Collections.Generic.List<string>();
-        
-        if (!string.IsNullOrEmpty(existingRegistry))
-        {
-            allIDs.AddRange(existingRegistry.Split(','));
-        }
-        
-        // Add new marker IDs that aren't already registered
-        foreach (var markerData in markers)
-        {
-            if (!string.IsNullOrEmpty(markerData.uniqueID) && !allIDs.Contains(markerData.uniqueID))
-            {
-                allIDs.Add(markerData.uniqueID);
-            }
-        }
-        
-        // Save updated registry
-        PlayerPrefs.SetString("MarkerIDRegistry", string.Join(",", allIDs));
-        PlayerPrefs.Save();
-    }
-    
+
     private void InitializeMarkers()
     {
         if (hasInitialized)
             return;
-        
+
         if (markers == null || markers.Length == 0)
         {
             Debug.LogError($"[SaveableUIImage] No markers assigned on {gameObject.name}!");
             return;
         }
-        
+
         hasInitialized = true;
-        
-        // Check if this is a new game (clear markers)
-        bool isNewGame = PlayerPrefs.GetInt("IsNewGame", 0) == 1;
-        if (isNewGame)
-        {
-            // Clear all marker data for new game
-            foreach (var markerData in markers)
-            {
-                if (!string.IsNullOrEmpty(markerData.uniqueID))
-                {
-                    PlayerPrefs.DeleteKey($"UIImage_{markerData.uniqueID}");
-                }
-            }
-            
-            // Clear the new game flag (only clear once)
-            PlayerPrefs.SetInt("IsNewGame", 0);
-            PlayerPrefs.Save();
-        }
-        
-        // Validate that all markers have unique IDs
+
         for (int i = 0; i < markers.Length; i++)
         {
             if (string.IsNullOrEmpty(markers[i].uniqueID))
-            {
                 Debug.LogError($"[SaveableUIImage] Marker {i} on {gameObject.name} is missing a uniqueID! Please set it in the inspector.");
-            }
         }
-        
-        // Load saved state for each marker
+
+        // Show exactly the markers the loaded progress has (and hide any the scene had switched on)
         foreach (var markerData in markers)
         {
             if (markerData.marker == null)
                 continue;
-            
-            bool wasRevealed = PlayerPrefs.GetInt($"UIImage_{markerData.uniqueID}", 0) == 1;
+
+            bool wasRevealed = SaveManager.instance != null && !string.IsNullOrEmpty(markerData.uniqueID)
+                               && SaveManager.instance.IsInteractableUsed(Key(markerData));
             markerData.marker.SetActive(wasRevealed);
             markerData.lastKnownState = wasRevealed;
         }
+        foreach (var markerData in markers) ApplyHiddenBy(markerData);
     }
-    
-    private void Update()
+
+    static void ApplyHiddenBy(MarkerData m)
     {
-        if (markers == null)
+        if (m.marker == null || m.hiddenBy == null || !m.hiddenBy.activeSelf || !m.marker.activeSelf) return;
+        m.marker.SetActive(false);
+        m.lastKnownState = false;   // it stays recorded as revealed; hiddenBy keeps it off
+    }
+
+    private void Update() => Poll();
+
+    /// <summary>Called every frame by MapHandler too: this component lives on the map screen, which is switched off most of the
+    /// time, and markers are revealed while it's closed. Without this they were only noticed (and saved) once the map was opened.</summary>
+    public void Poll()
+    {
+        if (!hasInitialized) InitializeMarkers();
+        if (markers == null || !hasInitialized)
             return;
-        
-        // Check each marker for state changes
+
+        // A marker switched on by the game (an OnPlayerTrigger at the place) is recorded in the progress
         foreach (var markerData in markers)
         {
             if (markerData.marker == null)
                 continue;
-            
-            // Detect when child state changes (player triggered it)
+
+            ApplyHiddenBy(markerData);
+            // nothing can be drawn on a map the player doesn't have: a door tried (or a place found) before the map is NOT marked,
+            // not even after the map is picked up - trying that door again with the map marks it
+            if (markerData.marker.activeSelf && !markerData.lastKnownState && MapHandler.instance != null && !MapHandler.instance.OwnsPage(Page))
+            {
+                markerData.marker.SetActive(false);
+                continue;
+            }
             if (markerData.marker.activeSelf != markerData.lastKnownState)
             {
                 markerData.lastKnownState = markerData.marker.activeSelf;
-                
-                if (markerData.marker.activeSelf)
-                {
-                    // Child was just enabled, save it
-                    PlayerPrefs.SetInt($"UIImage_{markerData.uniqueID}", 1);
-                    PlayerPrefs.Save();
-                }
+
+                if (markerData.marker.activeSelf && SaveManager.instance != null && !string.IsNullOrEmpty(markerData.uniqueID))
+                    SaveManager.instance.RegisterUsedInteractable(Key(markerData));
             }
         }
     }

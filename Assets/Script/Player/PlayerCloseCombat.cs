@@ -98,6 +98,25 @@ public class PlayerCloseCombat : MonoBehaviour
         animator = player != null ? player.animator : GetComponentInChildren<Animator>();
     }
 
+    void Start()
+    {
+        // while a Questioner holds him (and through the push-off that ends it) nothing else can hurt him - a bag bearer used to
+        // land bags on a player who could do nothing about them. Only the holder's own bite gets through (DamageFromGrabber).
+        var hp = player != null && player.health != null ? player.health : GetComponent<Health>();
+        if (hp != null) hp.damageBlocker = () => (IsGrabbed || IsPushingOff) && !grabberDamage;
+    }
+
+    bool grabberDamage;
+
+    /// <summary>Damage from the Questioner that is holding him (the bite): the one hit that lands during a grab.</summary>
+    public void DamageFromGrabber(int amount)
+    {
+        if (player == null || player.health == null) return;
+        grabberDamage = true;
+        try { player.health.Damage(amount, true); }
+        finally { grabberDamage = false; }
+    }
+
     void OnEnable()
     {
         CinemachineCore.CameraUpdatedEvent.AddListener(OnCameraUpdated);

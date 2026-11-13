@@ -22698,6 +22698,16 @@ MonoBehaviour:
   pushForce: 3
   tankTurnSpeed: 110
   tankBackwardSpeedMultiplier: 0.5
+  turnAcceleration: 600
+  turnDeceleration: 900
+  turnDegreesPerCycle: 90
+  turnDegreesPerCycleRight: 102.6
+  turnStepsLeft:
+  - 0.38
+  - 0.85
+  turnStepsRight:
+  - 0.27
+  - 0.9
 --- !u!114 &4030614728100278281
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22726,8 +22736,8 @@ MonoBehaviour:
   hitSoundEffects: []
   hitSoundVolume: 2
   isDamageByWeakpointHit: 0
-  iFrameDuration: 1
-  enableIFrames: 0
+  iFrameDuration: 2
+  enableIFrames: 1
   isInvincible: 0
 --- !u!82 &7398177616644243204
 AudioSource:
@@ -23098,7 +23108,7 @@ MonoBehaviour:
   whiteVignetteOverlay: {fileID: 0}
   maxVignetteAlpha: 1
   vignetteAlphaGain: 2.5
-  veinsRevealCurve: 1.8
+  veinsMaxReveal: 0.2
   postProcessingSmoothness: 0.5
   stabilityFill: {fileID: 0}
   stabilityTxt: {fileID: 0}
@@ -23200,6 +23210,8 @@ MonoBehaviour:
     type: 3}
   switchInput: {fileID: -6607558110830027163, guid: 5b380c80d4897454e9a01e859512909f,
     type: 3}
+  switchTargetInput: {fileID: 3467747965333130984, guid: 5b380c80d4897454e9a01e859512909f,
+    type: 3}
   switchTime: 1
   switchSlowAtNoStability: 2.5
   gunDrawClip: {fileID: 8300000, guid: 726fbe2a70559164085593af871f8e63, type: 3}
@@ -23256,19 +23268,16 @@ MonoBehaviour:
   projectileMaxHeight: 2.8
   lockReach: 1.8
   swingClips:
-  - {fileID: 8300000, guid: c275e5f3d6c9ca340b958d2be963efc9, type: 3}
-  - {fileID: 8300000, guid: a2b4a05573c71c340a6e382882d67f96, type: 3}
-  - {fileID: 8300000, guid: 61b68831404661848bcc03b8953e5049, type: 3}
+  - {fileID: 8300000, guid: fa04ea946334b1d4698d17ac614ff0e0, type: 3}
   fleshHitClips:
   - {fileID: 8300000, guid: 7f9db49f755f04e46a2369f77504065a, type: 3}
   - {fileID: 8300000, guid: 4edbb93b6c81af147859a2ad99d3b8dd, type: 3}
   - {fileID: 8300000, guid: 35192c7a539e746448047fbaae75ca80, type: 3}
   - {fileID: 8300000, guid: 8b6cd4d8c571b4c4ab96218be4d73a6e, type: 3}
   wallHitClips:
-  - {fileID: 8300000, guid: d1f3a3028379c3b4f91e067db541ea26, type: 3}
-  - {fileID: 8300000, guid: 8ab95eb3f1c2df8418fb3511034dfadf, type: 3}
-  readyClip: {fileID: 8300000, guid: 9de86cc329aff4446833decf85ce0538, type: 3}
-  swingVolume: 0.7
+  - {fileID: 8300000, guid: e1ef052051e460b41afca8a59cbb1794, type: 3}
+  readyClip: {fileID: 8300000, guid: bbe706985b4384847b5d5e3caa86d024, type: 3}
+  swingVolume: 0.45
   hitVolume: 1
   wallVolume: 0.8
   carryRootPos: {x: 7.836285e-14, y: -0.000032023312, z: 0.008986075}

@@ -266,7 +266,7 @@ PrefabInstance:
     - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
         type: 3}
       propertyPath: footstepVolume
-      value: 0.175
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 2540446152838164944, guid: 876e8163669e9b34b8d2c59b5ccda795,
         type: 3}
@@ -460,18 +460,21 @@ MonoBehaviour:
     - {fileID: 8300000, guid: 526866a202fef0f40bf2bceab4b7415d, type: 3}
     - {fileID: 8300000, guid: cefe151854137fe40af79c00a8e85bc2, type: 3}
     - {fileID: 8300000, guid: 6bf46e0bdfa48d34fa3a6dd09ffdb208, type: 3}
+    volumeScale: 1
   - surfaceType: 2
     footstepSounds:
     - {fileID: 8300000, guid: c0d166852dcb8eb4e9d2ee9d87fae917, type: 3}
     - {fileID: 8300000, guid: 38bf3dd9ed89d4b48947375ea21e91e7, type: 3}
     - {fileID: 8300000, guid: 5520d24e0293c2a4c9865c3071c855d3, type: 3}
     - {fileID: 8300000, guid: 2730ecb98de69e0449313267495518d0, type: 3}
+    volumeScale: 1
   - surfaceType: 1
     footstepSounds:
     - {fileID: 8300000, guid: 579000b7f68acda4188f0e93e42c8aaa, type: 3}
     - {fileID: 8300000, guid: ebc15a417d5a0f64f901a141a2551afc, type: 3}
     - {fileID: 8300000, guid: a9a41a18713bd5c429187c152e112a94, type: 3}
     - {fileID: 8300000, guid: de6a3799b75671848b74e0ea8fb1caa1, type: 3}
+    volumeScale: 1
   groundLayer:
     serializedVersion: 2
     m_Bits: 0

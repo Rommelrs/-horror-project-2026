@@ -51,6 +51,8 @@ public class PlayerMeleeWeapon : MonoBehaviour
     [SerializeField] InputActionReference gunSelectInput;
     [Tooltip("Mouse wheel: flips between the pipe and the gun.")]
     [SerializeField] InputActionReference switchInput;
+    [Tooltip("With the pipe up: lock on to the next enemy in reach (Tab / right stick click).")]
+    [SerializeField] InputActionReference switchTargetInput;
     [Tooltip("Seconds to put one weapon away and take the other out.")]
     [SerializeField] float switchTime = 1f;
     [Tooltip("Shaking hands: the weapon switch takes this many times longer at 0 stability. Full speed from the Stable tier up, in between it scales.")]
@@ -596,6 +598,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
                 else if (!attacking || attackT >= bufferFrom) queued = true;
             }
             if (!attacking && queued && StanceReady && aimHeld) StartAttack();
+            if (!attacking && switchTargetInput != null && switchTargetInput.action.WasPressedThisFrame()) SwitchTarget();
             if (attacking) UpdateAttack(aimHeld);
             UpdateFacing();
             UpdateMovement();
@@ -1075,6 +1078,57 @@ public class PlayerMeleeWeapon : MonoBehaviour
             if (score < bestScore) { bestScore = score; best = e; }
         }
         return best;
+    }
+
+    /// <summary>Raised when the player switches the lock to another enemy (the tutorial prompt listens).</summary>
+    public static event System.Action OnTargetSwitched;
+
+    /// <summary>Enemies the lock could go to right now (in reach, alive, in sight; any direction). Used by the switch-target hint.</summary>
+    public int LockableEnemyCount()
+    {
+        int count = 0;
+        Enemy last = null;
+        int n = Physics.OverlapSphereNonAlloc(transform.position, lockRange, overlap, enemyMask, QueryTriggerInteraction.Collide);
+        var seen = new System.Collections.Generic.HashSet<Enemy>();
+        for (int i = 0; i < n; i++)
+        {
+            var e = overlap[i].GetComponentInParent<Enemy>();
+            if (e == null || e == last || !seen.Add(e) || !Valid(e, lockRange, 360f)) continue;
+            last = e;
+            count++;
+        }
+        return count;
+    }
+
+    /// <summary>Lock on to the next enemy in reach, going round clockwise from the current one (from straight ahead if none).
+    /// He turns to it the same way he turns to any target; the lock then holds as usual.</summary>
+    void SwitchTarget()
+    {
+        int n = Physics.OverlapSphereNonAlloc(transform.position, lockRange, overlap, enemyMask, QueryTriggerInteraction.Collide);
+        var candidates = new System.Collections.Generic.List<Enemy>();
+        for (int i = 0; i < n; i++)
+        {
+            var e = overlap[i].GetComponentInParent<Enemy>();
+            if (e != null && !candidates.Contains(e) && Valid(e, lockRange, 360f)) candidates.Add(e);
+        }
+        if (candidates.Count == 0 || (candidates.Count == 1 && candidates[0] == target)) return;
+
+        Vector3 from = transform.forward;
+        if (target != null) { from = target.transform.position - transform.position; from.y = 0f; }
+        float fromYaw = Mathf.Atan2(from.x, from.z) * Mathf.Rad2Deg;
+        Enemy best = null;
+        float bestDelta = float.MaxValue;
+        foreach (var e in candidates)
+        {
+            if (e == target) continue;
+            Vector3 to = e.transform.position - transform.position;
+            float delta = Mathf.Repeat(Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg - fromYaw, 360f);
+            if (delta < 0.5f) delta += 360f;
+            if (delta < bestDelta) { bestDelta = delta; best = e; }
+        }
+        if (best == null) return;
+        target = best;
+        OnTargetSwitched?.Invoke();
     }
 
     bool Valid(Enemy e, float range, float angle)

@@ -120,6 +120,7 @@ public class DoorInteractionHandler : MonoBehaviour
                 {
                     //Check if has key
                     bool hasKey = false;
+                    Item keyUsed = null;
                     List<Inventory.ItemStack> itemStacks = Player.instance.inventory.GetItems();
 
                     if (itemStacks != null && itemStacks.Count > 0)
@@ -132,6 +133,7 @@ public class DoorInteractionHandler : MonoBehaviour
                             if (itemStacks[i].item.itemType == ItemType.Key && itemStacks[i].item.keyCode == currentInteractable.keyCodeRequired)
                             {
                                 hasKey = true;
+                                keyUsed = itemStacks[i].item;
                                 break;
                             }
                         }
@@ -155,6 +157,8 @@ public class DoorInteractionHandler : MonoBehaviour
                     if (currentInteractable.unlockStepWithKey && !currentInteractable.IsUnlocked)
                     {
                         currentInteractable.Unlock();
+                        // a key that opens nothing else is done with now
+                        if (currentInteractable.consumeKeyOnUnlock && keyUsed != null) Player.instance.inventory.RemoveItem(keyUsed);
                         AudioClip unlockClip = currentInteractable.unlockClip != null ? currentInteractable.unlockClip : doorUnlockClip;
                         if (unlockClip != null) audioSource.PlayOneShot(unlockClip);
                         currentInteractable.ShowUnlockedLine();    // "It's unlocked."

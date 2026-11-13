@@ -30,6 +30,8 @@ public class Enemy : MonoBehaviour, IPoolable
     public EnemyInvestigateState investigateState;
 
     AudioSource audioSource;
+    [Tooltip("Optional: footsteps play on this source instead of the main one, so they can carry further than his voice (its own rolloff). Empty = the main AudioSource.")]
+    [SerializeField] AudioSource footstepSource;
     EnemyEventHandler enemyEventHandler;
     float currentVelocity;
 
@@ -469,7 +471,7 @@ public class Enemy : MonoBehaviour, IPoolable
         if (clips != null && clips.Length > 0)
         {
             AudioClip randomFootstep = clips[Random.Range(0, clips.Length)];
-            audioSource.PlayOneShot(randomFootstep, stats.footstepVolume);
+            (footstepSource != null ? footstepSource : audioSource).PlayOneShot(randomFootstep, stats.footstepVolume);
         }
     }
     

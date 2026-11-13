@@ -71,6 +71,8 @@ public class Health : MonoBehaviour, IDamagable
     public bool isDamageByWeakpointHit = false;
     /// <summary>Optional: reshapes every incoming hit (sees isDamageByWeakpointHit), before i-frames and death.</summary>
     public System.Func<int, int> damageFilter;
+    /// <summary>Optional: returns true while no hit may land at all (the player while a Questioner holds him, see PlayerCloseCombat).</summary>
+    public System.Func<bool> damageBlocker;
     Vector3 lastHitPoint = Vector3.zero;
     
     [Header("Invincibility Frames (Player Only)")]
@@ -99,6 +101,8 @@ public class Health : MonoBehaviour, IDamagable
     public void Damage(int damage, bool ignoreIFrames)
     {
         if (isInvincible)
+            return;
+        if (damageBlocker != null && damageBlocker())
             return;
 
         // an owner can reshape a hit before it lands (the Questioner: a mouth shot staggers him instead of killing him)
@@ -156,6 +160,16 @@ public class Health : MonoBehaviour, IDamagable
         health = Mathf.Clamp(health + delta, 1, maxHealth);
         if (healthBar != null)
             healthBar.SetHealth(health, maxHealth, delta < 0);
+    }
+
+    /// <summary>Loading a save / checkpoint: puts health straight at this value (1..max) - no hit sound, blood, i-frames or
+    /// OnDamageTaken (Damage() here made Continue look and feel like he'd just been hit: hurt reaction, stability loss).</summary>
+    public void SetHealthSilently(int value)
+    {
+        health = Mathf.Clamp(value, 1, maxHealth);
+        IsDead = false;
+        if (healthBar != null)
+            healthBar.SetHealth(health, maxHealth, false);
     }
 
     // Healing Behaviour

@@ -14,6 +14,8 @@ public class SubtitleTrigger : MonoBehaviour
     [SerializeField] float lifeTime = 3f;
     [SerializeField] bool triggerOnce = false;
     [SerializeField] bool freezeGame = true;
+    [Tooltip("The last line stays on screen until the player presses interact (otherwise it closes by itself after a few seconds).")]
+    [SerializeField] bool waitForInteract = false;
 
     [System.Serializable]
     public enum SubtitleTriggerType
@@ -49,6 +51,13 @@ public class SubtitleTrigger : MonoBehaviour
     [Header("Subtitle Ref")]
     [SerializeField] LocalizedString subtitleRef;
     [SerializeField] LocalizedString[] subtitleGroupRef;
+
+    /// <summary>The lines this trigger shows (a story beat can swap them, e.g. the Store's entrance door before / after the Runner).</summary>
+    public LocalizedString[] SubtitleGroup
+    {
+        get => subtitleGroupRef;
+        set => subtitleGroupRef = value;
+    }
 
     [Header("Audio")]
     [SerializeField] AudioClip audioClip;
@@ -95,34 +104,17 @@ public class SubtitleTrigger : MonoBehaviour
 
         PlayAudio();
 
-        if (completedEventType == CompletedEventType.CloseInspectionMenu)
+        Action onDone = completedEventType switch
         {
-            if (subtitleType == SubtitleType.Single)
-                SubtitleManager.ShowSubtitle(subtitleRef, freezeGame, CloseInspectionMenu);
-            else if (subtitleType == SubtitleType.Group)
-                SubtitleManager.ShowSubtitleGroup(subtitleGroupRef, freezeGame, CloseInspectionMenu);
-        }
-        else if(completedEventType == CompletedEventType.CloseCashRegisterMenu)
-        {
-            if (subtitleType == SubtitleType.Single)
-                SubtitleManager.ShowSubtitle(subtitleRef, freezeGame, CloseCashRegisterMenu);
-            else if (subtitleType == SubtitleType.Group)
-                SubtitleManager.ShowSubtitleGroup(subtitleGroupRef, freezeGame, CloseCashRegisterMenu);
-        }
-        else if(completedEventType == CompletedEventType.TriggerCompletedEvent)
-        {
-            if (subtitleType == SubtitleType.Single)
-                SubtitleManager.ShowSubtitle(subtitleRef, freezeGame, TriggerCompletedEvent);
-            else if (subtitleType == SubtitleType.Group)
-                SubtitleManager.ShowSubtitleGroup(subtitleGroupRef, freezeGame, TriggerCompletedEvent);
-        }
-        else
-        {
-            if (subtitleType == SubtitleType.Single)
-                SubtitleManager.ShowSubtitle(subtitleRef, freezeGame);
-            else if (subtitleType == SubtitleType.Group)
-                SubtitleManager.ShowSubtitleGroup(subtitleGroupRef, freezeGame);
-        }
+            CompletedEventType.CloseInspectionMenu => CloseInspectionMenu,
+            CompletedEventType.CloseCashRegisterMenu => CloseCashRegisterMenu,
+            CompletedEventType.TriggerCompletedEvent => TriggerCompletedEvent,
+            _ => null
+        };
+        if (subtitleType == SubtitleType.Single)
+            SubtitleManager.ShowSubtitle(subtitleRef, freezeGame, onDone, -1f, waitForInteract);
+        else if (subtitleType == SubtitleType.Group)
+            SubtitleManager.ShowSubtitleGroup(subtitleGroupRef, freezeGame, onDone, waitForInteract);
     }
 
     public void TriggerSubtitleAfterDelay(float delay)

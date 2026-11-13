@@ -22,6 +22,13 @@ public class LampGlowOcclusion : MonoBehaviour
     [Tooltip("Beyond this the glow is invisible anyway, so no check is done. Keep at or above the material's 'Visible up to'.")]
     [SerializeField] float maxCheckDistance = 60f;
 
+    [Tooltip("0 = a lamp, checked at one point. Above 0 = a shaft of light this long (metres) along the object's +Z, checked along its length, so the vehicle it comes out of doesn't hide all of it.")]
+    [SerializeField, Min(0f)] float beamLength = 0f;
+
+    // Custom/HeadlightBeam only starts sliding vertices toward the camera past this fraction of the far clip. Closer than that its
+    // depth is true, so walls hide it by themselves and no physics check is needed.
+    const float TrueDepthFraction = 0.55f;
+
     static readonly int VisibilityId = Shader.PropertyToID("_Visibility");
 
     MeshRenderer glowRenderer;
@@ -38,6 +45,15 @@ public class LampGlowOcclusion : MonoBehaviour
 
     // for components that change how far the glow can be seen (e.g. VehicleHeadlights)
     public void SetMaxCheckDistance(float metres) { maxCheckDistance = metres; }
+
+    public LayerMask Blockers => blockers;
+
+    // for the headlight air beams, which have the same far-clip problem as the glow
+    public void SetUpAsBeam(float length, LayerMask sameBlockers)
+    {
+        beamLength = length;
+        blockers = sameBlockers;
+    }
 
     void OnDisable()
     {
@@ -81,6 +97,8 @@ public class LampGlowOcclusion : MonoBehaviour
     // fraction (0..1) of the sight lines from camPos to the lamp that are clear
     public float SampleVisibilityFrom(Vector3 camPos)
     {
+        if (beamLength > 0f) return SampleBeamFrom(camPos);
+
         Vector3 lamp = transform.position;
         Vector3 toLamp = lamp - camPos;
         float dist = toLamp.magnitude;
@@ -99,5 +117,21 @@ public class LampGlowOcclusion : MonoBehaviour
             if (!IsBlocked(camPos, end)) clear++;
         }
         return clear / 3f;
+    }
+
+    // 1 if any part of the shaft can be seen, 0 only when all of it is hidden: its far end often runs into whatever is parked in
+    // front of the vehicle, and that must not dim the rest. Three points along it, starting clear of the lamp and the vehicle around it.
+    float SampleBeamFrom(Vector3 camPos)
+    {
+        Vector3 lamp = transform.position;
+        if (Vector3.Distance(camPos, lamp) > maxCheckDistance) return 1f;
+
+        float trueDepth = cam != null ? cam.farClipPlane * TrueDepthFraction : 0f;
+        for (int i = 0; i < 3; i++)
+        {
+            Vector3 point = lamp + transform.forward * (beamLength * (0.15f + 0.35f * i));
+            if (Vector3.Distance(camPos, point) < trueDepth || !IsBlocked(camPos, point)) return 1f;
+        }
+        return 0f;
     }
 }

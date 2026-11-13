@@ -96,6 +96,20 @@ public class ItemInspectionHandler : MonoBehaviour
             if (itemRoot != null)
                 itemRoot.transform.Rotate(Vector3.up * itemRootRotateSpeed * Time.unscaledDeltaTime, Space.Self);
         }
+
+        // a subtitle (e.g. the note on the knife handle) runs across the bottom of the screen: the Read / Close hints step
+        // aside until it's gone instead of being written over
+        bool subtitleUp = SubtitleManager.instance != null && SubtitleManager.instance.IsSubtitleBusy();
+        SetHintVisible(readHint, !subtitleUp);
+        SetHintVisible(exitHint, !subtitleUp);
+    }
+
+    static void SetHintVisible(GameObject hint, bool visible)
+    {
+        if (hint == null) return;
+        var group = hint.GetComponent<CanvasGroup>();
+        if (group == null) group = hint.AddComponent<CanvasGroup>();
+        group.alpha = visible ? 1f : 0f;
     }
 
     public void OnInteractButtonPressed(InputAction.CallbackContext callbackContext)

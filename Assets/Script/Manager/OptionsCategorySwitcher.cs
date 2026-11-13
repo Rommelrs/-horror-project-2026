@@ -19,6 +19,13 @@ public class OptionsCategorySwitcher : MonoBehaviour
             backToSettingsButton.onClick.AddListener(ShowSettings);
     }
 
+    // the options always open on the settings page, even if they were closed from the controls page
+    private void OnEnable()
+    {
+        if (settingsGroup != null && controlsGroup != null)
+            ShowSettings();
+    }
+
     public void ShowControls()
     {
         settingsGroup.SetActive(false);

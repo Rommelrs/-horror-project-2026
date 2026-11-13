@@ -119,10 +119,16 @@ public class Projectile : MonoBehaviour, IPoolable
         transform.rotation = q * Quaternion.AngleAxis(rollOffset, Vector3.forward);
     }
 
-    public void ShootProjectile(Vector3 targetPosition, Enemy owner)
+    public void ShootProjectile(Vector3 targetPosition, Enemy owner) => ShootProjectile(targetPosition, owner, float.NaN);
+
+    /// <summary>launchAngle (degrees above horizontal) replaces the usual arc when the target is below the throw point (a flat
+    /// throw down at the player instead of a lob up into the air); NaN, or a target he'd have to throw up to, = the usual arc.</summary>
+    public void ShootProjectile(Vector3 targetPosition, Enemy owner, float launchAngle)
     {
         this.owner = owner;
-        Vector3 velocity = CalculateLaunchVelocity(targetPosition);
+        Vector3 velocity = Vector3.zero;
+        if (!float.IsNaN(launchAngle)) velocity = LaunchVelocityAtAngle(targetPosition, launchAngle);
+        if (velocity == Vector3.zero) velocity = CalculateLaunchVelocity(targetPosition);
 
         if (velocity == Vector3.zero)
         {
@@ -202,6 +208,22 @@ public class Projectile : MonoBehaviour, IPoolable
 
         velocity.y = speed * Mathf.Sin(angleRad);
 
+        return velocity;
+    }
+
+    // the throw at a fixed angle that lands on target; zero when that angle can't reach it (target at or above the throw point)
+    private Vector3 LaunchVelocityAtAngle(Vector3 target, float angleDeg)
+    {
+        Vector3 start = transform.position;
+        Vector3 toTargetXZ = new Vector3(target.x - start.x, 0f, target.z - start.z);
+        float distance = toTargetXZ.magnitude, heightDifference = target.y - start.y;
+        if (distance < 0.1f) return Vector3.zero;
+        float a = angleDeg * Mathf.Deg2Rad;
+        float denom = 2f * Mathf.Cos(a) * Mathf.Cos(a) * (distance * Mathf.Tan(a) - heightDifference);
+        if (denom <= 0.01f) return Vector3.zero;
+        float speed = Mathf.Sqrt(Mathf.Abs(gravity) * distance * distance / denom);
+        Vector3 velocity = toTargetXZ.normalized * speed * Mathf.Cos(a);
+        velocity.y = speed * Mathf.Sin(a);
         return velocity;
     }
 

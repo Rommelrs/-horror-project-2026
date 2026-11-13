@@ -44,6 +44,7 @@ Transform:
   - {fileID: 2845372768680320702}
   - {fileID: 1238346534130955723}
   - {fileID: 3449586214219337645}
+  - {fileID: 6560723099927629185}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!195 &5821214158134030457
@@ -426,16 +427,19 @@ MonoBehaviour:
   OnAttackStarted:
     m_PersistentCalls:
       m_Calls: []
+  footstepSource: {fileID: 459737211023465395}
   damageDirection: {x: 0, y: 0, z: 0}
   damageForceMultiplier: 0
   pendingKnockbackScale: 1
   pendingMeleeHit: 0
+  pendingEnvironmentHit: 0
   chaseStartDelayEnabled: 1
   playerDetected: 0
   onPlayerDetected:
     m_PersistentCalls:
       m_Calls: []
   specMoveset: 1
+  hordeMode: 0
   tuning:
     walkSpeed: 1
     strafeSpeed: 1.2
@@ -448,6 +452,35 @@ MonoBehaviour:
     circleMax: 6
     circleMin: 4
     circleTighten: 0.12
+    turnGap: 0.8
+    provokedTurnMoves: 2
+    hordeStopDistance: 3.2
+    hordeMaxGrabbers: 2
+    hordeGrabMin: 1.8
+    hordeGrabMax: 5.5
+    hordeGrabGapMin: 8
+    hordeGrabGapMax: 12
+    hordeFrontAngle: 50
+    hordeMaxClawers: 2
+    hordeClawRange: 4.5
+    hordeClawRunSpeed: 2.6
+    hordeClawGapMin: 5
+    hordeClawGapMax: 8
+    hordeClawAfterGrab: 3
+    hordeScreamSpacing: 0.6
+    hordeScreamCooldownMin: 4
+    hordeScreamCooldownMax: 8
+    hordeChorusMin: 8
+    hordeChorusTriggerRange: 9
+    hordeChorusCloseRange: 6
+    hordeChorusRange: 14
+    hordeChorusSpread: 0.1
+    hordeChorusHold: 0.6
+    hordeChorusVoices: 6
+    hordeChorusWaves: 24
+    hordeChorusHitDelay: 0.02
+    hordeChorusQuiet: 2.5
+    hordeChorusMaxHold: 45
     firstMoveDelay: 0.6
     decisionInterval: 0.35
     moveGapMin: 0.5
@@ -493,6 +526,9 @@ MonoBehaviour:
     swipeGap: 0.3
     swipeRecovery: 0.7
     swipeDamage: 10
+    burstClawHold: 0.5
+    burstClawWindow: 1
+    clawHoldAt: 0.3
     swipeReach: 1.85
     swipeArc: 110
     staggerTime: 4
@@ -503,6 +539,29 @@ MonoBehaviour:
     feintTimeMax: 2.4
     feintDistMin: 2.2
     feintDistMax: 4.8
+    paceGapMin: 3
+    paceGapMax: 7
+    stillChance: 0.6
+    stillRangeMin: 2.5
+    stillTimeMin: 1
+    stillTimeMax: 2.5
+    stillEndsInBurst: 0.45
+    stillEndsInAttack: 0.3
+    burstSpeed: 3
+    burstAcceleration: 12
+    burstMaxTime: 1.4
+    burstCooldown: 4
+    grabHoldMin: 0.4
+    grabHoldMax: 1.1
+    maxSameMoveInARow: 2
+    retreatAfter: 1.2
+    retreatGrabChance: 0.9
+    retreatCooldownCut: 0.5
+    aimPunishAfter: 2.5
+    aimPunishChance: 0.6
+    maxRecoilsInARow: 2
+    poiseWindow: 4
+    poiseGrabWindup: 0.3
     afterHitRepositionMin: 1.8
     afterHitRepositionMax: 2.8
     swipePushPlayer: 0.55
@@ -518,16 +577,23 @@ MonoBehaviour:
   screamSFX:
   - {fileID: 8300000, guid: e4adc28a3ff9b0e47a05e09792ae85c8, type: 3}
   grabCueSFX:
-  - {fileID: 8300000, guid: c088a098c9c964f4c8e85fdb762bed7e, type: 3}
+  - {fileID: 8300000, guid: 015dbc31ad7a0bf4eba39d08f7a6ec61, type: 3}
+  - {fileID: 8300000, guid: 57aa7eaf9faf41642aa90fa32363d24d, type: 3}
+  - {fileID: 8300000, guid: 8fd872d90ac98834385b825e7f88992d, type: 3}
   hissSFX:
   - {fileID: 8300000, guid: 299baea6bb23ed74eb09cbbc23de8414, type: 3}
   whisperSFX:
   - {fileID: 8300000, guid: 744d534cabcf2504c8cbe379ac3bfa6c, type: 3}
   biteSFX:
-  - {fileID: 8300000, guid: de0dd31d44a439542bed39a515fecd11, type: 3}
+  - {fileID: 8300000, guid: 8f5bad989418eb44a8f879c107550c70, type: 3}
   swipeSFX:
   - {fileID: 8300000, guid: 1e455086d9502ef41bff72d30a089ad2, type: 3}
   - {fileID: 8300000, guid: 3389742e25f74da4191203d1751a7169, type: 3}
+  clawHitSFX:
+  - {fileID: 8300000, guid: 9ea2669de5b9c7949b1e83f48f3e507c, type: 3}
+  - {fileID: 8300000, guid: addc96ac3ff138f4483bdf546b71a55e, type: 3}
+  counterSFX:
+  - {fileID: 8300000, guid: 507eeba0097627f43b1ec913982f91ea, type: 3}
   staggerSFX:
   - {fileID: 8300000, guid: 60fe4f20a4294454b8da706f837e552e, type: 3}
   - {fileID: 8300000, guid: 723d596111cc2514e96b1946f697411f, type: 3}
@@ -576,6 +642,136 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f28f94152f2da642a0d8a1bbd41aba7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &3747072671732965529
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6560723099927629185}
+  - component: {fileID: 459737211023465395}
+  m_Layer: 0
+  m_Name: FootstepAudio
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6560723099927629185
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3747072671732965529}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 939433241807476701}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!82 &459737211023465395
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3747072671732965529}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 8412773623437164646, guid: 6ada63477c7e6d243afce2bee96afd8c,
+    type: 2}
+  m_audioClip: {fileID: 0}
+  m_Resource: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 0.6
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 140
+  DopplerLevel: 0
+  MinDistance: 1
+  MaxDistance: 15
+  Pan2D: 0
+  rolloffMode: 1
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!1 &7477320931874054654
 GameObject:
   m_ObjectHideFlags: 0

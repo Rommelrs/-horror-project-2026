@@ -40,6 +40,10 @@ public class QuestionerEnemy : HeadshotEnemy
     public AudioClip[] whisperSFX;
     public AudioClip[] biteSFX;
     public AudioClip[] swipeSFX;
+    [Tooltip("A claw landing on Khalid (the swing itself is swipeSFX).")]
+    public AudioClip[] clawHitSFX;
+    [Tooltip("The pipe countering his grab. Empty = his normal stagger sound.")]
+    public AudioClip[] counterSFX;
     public AudioClip[] staggerSFX;
     [Range(0f, 2f)] public float cueVolume = 1f;
 
@@ -477,6 +481,8 @@ public class QuestionerEnemy : HeadshotEnemy
         bool staggered = stateMachine.CurrentState == combatState && combatState.IsStaggered;
         if (weak)
         {
+            // one mouth shot per Questioner: the gun only destroys the hitbox it hit, and the mouth has two (one each side)
+            RemoveMouthWeakpoints();
             if (staggered)
             {
                 // second mouth hit while he's down: kill
@@ -530,6 +536,14 @@ public class QuestionerEnemy : HeadshotEnemy
     }
 
     // ---------------- mouth weak point ----------------
+
+    /// <summary>Takes every mouth weak point off him (not the spare used when the pool reuses him).</summary>
+    public void RemoveMouthWeakpoints()
+    {
+        foreach (var h in GetComponentsInChildren<Hitbox>(true))
+            if (h.damageType == DamageType.Weakpoint && h.gameObject != weakpointTemplate)
+                Destroy(h.gameObject);
+    }
 
     public void RestoreWeakpoint()
     {
@@ -600,6 +614,12 @@ public class QuestionerEnemy : HeadshotEnemy
         if (clips == null || clips.Length == 0 || cueSource == null) return;
         var c = clips[Random.Range(0, clips.Length)];
         if (c != null) cueSource.PlayOneShot(c, volume * cueVolume);
+    }
+
+    /// <summary>Cuts what his voice is saying (the grab voice runs longer than the grab), leaving a scream alone.</summary>
+    public void StopVoice()
+    {
+        if (cueSource != null) cueSource.Stop();
     }
 
     public void StopCues()

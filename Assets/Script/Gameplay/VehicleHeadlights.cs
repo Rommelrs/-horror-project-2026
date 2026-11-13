@@ -57,9 +57,27 @@ public class VehicleHeadlights : MonoBehaviour
     {
         lights = GetComponentsInChildren<Light>(true);
         glows = GetComponentsInChildren<MeshRenderer>(true);
+        AddBeamOcclusion();
         ApplyFogDistance();
         ApplyPool();
         ApplyAirBeams();
+    }
+
+    // The air beams stay visible past the camera's short far clip, where a building in front of them is no longer drawn and can't hide
+    // them by depth. They use the same line-of-sight check as the glows, with the same list of what blocks the view.
+    void AddBeamOcclusion()
+    {
+        if (airBeams == null) return;
+        LampGlowOcclusion glow = GetComponentInChildren<LampGlowOcclusion>(true);
+        if (glow == null) return;
+        LayerMask blockers = glow.Blockers;
+        foreach (Transform t in airBeams)
+        {
+            if (t == null || t.GetComponent<MeshRenderer>() == null) continue;
+            LampGlowOcclusion occlusion = t.GetComponent<LampGlowOcclusion>();
+            if (occlusion == null) occlusion = t.gameObject.AddComponent<LampGlowOcclusion>();
+            occlusion.SetUpAsBeam(airBeamLength, blockers);
+        }
     }
 
     void Start()

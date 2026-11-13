@@ -26,11 +26,77 @@ public class HealTutorialPrompts : MonoBehaviour
     [Tooltip("Lets the pickup banner start sliding in first.")]
     [SerializeField] float startDelay = 0.4f;
 
+    [Header("Low health reminders")]
+    [Tooltip("At or below this much health (fraction of max) with painkillers: \"Press [G] to use Painkillers\".")]
+    [SerializeField, Range(0f, 1f)] float remindPainkillerAt = 0.5f;
+    [Tooltip("At or below this much health with a medic kit: \"Hold [G] to use Medic Kit\" (comes first).")]
+    [SerializeField, Range(0f, 1f)] float remindMedKitAt = 0.3f;
+    [SerializeField] float reminderSeconds = 5f;
+    [Tooltip("The same reminder waits this long before it can show again (it also re-arms once health is back above its line).")]
+    [SerializeField] float reminderCooldown = 45f;
+
     readonly Queue<Entry> queue = new Queue<Entry>();
     Coroutine routine;
+    Coroutine reminderRoutine;
+    readonly Dictionary<Entry, float> nextReminder = new Dictionary<Entry, float>();
 
     void OnEnable() => Inventory.OnItemPickedUp += OnItemPickedUp;
-    void OnDisable() => Inventory.OnItemPickedUp -= OnItemPickedUp;
+    void OnDisable()
+    {
+        Inventory.OnItemPickedUp -= OnItemPickedUp;
+        reminderRoutine = null;
+    }
+
+    void Update()
+    {
+        if (routine != null || reminderRoutine != null || entries == null) return;
+        var p = Player.instance;
+        if (p == null || p.health == null || p.inventory == null || !CanShow()) return;
+        float frac = p.health.GetHealthValue() / (float)Mathf.Max(1, p.health.GetMaxHealthValue());
+
+        Entry painkiller = null, medKit = null;
+        foreach (var e in entries)
+        {
+            if (e.item == null || e.prompt == null) continue;
+            if (e.item.itemType == ItemType.HealingAndAddStability) medKit = e; else painkiller = e;
+        }
+        // back above a line: that reminder may come again next time health drops below it
+        if (medKit != null && frac > remindMedKitAt) nextReminder.Remove(medKit);
+        if (painkiller != null && frac > remindPainkillerAt) nextReminder.Remove(painkiller);
+
+        Entry pick = null;
+        if (medKit != null && frac <= remindMedKitAt && p.inventory.CountOf(medKit.item) > 0 && Ready(medKit)) pick = medKit;
+        else if (painkiller != null && frac <= remindPainkillerAt && p.inventory.CountOf(painkiller.item) > 0 && Ready(painkiller)) pick = painkiller;
+        if (pick == null || PlayerQuickHeal.Using) return;
+
+        nextReminder[pick] = Time.unscaledTime + reminderCooldown;
+        reminderRoutine = StartCoroutine(Co_Remind(pick));
+    }
+
+    bool Ready(Entry e) => !nextReminder.TryGetValue(e, out float t) || Time.unscaledTime >= t;
+
+    IEnumerator Co_Remind(Entry e)
+    {
+        bool on = false;
+        float shown = 0f;
+        while (shown < reminderSeconds && routine == null)
+        {
+            bool can = CanShow();
+            if (can != on)
+            {
+                on = can;
+                if (on) e.prompt.ShowPrompt(); else e.prompt.HidePrompt();
+            }
+            if (on)
+            {
+                if (PlayerQuickHeal.Using) break;
+                shown += Time.unscaledDeltaTime;
+            }
+            yield return null;
+        }
+        e.prompt.HidePrompt();
+        reminderRoutine = null;
+    }
 
     void OnItemPickedUp(Item item, int before, int after)
     {
@@ -81,7 +147,7 @@ public class HealTutorialPrompts : MonoBehaviour
 
     static bool CanShow()
     {
-        if (Player.instance == null || Player.instance.IsDead()) return false;
+        if (Player.instance == null || Player.instance.IsDead() || Player.instance.isGrabbed) return false;
         if (GameManager.IsPaused) return false;
         if (SubtitleManager.instance != null && SubtitleManager.instance.IsSubtitleBusy()) return false;
         if (InventoryUI.instance != null && InventoryUI.instance.InventoryIsActive()) return false;

@@ -14,10 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: Stability Pill
   itemIcon: {fileID: 21300000, guid: df9193e6f5148bb42ba7dd386ef82f7e, type: 3}
-  description: Increases stability by 50%
+  description: 'A small white pill. It calms the nerves.
+
+    Restores half of your
+    stability.'
   isStackable: 1
   maxStackSize: 10
   itemType: 2
+  showReadPrompt: 1
   healingAmount: 0
   stabilityIncreaseAmount: 50
   energyDrinkDuration: 0

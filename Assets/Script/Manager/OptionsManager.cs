@@ -12,6 +12,8 @@ public class OptionsManager : MonoBehaviour
 {
     public static OptionsManager instance;
     [SerializeField] MenuPanelSwitcher menuPanelSwitcher;
+    [Tooltip("Where Apply goes afterwards: the same screen the Back button returns to. Empty = the panel switcher's first panel (the pause menu in game).")]
+    [SerializeField] GameObject returnPanel;
 
     [Header("Language")]
     [SerializeField] TMP_Dropdown languageDropdown;
@@ -228,11 +230,14 @@ public class OptionsManager : MonoBehaviour
 
         //Set Resolution
         Resolution resolution = filteredResolutions[resolutionDropdown.value];
-        if (resolution.width != Screen.width && resolution.height != Screen.height)
+        if (resolution.width != Screen.width || resolution.height != Screen.height)
             Screen.SetResolution(resolution.width, resolution.height, fullScreen);
 
-        //Switch back to the main menu
-        menuPanelSwitcher.SwitchPanel(0);
+        //Leave the options the same way the Back button does
+        if (returnPanel != null)
+            menuPanelSwitcher.SwitchPanel(returnPanel);
+        else
+            menuPanelSwitcher.SwitchPanel(0);
     }
     #endregion
 

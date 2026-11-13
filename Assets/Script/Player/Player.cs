@@ -194,7 +194,7 @@ public class Player : MonoBehaviour
     /// <summary>
     /// Reset everything for a completely fresh new game
     /// </summary>
-    void ResetForNewGame()
+    public void ResetForNewGame()
     {
         Debug.Log("[Player] ResetForNewGame - clearing inventory and resetting stats");
         
@@ -205,8 +205,9 @@ public class Player : MonoBehaviour
         if (inventory != null)
         {
             inventory.ClearInventory();
+            inventory.MarkInitialized();   // ClearInventory left it "not initialized": the scene's default items would be added back
         }
-        
+
         // Reset weapon state
         if (playerWeaponSystem != null)
         {

@@ -31,6 +31,16 @@ public class SaveableDisableState : MonoBehaviour, ISaveable
         SaveManager.instance.RegisterTriggeredZone(uniqueID.ID);
     }
 
+    /// <summary>This object was switched off during play (live, or in the loaded save / checkpoint).</summary>
+    public bool WasSwitchedOff
+    {
+        get
+        {
+            if (uniqueID == null) uniqueID = GetComponent<UniqueID>();
+            return SaveManager.instance != null && uniqueID != null && SaveManager.instance.IsZoneTriggered(uniqueID.ID);
+        }
+    }
+
     public void Save(SaveData saveData) { }
 
     public void Load(SaveData saveData)

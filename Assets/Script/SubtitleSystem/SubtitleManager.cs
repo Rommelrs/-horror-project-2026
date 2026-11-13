@@ -38,6 +38,7 @@ public class SubtitleManager : MonoBehaviour
     }
 
     bool shouldFreezeGame = true;
+    bool waitForContinue = false;   // the last line stays until the player presses interact (no auto-dismiss)
     Action callbackOnCompleted;
 
     private void Awake()
@@ -134,19 +135,21 @@ public class SubtitleManager : MonoBehaviour
 
     /// <param name="showFor">Spoken lines (cutscenes): above 0, the line appears whole at once (no typewriter) and closes
     /// after this many seconds, so it keeps pace with the voice.</param>
-    public static void ShowSubtitle(LocalizedString localizedString, bool freezeGame = true, Action callbakActionOnCompleted = null, float showFor = -1f)
+    /// <param name="waitForContinue">The line stays until the player presses interact instead of closing by itself.</param>
+    public static void ShowSubtitle(LocalizedString localizedString, bool freezeGame = true, Action callbakActionOnCompleted = null, float showFor = -1f, bool waitForContinue = false)
     {
         if (instance != null)
         {
             string subtitle = localizedString.GetLocalizedString();
             instance.shouldFreezeGame = freezeGame;
+            instance.waitForContinue = waitForContinue;
             instance.callbackOnCompleted = callbakActionOnCompleted;
             instance.currentSubtitleList = new List<string>();
             instance.UpdateSubtitle(subtitle, showFor);
         }
     }
 
-    public static void ShowSubtitleGroup(LocalizedString[] localizedStringList, bool freezeGame = true, Action callbakActionOnCompleted = null)
+    public static void ShowSubtitleGroup(LocalizedString[] localizedStringList, bool freezeGame = true, Action callbakActionOnCompleted = null, bool waitForContinue = false)
     {
         if (instance != null)
         {
@@ -160,6 +163,7 @@ public class SubtitleManager : MonoBehaviour
             }
 
             instance.shouldFreezeGame = freezeGame;
+            instance.waitForContinue = waitForContinue;
             instance.callbackOnCompleted = callbakActionOnCompleted;
             instance.UpdateGroupSubtitle(stringList.ToArray());
         }
@@ -213,6 +217,7 @@ public class SubtitleManager : MonoBehaviour
         // Auto-dismiss last subtitle if no more in queue
         if (currentSubtitleList == null || currentSubtitleList.Count <= 0)
         {
+            if (waitForContinue && !spoken) yield break;   // closed by OnContinueButtonPressed
             yield return new WaitForSecondsRealtime(spoken ? showFor : autoDismissDelay);
             
             // Close subtitle

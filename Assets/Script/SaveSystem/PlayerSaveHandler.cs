@@ -120,15 +120,7 @@ public class PlayerSaveHandler : MonoBehaviour, ISaveable
         if (health != null)
         {
             health.ResetHealth(); // Reset first
-            int healthDiff = saveData.playerData.health - health.GetHealthValue();
-            if (healthDiff < 0)
-            {
-                health.Damage(-healthDiff);
-            }
-            else if (healthDiff > 0)
-            {
-                health.Heal(healthDiff);
-            }
+            health.SetHealthSilently(saveData.playerData.health);   // not Damage(): that played a hit on every load
         }
         
         // Load Stability

@@ -75,8 +75,17 @@ public class CinematicKnockdownSequence : MonoBehaviour
     [Header("Enemy Gate")]
     [Tooltip("All these enemies must be dead before player can stand up.")]
     [SerializeField] Enemy[] enemiesToKill;
+    [Tooltip("Bag bearers among the enemies to kill don't throw while he's being pushed (he can't do anything yet), and only start this many seconds after he lands.")]
+    [SerializeField] float bagBearerGraceAfterKnockdown = 5f;
+    [Tooltip("While he's down, each bag bearer waits at least this many seconds after a bag before throwing the next one (his normal rhythm comes back once he stands up).")]
+    [SerializeField] float bagBearerThrowGapWhileDowned = 5f;
     [Tooltip("Subtitle triggered when player tries to release ADS while enemies are still alive.")]
     [SerializeField] SubtitleTrigger mustKillSubtitle;
+    [Tooltip("With a gun: he aims by himself as soon as his fall has finished, and stays aimed until the enemies are dead.")]
+    [SerializeField] bool autoAimWhileDowned = true;
+    [Tooltip("With a gun: he gets up by himself this many seconds after the last enemy dies (no E press).")]
+    [SerializeField] bool autoStandUpWhenCleared = true;
+    [SerializeField] float autoStandUpDelay = 1f;
 
     [Header("Optional ADS While Downed")]
     [Tooltip("If true, player can ADS while knocked down.")]
@@ -106,6 +115,9 @@ public class CinematicKnockdownSequence : MonoBehaviour
     public UnityEvent OnPlayerStoodUp;
 
     bool hasTriggered = false;
+    bool autoAiming = false;
+    bool fallStarted = false;     // the knockdown animation has begun (isKnockdownAnimPlaying is still false for the first 0.05 s)
+    float clearedAt = -1f;
     bool isPlayerDowned = false;
     bool enemiesCleared = false;
     bool isKnockdownAnimPlaying = false;
@@ -144,6 +156,22 @@ public class CinematicKnockdownSequence : MonoBehaviour
 
         // Always lock the player body rotation while downed — ADS only moves the camera, not the character
         Player.instance.transform.rotation = downedPlayerRotation;
+
+        // gun + enemies to kill: he raises the gun by himself once he's on the floor, and gets up by himself once they're dead
+        bool gated = HasGun && enemiesToKill != null && enemiesToKill.Length > 0;
+        if (gated && AllEnemiesDead())
+        {
+            if (autoStandUpWhenCleared)
+            {
+                if (clearedAt < 0f) clearedAt = Time.time;
+                else if (Time.time - clearedAt >= autoStandUpDelay) { StandUp(); return; }
+            }
+        }
+        else if (gated && autoAimWhileDowned && !autoAiming && fallStarted && !isKnockdownAnimPlaying && allowADSWhileDowned && downedAimCam != null)
+        {
+            autoAiming = true;
+            Player.instance.playerWeaponSystem.aimingOverrideForTesting = true;
+        }
 
         bool aiming = allowADSWhileDowned && downedAimCam != null
             ? Player.instance.playerWeaponSystem.isAiming
@@ -218,11 +246,12 @@ public class CinematicKnockdownSequence : MonoBehaviour
             var camTarget = Player.instance.playerWeaponSystem.CinemachineCameraTarget.transform;
             camTarget.localPosition += Vector3.down * downedViewOffset;
 
-            // Disable downed FOV/Dutch on thirdPersonVCam while downedAimCam is active
+            // Disable downed FOV/Dutch on thirdPersonVCam while downedAimCam is active (exact values: adding and taking
+            // away 15-20 degrees drifted, and left him zoomed in after standing up)
             if (thirdPersonVCam != null)
             {
                 thirdPersonVCam.m_Lens.Dutch = 0f;
-                thirdPersonVCam.m_Lens.FieldOfView -= downedFOVIncrease;
+                thirdPersonVCam.m_Lens.FieldOfView = originalFOV;
             }
 
             // Reparent FP hands to downedAimCam so they stick in front of it
@@ -250,7 +279,7 @@ public class CinematicKnockdownSequence : MonoBehaviour
             if (thirdPersonVCam != null)
             {
                 thirdPersonVCam.m_Lens.Dutch = downedDutchAngle;
-                thirdPersonVCam.m_Lens.FieldOfView += downedFOVIncrease;
+                thirdPersonVCam.m_Lens.FieldOfView = originalFOV + downedFOVIncrease;
             }
 
             // Restore FP hands to original parent and position
@@ -274,9 +303,25 @@ public class CinematicKnockdownSequence : MonoBehaviour
 
     bool autoWalking = false;
 
+    void HoldBagBearers(float untilTime)
+    {
+        if (enemiesToKill == null) return;
+        foreach (var e in enemiesToKill)
+            if (e is BagBearerEnemy bb && bb != null) bb.SetAttackHold(untilTime);
+    }
+
+    void SetBagBearerThrowGap(float seconds)
+    {
+        if (enemiesToKill == null) return;
+        foreach (var e in enemiesToKill)
+            if (e is BagBearerEnemy bb && bb != null) bb.SetThrowGap(seconds);
+    }
+
     IEnumerator Co_RunSequence()
     {
         OnSequenceStarted?.Invoke();
+        // the encounter wakes up with the sequence: no bag in the air before he's even been pushed
+        HoldBagBearers(float.MaxValue);
 
         // Remove ALL player control
         Player.instance.isKnockedDown = true;
@@ -359,6 +404,10 @@ public class CinematicKnockdownSequence : MonoBehaviour
     {
         isPlayerDowned = true;
         autoWalking = false; // Stop auto-walk
+        HoldBagBearers(Time.time + bagBearerGraceAfterKnockdown);
+        SetBagBearerThrowGap(bagBearerThrowGapWhileDowned);
+        // the camera as it is before any of the knockdown's changes: what standing up returns it to
+        CaptureCameraLens();
 
         if (cameraRotationOverride != null)
             StartCoroutine(Co_DisableCameraOverrideAfterDelay());
@@ -417,10 +466,11 @@ public class CinematicKnockdownSequence : MonoBehaviour
 
         // Camera shake + Dutch roll on impact
         if (thirdPersonVCam != null)
-            StartCoroutine(Co_CameraKnockdownEffect());
+            lensRoutine = StartCoroutine(Co_CameraKnockdownEffect());
 
         // Activate the knockdown layer and play the animation from the start
         isKnockdownAnimPlaying = true;
+        fallStarted = true;
         Player.instance.animator.SetLayerWeight(KnockdownLayer, 1f);
         Player.instance.animator.Play(knockdownStateName, KnockdownLayer, 0f);
 
@@ -476,6 +526,10 @@ public class CinematicKnockdownSequence : MonoBehaviour
         if (!isPlayerDowned) return;
         isPlayerDowned = false;
         isKnockdownAnimPlaying = false;
+        autoAiming = false;
+        fallStarted = false;
+        clearedAt = -1f;
+        SetBagBearerThrowGap(0f);
 
         // Reset ADS toggle state and force exit aiming
         adsToggled = false;
@@ -503,12 +557,16 @@ public class CinematicKnockdownSequence : MonoBehaviour
             }
         }
 
-        // Always reset Dutch and FOV to original values at the very end
+        // Always reset Dutch and FOV to original values at the very end (and stop the roll-in if it's still going, or it
+        // would write the downed lens back after this)
+        if (lensRoutine != null) { StopCoroutine(lensRoutine); lensRoutine = null; }
         if (thirdPersonVCam != null)
         {
+            if (shakeRestPosSet) thirdPersonVCam.transform.localPosition = shakeRestPos;
             thirdPersonVCam.m_Lens.Dutch = 0f;
-            thirdPersonVCam.m_Lens.FieldOfView = originalFOV;
+            if (lensCaptured) thirdPersonVCam.m_Lens.FieldOfView = originalFOV;
         }
+        lensCaptured = false;
 
         downedAimActive = false;
         if (downedAimCam != null) { downedAimCam.Priority = 0; downedAimCam.gameObject.SetActive(false); }
@@ -529,35 +587,57 @@ public class CinematicKnockdownSequence : MonoBehaviour
         OnPlayerStoodUp?.Invoke();
     }
 
+    Coroutine lensRoutine;
+    bool lensCaptured;
+    bool shakeRestPosSet;
+    Vector3 shakeRestPos;
+
+    // Read once per knockdown, before anything here touches the lens. It used to be read after the shake (0.5 s in): aiming
+    // during the shake had already taken the downed FOV off, so that narrower value became "normal" and stuck after standing up.
+    void CaptureCameraLens()
+    {
+        if (thirdPersonVCam == null || lensCaptured) return;
+        originalFOV = thirdPersonVCam.m_Lens.FieldOfView;
+        lensCaptured = true;
+    }
+
     IEnumerator Co_CameraKnockdownEffect()
     {
         // Quick position shake
         float elapsed = 0f;
         Transform vcamTransform = thirdPersonVCam.transform;
-        Vector3 originalPos = vcamTransform.localPosition;
+        shakeRestPos = vcamTransform.localPosition;
+        shakeRestPosSet = true;
         while (elapsed < shakeDuration)
         {
             float strength = Mathf.Lerp(shakeIntensity, 0f, elapsed / shakeDuration);
-            vcamTransform.localPosition = originalPos + Random.insideUnitSphere * strength;
+            vcamTransform.localPosition = shakeRestPos + Random.insideUnitSphere * strength;
             elapsed += Time.deltaTime;
             yield return null;
         }
-        vcamTransform.localPosition = originalPos;
+        vcamTransform.localPosition = shakeRestPos;
+        shakeRestPosSet = false;
 
-        originalFOV = thirdPersonVCam.m_Lens.FieldOfView;
-
+        // roll and widen into the downed view (not while he's aiming: the low aim camera has its own lens then)
         float dutchElapsed = 0f;
         float dutchTime = 0.3f;
         while (dutchElapsed < dutchTime)
         {
             dutchElapsed += Time.deltaTime;
             float t = dutchElapsed / dutchTime;
-            thirdPersonVCam.m_Lens.Dutch = Mathf.Lerp(0f, downedDutchAngle, t);
-            thirdPersonVCam.m_Lens.FieldOfView = Mathf.Lerp(originalFOV, originalFOV + downedFOVIncrease, t);
+            if (!downedAimActive)
+            {
+                thirdPersonVCam.m_Lens.Dutch = Mathf.Lerp(0f, downedDutchAngle, t);
+                thirdPersonVCam.m_Lens.FieldOfView = Mathf.Lerp(originalFOV, originalFOV + downedFOVIncrease, t);
+            }
             yield return null;
         }
-        thirdPersonVCam.m_Lens.Dutch = downedDutchAngle;
-        thirdPersonVCam.m_Lens.FieldOfView = originalFOV + downedFOVIncrease;
+        if (!downedAimActive)
+        {
+            thirdPersonVCam.m_Lens.Dutch = downedDutchAngle;
+            thirdPersonVCam.m_Lens.FieldOfView = originalFOV + downedFOVIncrease;
+        }
+        lensRoutine = null;
     }
 
     IEnumerator Co_PushPlayer(Vector3 direction, float force)

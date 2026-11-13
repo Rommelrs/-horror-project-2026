@@ -451,6 +451,7 @@ MonoBehaviour:
   requiresKey: 0
   keyCodeRequired: 0
   unlockStepWithKey: 0
+  consumeKeyOnUnlock: 0
   lockedLine:
     m_TableReference:
       m_TableCollectionName: 
@@ -901,6 +902,7 @@ MonoBehaviour:
   requiresKey: 0
   keyCodeRequired: 0
   unlockStepWithKey: 0
+  consumeKeyOnUnlock: 0
   lockedLine:
     m_TableReference:
       m_TableCollectionName: 
@@ -1358,6 +1360,7 @@ MonoBehaviour:
   spread: 0.3
   fadeTime: 0.2
   maxCheckDistance: 60
+  beamLength: 0
 --- !u!1 &8037596208216120473
 GameObject:
   m_ObjectHideFlags: 0

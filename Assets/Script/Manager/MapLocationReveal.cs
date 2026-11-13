@@ -60,16 +60,33 @@ public class MapLocationReveal : MonoBehaviour
         IsSequenceActive = false;
     }
 
+    // A reveal that happens before the player owns that map page is not drawn yet: it waits (saved as a story flag) and the
+    // marker simply appears on the page once the map is picked up.
+    string PendingFlag => "mapreveal-pending:" + gameObject.name;
+
     private void Start()
     {
         if (!string.IsNullOrEmpty(triggerNoteItemName) && ItemInspectionHandler.instance != null)
             ItemInspectionHandler.instance.onCloseInspection += OnInspectionClosed;
+        MapHandler.OnMapsChanged += OnMapsChanged;
+        OnMapsChanged();
     }
 
     private void OnDestroy()
     {
         if (ItemInspectionHandler.instance != null)
             ItemInspectionHandler.instance.onCloseInspection -= OnInspectionClosed;
+        MapHandler.OnMapsChanged -= OnMapsChanged;
+    }
+
+    bool OwnsMap => MapHandler.instance == null || MapHandler.instance.OwnsPage(mapPageIndex);
+
+    void OnMapsChanged()
+    {
+        if (revealed || isRunning || markerCanvasGroup == null || !StoryFlags.Has(PendingFlag) || !OwnsMap) return;
+        revealed = true;
+        markerCanvasGroup.alpha = 1f;
+        markerCanvasGroup.gameObject.SetActive(true);
     }
 
     void OnInspectionClosed(string itemName)
@@ -87,6 +104,13 @@ public class MapLocationReveal : MonoBehaviour
         if (markerCanvasGroup != null && markerCanvasGroup.gameObject.activeSelf)
         {
             revealed = true;
+            return;
+        }
+        // no map for this page yet: nothing is drawn (and no map opens); it appears once the map is found
+        if (!OwnsMap)
+        {
+            StoryFlags.Set(PendingFlag);
+            Debug.Log("[MapReveal] '" + name + "': the player has no map for page " + mapPageIndex + " yet - marker waits for it");
             return;
         }
         StartCoroutine(Co_RevealSequence());

@@ -1694,13 +1694,13 @@ AnimatorState:
   m_SpeedParameterActive: 0
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
-  m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: 92465eccbb69a3c4f83f0107e117099b, type: 2}
+  m_TimeParameterActive: 1
+  m_Motion: {fileID: 7400000, guid: a71bbd0758f378841bea712331712c68, type: 2}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
-  m_TimeParameter: 
+  m_TimeParameter: TurnPhase
 --- !u!1102 &-4250997124287171634
 AnimatorState:
   serializedVersion: 6
@@ -2165,13 +2165,13 @@ AnimatorState:
   m_SpeedParameterActive: 0
   m_MirrorParameterActive: 0
   m_CycleOffsetParameterActive: 0
-  m_TimeParameterActive: 0
-  m_Motion: {fileID: 7400000, guid: 78a4c20348c23db47b19747d47878278, type: 2}
+  m_TimeParameterActive: 1
+  m_Motion: {fileID: 7400000, guid: e39cd40f7a4b2d84c874892ca5748662, type: 2}
   m_Tag: 
   m_SpeedParameter: 
   m_MirrorParameter: 
   m_CycleOffsetParameter: 
-  m_TimeParameter: Velocity
+  m_TimeParameter: TurnPhase
 --- !u!1102 &-2088797425737552888
 AnimatorState:
   serializedVersion: 6
@@ -3053,6 +3053,12 @@ AnimatorController:
   - m_Name: SwitchSpeed
     m_Type: 1
     m_DefaultFloat: 1
+    m_DefaultInt: 0
+    m_DefaultBool: 0
+    m_Controller: {fileID: 9100000}
+  - m_Name: TurnPhase
+    m_Type: 1
+    m_DefaultFloat: 0
     m_DefaultInt: 0
     m_DefaultBool: 0
     m_Controller: {fileID: 9100000}

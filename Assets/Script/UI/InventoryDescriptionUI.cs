@@ -39,6 +39,12 @@ public class InventoryDescriptionUI : MonoBehaviour
     [SerializeField] float fullMessagePop = 1.18f;
     [SerializeField] AudioClip cantUseClip;
 
+    [Header("How to use (heal items)")]
+    [Tooltip("Under a painkiller's description: the same 'Press [G] to use Painkillers' line the game shows.")]
+    [SerializeField] GameObject painkillerUseHint;
+    [Tooltip("Under a medic kit's description: 'Hold [G] to use Medic Kit'.")]
+    [SerializeField] GameObject medKitUseHint;
+
     Item currentItem;
     Coroutine fullMessageCR;
     Color descriptionColor;
@@ -74,6 +80,12 @@ public class InventoryDescriptionUI : MonoBehaviour
             if (itemRoot != null)
                 itemRoot.transform.Rotate(Vector3.up * itemRootRotateSpeed * Time.unscaledDeltaTime, Space.Self);
         }
+    }
+
+    void ShowUseHint(Item item)
+    {
+        if (painkillerUseHint != null) painkillerUseHint.SetActive(item != null && item.itemType == ItemType.Healing);
+        if (medKitUseHint != null) medKitUseHint.SetActive(item != null && item.itemType == ItemType.HealingAndAddStability);
     }
 
     public void ShowItemDescription(Item item, int itemStack)
@@ -115,9 +127,11 @@ public class InventoryDescriptionUI : MonoBehaviour
             }
 
             CheckIfButtonIsUseable(item);
+            ShowUseHint(item);
         }
         else
         {
+            ShowUseHint(null);
             rotateItem = false;
             HideItem3DIcon();
 
@@ -202,10 +216,10 @@ public class InventoryDescriptionUI : MonoBehaviour
         }
 
         //Show Buttons based on item type
-        if (item.itemType == ItemType.Healing 
-            || item.itemType == ItemType.EnergyDrink 
+        // (painkillers and the medic kit are NOT usable here: healing happens in the world with the heal key, where it takes
+        // time and leaves him open - healing from the paused menu took that decision away)
+        if (item.itemType == ItemType.EnergyDrink
             || item.itemType == ItemType.AddStability
-            || item.itemType == ItemType.HealingAndAddStability
             || item.itemType == ItemType.CalmingInhaler
             || (item.itemType == ItemType.Fuse && Player.instance.fuseBoxInRange && (Player.instance.currentFuseboxInRange == null || !Player.instance.currentFuseboxInRange.useBlocked))
             || (item.itemType == ItemType.UVLight && ImageFadeInteractable.currentInRange != null && ImageFadeInteractable.currentInRange.SupportsUVLight())
@@ -318,6 +332,10 @@ public class InventoryDescriptionUI : MonoBehaviour
 
     public void OnUseButtonClicked()
     {
+        // healing only in the world (heal key), never from the paused menu
+        if (currentItem != null && (currentItem.itemType == ItemType.Healing || currentItem.itemType == ItemType.HealingAndAddStability))
+            return;
+
         // full health (and stability, for the medic kit): say so instead of wasting it
         string fullKey = FullMessageKey(currentItem);
         if (fullKey != null)

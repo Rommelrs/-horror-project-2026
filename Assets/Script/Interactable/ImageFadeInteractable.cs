@@ -20,6 +20,8 @@ public class ImageFadeInteractable : Interactable
 
     [Header("UV Light")]
     [SerializeField] private bool supportsUVLight = false;
+    [Tooltip("On: the UV Light leaves the inventory once it has been used here (it has no other use).")]
+    [SerializeField] private bool consumeUVLight = false;
     [SerializeField] private Sprite uvLightSprite;
     [SerializeField] private SubtitleTrigger uvSubtitleTrigger;
 
@@ -143,6 +145,11 @@ public class ImageFadeInteractable : Interactable
         if (!supportsUVLight || uvLightUsed) return;
 
         uvLightUsed = true;
+
+        // the UV light's only use: it leaves the inventory
+        if (consumeUVLight && Player.instance != null && Player.instance.inventory != null)
+            foreach (var stack in Player.instance.inventory.GetItems())
+                if (stack.item != null && stack.item.itemType == ItemType.UVLight) { Player.instance.inventory.RemoveItem(stack.item); break; }
 
         // Swap to UV sprite
         if (panelImage != null && uvLightSprite != null)

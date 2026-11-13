@@ -538,7 +538,6 @@ public static class CowardMeetingBuilder
         var c6 = Say(tl, voK, voC, "CW2_B1", b1);
         var k6 = Say(tl, voK, voC, "CW2_B2", b2);
         var c7 = Say(tl, voK, voC, "CW2_B3", b3);
-        var k7 = Say(tl, voK, voC, "CW2_B4", b4);
         var c8 = Say(tl, voK, voC, "CW2_B5", b5);
         var c9 = Say(tl, voK, voC, "CW2_B6", b6);
         var k8 = Say(tl, voK, voC, "CW2_B7", b7);
@@ -568,8 +567,7 @@ public static class CowardMeetingBuilder
         var cm = Cameras(tl, d, c.brain);
         Shot(cm, d, v[0], 0f, k6.start - 0.15f);                          // "The alley by the school."
         Shot(cm, d, v[1], k6.start - 0.15f, c7.start - 0.15f);            // "I've already been in there."
-        Shot(cm, d, v[2], c7.start - 0.15f, k7.start - 0.15f);            // "...You went in?" staring at him
-        Shot(cm, d, v[3], k7.start - 0.15f, c8.start - 0.15f);            // "Yeah."
+        Shot(cm, d, v[2], c7.start - 0.15f, c8.start - 0.15f);            // "...You went in? And you came back out alive??" staring at him
         Shot(cm, d, v[4], c8.start - 0.15f, c9.start - 0.15f);            // "This is impossible..."
         Shot(cm, d, v[0], c9.start - 0.15f, k8.start - 0.15f);            // "Have you... have you seen them??"
         Shot(cm, d, v[1], k8.start - 0.15f, c10.start - 0.15f);           // "Yeah..." looking away
@@ -683,8 +681,8 @@ public static class CowardMeetingBuilder
         float t0 = AFirstLine;
         b1 = t0; t0 += LineLength("CW2_B1") + 0.9f;    // "The alley by the school."
         b2 = t0; t0 += LineLength("CW2_B2") + 0.9f;    // "I've already been in there."
-        b3 = t0; t0 += LineLength("CW2_B3") + 1.0f;    // "...You went in? And you came back out alive??"
-        b4 = t0; t0 += LineLength("CW2_B4") + 0.9f;    // "Yeah."
+        b3 = t0; t0 += LineLength("CW2_B3") + 0.8f;    // "...You went in? And you came back out alive??"
+        // (Khalid's first "Yeah." CW2_B4 was cut 2026-11-07 - the coward keeps talking straight on)
         b5 = t0; t0 += LineLength("CW2_B5") + 0.7f;    // "This is impossible..."
         b6 = t0; t0 += LineLength("CW2_B6") + 1.2f;    // "Have you... have you seen them??"
         b7 = t0; t0 += LineLength("CW2_B7") + 1.0f;    // "Yeah..."

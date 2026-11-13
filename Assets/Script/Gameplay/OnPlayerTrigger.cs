@@ -24,7 +24,26 @@ public class OnPlayerTrigger : MonoBehaviour
     [Space(5)]
     [SerializeField] UnityEvent onTrigger;
 
+    [Tooltip("Already fired in the loaded save / checkpoint: run onTrigger + Activate Enemies again on load (no sound), so what it " +
+             "switched on (enemies, projectile spawners) is back. Only for triggers whose events just turn things on - a killed " +
+             "enemy still removes itself (SaveableEnemy).")]
+    [SerializeField] bool reapplyOnRestore = false;
+
+    [Tooltip("Map page this trigger only draws on (0 street map, 1 chalk map; -1 = not a map trigger). While the player doesn't " +
+             "have that map it does nothing and stays armed, so walking through again once the map is owned draws the marker.")]
+    [SerializeField] int requiredMapPage = -1;
+
     bool isTriggered = false;
+
+    void Start()
+    {
+        if (!reapplyOnRestore || isTriggered) return;
+        var saveable = GetComponent<SaveableTrigger>();
+        if (saveable == null || !saveable.WasAlreadyTriggered()) return;
+        isTriggered = true;
+        if (activateEnemies) ActivateEnemies();
+        onTrigger?.Invoke();
+    }
 
     private void OnTriggerEnter(Collider other)
     {
@@ -50,6 +69,10 @@ public class OnPlayerTrigger : MonoBehaviour
         if (isTriggered)
             return;
         
+        // a map-marker trigger without the map: nothing can be drawn yet, stay armed
+        if (requiredMapPage >= 0 && MapHandler.instance != null && !MapHandler.instance.OwnsPage(requiredMapPage))
+            return;
+
         // Check if item is required and player has it
         if (requireItem)
         {

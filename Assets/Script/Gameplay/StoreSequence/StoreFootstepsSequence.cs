@@ -43,6 +43,11 @@ public class StoreFootstepsSequence : MonoBehaviour
     [SerializeField] AudioClip lockClip;
     [Tooltip("Subtitle on the first attempt to open the locked door.")]
     public LocalizedString lockedAttemptLine;
+    [Tooltip("The entrance door's own subtitle (what E on it says). Until the Runner shows up across the road it says the line " +
+             "below instead (he won't go back out there); from then on its normal lines.")]
+    [SerializeField] SubtitleTrigger entranceDoorLines;
+    public LocalizedString beforeRunnerLine;
+    LocalizedString[] entranceNormalLines;
 
     [Header("Footsteps")]
     [SerializeField] AudioClip[] stepClips;
@@ -113,6 +118,20 @@ public class StoreFootstepsSequence : MonoBehaviour
             src.outputAudioMixerGroup = sfxGroup;
             pool[i] = src;
         }
+
+        if (entranceDoorLines != null && beforeRunnerLine != null && !beforeRunnerLine.IsEmpty)
+        {
+            entranceNormalLines = entranceDoorLines.SubtitleGroup;
+            entranceDoorLines.SubtitleGroup = new[] { beforeRunnerLine };
+        }
+    }
+
+    /// <summary>The Runner has shown himself (or the scene is already over): the entrance door says its normal lines again.</summary>
+    void RestoreEntranceLines()
+    {
+        if (entranceDoorLines == null || entranceNormalLines == null) return;
+        entranceDoorLines.SubtitleGroup = entranceNormalLines;
+        entranceNormalLines = null;
     }
 
     void Start()
@@ -160,6 +179,7 @@ public class StoreFootstepsSequence : MonoBehaviour
             actor.Idle();
             actor.gameObject.SetActive(true);
         }
+        RestoreEntranceLines();
         onFootstepsBegin?.Invoke();
         Debug.Log("[Footsteps] he is standing across the road, faint shuffling begins");
 
@@ -218,6 +238,7 @@ public class StoreFootstepsSequence : MonoBehaviour
     public void RestoreFinished()
     {
         Started = Finished = EntranceLocked = true;
+        RestoreEntranceLines();
         if (actor != null) actor.gameObject.SetActive(false);
         if (entranceDoor != null)
         {
@@ -244,6 +265,7 @@ public class StoreFootstepsSequence : MonoBehaviour
     {
         if (EntranceLocked) return;
         EntranceLocked = true;
+        RestoreEntranceLines();
 
         if (entranceDoor != null)
         {

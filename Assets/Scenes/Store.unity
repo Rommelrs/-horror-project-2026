@@ -15,10 +15,10 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
-  m_Fog: 0
+  m_Fog: 1
   m_FogColor: {r: 0.5664574, g: 0.47262093, b: 0.31122214, a: 0.9274411}
   m_FogMode: 2
-  m_FogDensity: 0.001
+  m_FogDensity: 0.002
   m_LinearFogStart: 0
   m_LinearFogEnd: 10
   m_AmbientSkyColor: {r: 0.45037502, g: 0.5239657, b: 0.5740074, a: 0.750625}
@@ -27,7 +27,7 @@ RenderSettings:
   m_AmbientIntensity: 0
   m_AmbientMode: 3
   m_SubtractiveShadowColor: {r: 0.49461555, g: 0.5281793, b: 0.6132076, a: 1}
-  m_SkyboxMaterial: {fileID: 1285489034}
+  m_SkyboxMaterial: {fileID: 618375796}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -1345,9 +1345,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1221799290}
     uniqueID: Alley1_DoorOpen_98b6890f
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1245510628}
     uniqueID: Alley1_ClosedDoor_a76f5d47
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1 &12072651
 GameObject:
@@ -1414,6 +1416,34 @@ Transform:
   - {fileID: 1006527596}
   m_Father: {fileID: 480022762}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!21 &14048467
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Enviro/Lite/EnviroFogRendering
+  m_Shader: {fileID: 4800000, guid: 5b0160f40adf130428015ffb5bfdb8a5, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats: []
+    m_Colors: []
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!1 &14160237
 GameObject:
   m_ObjectHideFlags: 0
@@ -2424,6 +2454,7 @@ MonoBehaviour:
   lifeTime: 1.5
   triggerOnce: 0
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 0
   completedEventType: 2
@@ -2496,6 +2527,7 @@ MonoBehaviour:
   lifeTime: 1.5
   triggerOnce: 0
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 1
   completedEventType: 2
@@ -17996,6 +18028,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1826693460}
     uniqueID: Goal_2d5ba2a4
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!23 &143278790 stripped
 MeshRenderer:
@@ -18465,6 +18498,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 45061436}
     uniqueID: Alley1_DoorOpen_52c3925d
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1001 &149987484
 PrefabInstance:
@@ -24687,15 +24721,19 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1632976780}
     uniqueID: Boundary1_0ec8bc32
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1429928699}
     uniqueID: Boundary1 (1)_d247e2e5
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 371897168}
     uniqueID: Boundary1 (3)_a83851c1
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1966319664}
     uniqueID: Boundary1 (2)_3eac90ee
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!23 &164833792 stripped
 MeshRenderer:
@@ -27299,6 +27337,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 493861897}
     uniqueID: Alley1_DoorOpen_ba5ac643
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1 &212721141
 GameObject:
@@ -30207,12 +30246,15 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1872116553}
     uniqueID: Alley3_DoorOpen_716d2f0f
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 899451937}
     uniqueID: Lock_Block_d049b694
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 49896440}
     uniqueID: LineAndSuccess_aef7806e
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!23 &251607854 stripped
 MeshRenderer:
@@ -33100,6 +33142,7 @@ MonoBehaviour:
   requiresKey: 1
   keyCodeRequired: 7856
   unlockStepWithKey: 1
+  consumeKeyOnUnlock: 1
   lockedLine:
     m_TableReference:
       m_TableCollectionName: Subtitles
@@ -37638,43 +37681,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 2786440611349163606, guid: 2fee3f3f3e622ac40bb68c9997162268, type: 3}
---- !u!84 &351220987
-RenderTexture:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Enviro Reflection Final Cubemap
-  m_ImageContentsHash:
-    serializedVersion: 2
-    Hash: 00000000000000000000000000000000
-  m_IsAlphaChannelOptional: 0
-  serializedVersion: 6
-  m_Width: 128
-  m_Height: 128
-  m_AntiAliasing: 1
-  m_MipCount: -1
-  m_DepthStencilFormat: 90
-  m_ColorFormat: 48
-  m_MipMap: 1
-  m_GenerateMips: 0
-  m_SRGB: 0
-  m_UseDynamicScale: 0
-  m_UseDynamicScaleExplicit: 0
-  m_BindMS: 0
-  m_EnableCompatibleFormat: 1
-  m_EnableRandomWrite: 0
-  m_TextureSettings:
-    serializedVersion: 2
-    m_FilterMode: 2
-    m_Aniso: 1
-    m_MipBias: 0
-    m_WrapU: 1
-    m_WrapV: 1
-    m_WrapW: 1
-  m_Dimension: 4
-  m_VolumeDepth: 1
-  m_ShadowSamplingMode: 2
 --- !u!1001 &352850343
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -41329,6 +41335,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1947889509}
     uniqueID: Alley1_DoorOpen_075e909e
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!23 &394684672 stripped
 MeshRenderer:
@@ -41974,6 +41981,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1184037304}
     uniqueID: Alley1_DoorOpen_da0d4a50
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!4 &398445127 stripped
 Transform:
@@ -47272,6 +47280,7 @@ MonoBehaviour:
   requiresKey: 0
   keyCodeRequired: 0
   unlockStepWithKey: 0
+  consumeKeyOnUnlock: 0
   lockedLine:
     m_TableReference:
       m_TableCollectionName: 
@@ -47431,6 +47440,7 @@ MonoBehaviour:
   lifeTime: 1.5
   triggerOnce: 0
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 1
   completedEventType: 0
@@ -48153,6 +48163,7 @@ MonoBehaviour:
   lifeTime: 1.5
   triggerOnce: 0
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 0
   completedEventType: 0
@@ -56081,6 +56092,7 @@ MonoBehaviour:
   lifeTime: 1.5
   triggerOnce: 1
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 0
   completedEventType: 0
@@ -56550,6 +56562,8 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  reapplyOnRestore: 0
+  requiredMapPage: -1
 --- !u!4 &563772593
 Transform:
   m_ObjectHideFlags: 0
@@ -59952,6 +59966,7 @@ MonoBehaviour:
   lifeTime: 3
   triggerOnce: 0
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 1
   completedEventType: 0
@@ -61379,6 +61394,7 @@ GameObject:
   - component: {fileID: 609447567}
   - component: {fileID: 609447566}
   - component: {fileID: 609447565}
+  - component: {fileID: 609447568}
   m_Layer: 0
   m_Name: Collider1 (21)
   m_TagString: Untagged
@@ -61479,6 +61495,19 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 609447563}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &609447568
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 609447563}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8ea3fc3940a68848886d46af3f91e55, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GroundType
+  surfaceType: 5
 --- !u!1 &609743622
 GameObject:
   m_ObjectHideFlags: 0
@@ -62364,6 +62393,53 @@ MeshRenderer:
     type: 3}
   m_PrefabInstance: {fileID: 1913614087}
   m_PrefabAsset: {fileID: 0}
+--- !u!21 &618375796
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Enviro/Lite/SkyboxSimple
+  m_Shader: {fileID: 4800000, guid: 846f1e8b410d51444866f03712815c1e, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _FlatCloudsBaseTexture:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _FlatCloudsDetailTexture:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MoonTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Stars:
+        m_Texture: {fileID: 8900000, guid: 214e1a8de772f334886a8d3bee074dc9, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats: []
+    m_Colors:
+    - _HorizonColor: {r: 0, g: 0, b: 0, a: 0}
+    - _SkyColor: {r: 0, g: 0, b: 0, a: 0}
+    - _SunColor: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!64 &618503180
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -63496,6 +63572,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1236051202}
     uniqueID: Alley1_DoorOpen_3642f1aa
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!23 &630694387 stripped
 MeshRenderer:
@@ -66279,6 +66356,7 @@ MonoBehaviour:
   lifeTime: 1.5
   triggerOnce: 1
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 0
   completedEventType: 0
@@ -78210,57 +78288,75 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 816964904}
     uniqueID: Boundary3_04d7f2cd
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 453208577}
     uniqueID: Boundary3 (1)_20750c09
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1048090836}
     uniqueID: Boundary3 (2)_47c5881b
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1564939104}
     uniqueID: Boundary3 (3)_2127bad0
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 995905289}
     uniqueID: Boundary3 (4)_242921fd
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 256124093}
     uniqueID: Boundary3 (6)_d9fbf842
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 881393429}
     uniqueID: Boundary3 (8)_6141e6f6
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 110371544}
     uniqueID: Boundary3 (9)_5cbff1c8
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1813749628}
     uniqueID: Boundary3 (10)_8ec2d29d
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 745111633}
     uniqueID: Boundary3 (12)_dbf0f40d
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1055561066}
     uniqueID: Boundary3 (13)_f21c11ed
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 402830521}
     uniqueID: Boundary3 (14)_c1d8a3e6
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1882867822}
     uniqueID: Boundary3 (15)_02a115d1
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1907851672}
     uniqueID: Boundary3 (16)_d4edfd3c
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 586806069}
     uniqueID: Boundary3 (11)_bbb4aaf3
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 153076580}
     uniqueID: Boundary3 (17)_a5dddb53
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 63060976}
     uniqueID: Boundary3 (7)_0b99220f
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 607851478}
     uniqueID: Boundary3 (5)_dbb74cc4
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1001 &803570413
 PrefabInstance:
@@ -82873,6 +82969,7 @@ MonoBehaviour:
   lifeTime: 1.5
   triggerOnce: 0
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 0
   completedEventType: 3
@@ -83063,18 +83160,6 @@ MonoBehaviour:
       - m_Target: {fileID: 97559066}
         m_TargetAssemblyTypeName: GunTutorialPrompts, Assembly-CSharp
         m_MethodName: StartTutorial
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 1
-        m_CallState: 2
-      - m_Target: {fileID: 2068246714}
-        m_TargetAssemblyTypeName: DisableFogOnArmed, Assembly-CSharp
-        m_MethodName: DisableFog
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -86813,6 +86898,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1568032356}
     uniqueID: Goal_2d5ba2a4ghgh
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1 &917012286
 GameObject:
@@ -87214,9 +87300,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 2042885969}
     uniqueID: Alley1_DoorOpen_1f47639f
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 866138198}
     uniqueID: Alley1_DoorClosed_8ce47274
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!23 &920190278 stripped
 MeshRenderer:
@@ -102427,7 +102515,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isAddionalCamera: 0
-  material: {fileID: 1778082900}
+  material: {fileID: 14048467}
   simpleFog: 0
 --- !u!114 &1023865415
 MonoBehaviour:
@@ -104963,6 +105051,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1000954526}
     uniqueID: Alley1_DoorOpen_0851c9cf
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1 &1054173110
 GameObject:
@@ -107063,9 +107152,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1435155404}
     uniqueID: Alley1_DoorOpen_8a70872b
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 3783504}
     uniqueID: Alley1_ClosedDoor_545fc4d1
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1001 &1086921653
 PrefabInstance:
@@ -107326,6 +107417,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 335559493}
     uniqueID: Alley1_DoorOpen_3ffd91f6
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1 &1088326254
 GameObject:
@@ -108951,6 +109043,7 @@ MonoBehaviour:
   lifeTime: 1.5
   triggerOnce: 1
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 0
   completedEventType: 0
@@ -113105,9 +113198,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 631344905}
     uniqueID: Boundary_00c84192
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 401696553}
     uniqueID: Boundary (1)_307f7f78
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1001 &1136912344
 PrefabInstance:
@@ -124087,53 +124182,6 @@ Transform:
   - {fileID: 2047802897}
   m_Father: {fileID: 41318526}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!21 &1285489034
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Enviro/Lite/SkyboxSimple
-  m_Shader: {fileID: 4800000, guid: 846f1e8b410d51444866f03712815c1e, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _FlatCloudsBaseTexture:
-        m_Texture: {fileID: 2800000, guid: 9b9ac0c14a0678d498b26fb2486005f1, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _FlatCloudsDetailTexture:
-        m_Texture: {fileID: 2800000, guid: 3904de3fb7c0ff1419fd3064f8114c90, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _MoonTex:
-        m_Texture: {fileID: 2800000, guid: 66ad4c55c5a3a7045a25295e064fc7d2, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _Stars:
-        m_Texture: {fileID: 8900000, guid: 214e1a8de772f334886a8d3bee074dc9, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats: []
-    m_Colors:
-    - _HorizonColor: {r: 0.91947657, g: 0.91947657, b: 0.91947657, a: 1}
-    - _SkyColor: {r: 0.41187257, g: 0.57850236, b: 0.7254959, a: 0.792158}
-    - _SunColor: {r: 0.9450186, g: 0.83714426, b: 0.72533697, a: 1}
-  m_BuildTextureStacks: []
-  m_AllowLocking: 1
 --- !u!1 &1285648959
 GameObject:
   m_ObjectHideFlags: 0
@@ -126625,10 +126673,10 @@ MonoBehaviour:
     flatCloudsAmbientLightIntensity: 1
     flatCloudsHGPhase: 0.9
     flatCoverage: 0
-    particleLayer1Alpha: 0.173
+    particleLayer1Alpha: 0
     particleLayer1Brightness: 0.75
     particleLayer1ColorPow: 2
-    particleLayer2Alpha: 0.088
+    particleLayer2Alpha: 0
     particleLayer2Brightness: 0
     particleLayer2ColorPow: 2
     particleCloudsOverwrite: 0
@@ -128034,7 +128082,7 @@ MonoBehaviour:
     heightFog: 1
     height: 80
     heightFogIntensity: 1
-    heightDensity: 1.5
+    heightDensity: 0.7
     noiseIntensity: 1
     noiseIntensityOffset: 0.3
     noiseScale: 0.001
@@ -128456,11 +128504,11 @@ MonoBehaviour:
   LST: 611.21497
   lastHourUpdate: 10
   hourTime: 0
-  cloudAnim: {x: 0, y: -0.9834968, z: 0.5854333}
-  cloudFlatBaseAnim: {x: 0, y: 0.29548454}
-  cloudFlatDetailAnim: {x: 0, y: -0.121504515}
-  cloudAnimNonScaled: {x: 0, y: -31.717445}
-  cirrusAnim: {x: 0, y: 0.41344807}
+  cloudAnim: {x: 0, y: -0.99026346, z: 0.58408004}
+  cloudFlatBaseAnim: {x: 0, y: 0.2948079}
+  cloudFlatDetailAnim: {x: 0, y: -0.13842116}
+  cloudAnimNonScaled: {x: 0, y: -31.718119}
+  cirrusAnim: {x: 0, y: 0.41341418}
   windIntensity: 0.25000003
   shadowIntensityMod: 0
   interiorMode: 0
@@ -128520,7 +128568,7 @@ MonoBehaviour:
     WeatherPrefabs: []
     zones:
     - {fileID: 1325783894}
-    startWeatherPreset: {fileID: 11400000, guid: 69485136906fd4c4db237cc9aecd7d41,
+    startWeatherPreset: {fileID: 11400000, guid: d20f6642ca448c247b4f143181443616,
       type: 2}
     currentActiveZone: {fileID: 1325783894}
     currentActiveWeatherPrefab: {fileID: 0}
@@ -128555,11 +128603,11 @@ MonoBehaviour:
     particleClouds: {fileID: 222144510}
   Fog:
     skyFogStart: 0
-    skyFogHeight: 0.01
+    skyFogHeight: 0.001
     skyFogIntensity: 0.851
     skyFogStrength: 0.1
-    scatteringStrenght: 1.29
-    sunBlocking: 0.01
+    scatteringStrenght: 1.4
+    sunBlocking: 0.06
     moonIntensity: 0
     hdrpRelativeFogHeight: 0
   LightShafts:
@@ -128584,7 +128632,7 @@ MonoBehaviour:
   usePostEffectFog: 1
   showFogInEditor: 1
   EnviroSkyRender: {fileID: 1023865414}
-  skyMat: {fileID: 1285489034}
+  skyMat: {fileID: 618375796}
   showSettings: 0
 --- !u!4 &1325783893
 Transform:
@@ -128638,6 +128686,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 991b8305772f6b24297aaa3bb65c47c1, type: 2}
   - {fileID: 11400000, guid: d46c8a17654d659438ba9709fe9e1800, type: 2}
   - {fileID: 11400000, guid: 6f9d0931688880347bd9ad00e43b3fb9, type: 2}
+  - {fileID: 11400000, guid: d20f6642ca448c247b4f143181443616, type: 2}
   updateMode: 0
   WeatherUpdateIntervall: 6
   useMeshZone: 0
@@ -136574,6 +136623,7 @@ MonoBehaviour:
   lifeTime: 3
   triggerOnce: 0
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 1
   completedEventType: 0
@@ -145643,6 +145693,7 @@ MonoBehaviour:
   requiresKey: 0
   keyCodeRequired: 0
   unlockStepWithKey: 0
+  consumeKeyOnUnlock: 0
   lockedLine:
     m_TableReference:
       m_TableCollectionName: 
@@ -145738,6 +145789,7 @@ MonoBehaviour:
   lifeTime: 1.5
   triggerOnce: 0
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 1
   completedEventType: 0
@@ -150296,6 +150348,7 @@ MonoBehaviour:
   requiresKey: 0
   keyCodeRequired: 0
   unlockStepWithKey: 0
+  consumeKeyOnUnlock: 0
   lockedLine:
     m_TableReference:
       m_TableCollectionName: 
@@ -154116,9 +154169,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1732242150}
     uniqueID: Alley1_DoorOpen_e388d3a1
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1148564050}
     uniqueID: Alley1_ClosedDoor_c497c84b
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!114 &1564258893
 MonoBehaviour:
@@ -159367,13 +159422,33 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
         type: 3}
-      propertyPath: surfaceFootstepSounds.Array.size
-      value: 1
+      propertyPath: defaultFootstepSounds.Array.size
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
         type: 3}
+      propertyPath: surfaceFootstepSounds.Array.size
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'defaultFootstepSounds.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 4f94e93c0bdc463469f44b5c02545314, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'defaultFootstepSounds.Array.data[1]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 274a01b069243204fba4e817f39f7ff5, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'defaultFootstepSounds.Array.data[2]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 60c5d3f55afaa4e4dbe498bdcd8a7bba, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
       propertyPath: surfaceFootstepSounds.Array.data[0].surfaceType
-      value: 5
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
         type: 3}
@@ -159382,7 +159457,82 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
         type: 3}
+      propertyPath: surfaceFootstepSounds.Array.data[1].surfaceType
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: surfaceFootstepSounds.Array.data[1].volumeScale
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: surfaceFootstepSounds.Array.data[2].surfaceType
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: surfaceFootstepSounds.Array.data[2].volumeScale
+      value: 1.25
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: surfaceFootstepSounds.Array.data[3].surfaceType
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: surfaceFootstepSounds.Array.data[3].volumeScale
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: surfaceFootstepSounds.Array.data[4].surfaceType
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: surfaceFootstepSounds.Array.data[4].volumeScale
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: surfaceFootstepSounds.Array.data[5].surfaceType
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: surfaceFootstepSounds.Array.data[5].volumeScale
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
       propertyPath: surfaceFootstepSounds.Array.data[0].footstepSounds.Array.size
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: surfaceFootstepSounds.Array.data[1].footstepSounds.Array.size
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: surfaceFootstepSounds.Array.data[2].footstepSounds.Array.size
+      value: 7
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: surfaceFootstepSounds.Array.data[3].footstepSounds.Array.size
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: surfaceFootstepSounds.Array.data[4].footstepSounds.Array.size
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: surfaceFootstepSounds.Array.data[5].footstepSounds.Array.size
       value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
@@ -159410,6 +159560,131 @@ PrefabInstance:
       propertyPath: 'surfaceFootstepSounds.Array.data[0].footstepSounds.Array.data[4]'
       value: 
       objectReference: {fileID: 8300000, guid: a00a0ba9fd63c57439c0b12e8c00442d, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[1].footstepSounds.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 6394dba571f681c459802271b417a439, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[1].footstepSounds.Array.data[1]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 0c71673cf09515f4cae088a8b1348faf, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[1].footstepSounds.Array.data[2]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 010540ccfe9f4534ebc2ac454cd661b2, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[1].footstepSounds.Array.data[3]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 3aed8e307f7f8d341970420fbfd55772, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[2].footstepSounds.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 1da97de1da3c9bb4eb790542a0fad4ac, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[2].footstepSounds.Array.data[1]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 530b5a2243ef8a64fa503063662d410d, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[2].footstepSounds.Array.data[2]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 1bf523e255911e54682ede053eb62561, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[2].footstepSounds.Array.data[3]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 4da00b84f8efc9a4f997c072ad6b1bd8, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[2].footstepSounds.Array.data[4]'
+      value: 
+      objectReference: {fileID: 8300000, guid: d047fbff87eb83744bd5134cd7dca21e, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[2].footstepSounds.Array.data[5]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 6287634ac99d742469839608aa290335, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[2].footstepSounds.Array.data[6]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 6a9da7cb317a76547b264c3c690291ba, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[3].footstepSounds.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: b944e018f1b69184aba7f04488419030, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[3].footstepSounds.Array.data[1]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 4a17cab3b1f472141aaaf9fde67c7df7, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[3].footstepSounds.Array.data[2]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 79f7b439c3dc38c40bda015d3c0fc53c, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[3].footstepSounds.Array.data[3]'
+      value: 
+      objectReference: {fileID: 8300000, guid: dc18025988b015c499861e551009f838, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[4].footstepSounds.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 41337b802529c384bb8a03bfa633f09a, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[4].footstepSounds.Array.data[1]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 526866a202fef0f40bf2bceab4b7415d, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[4].footstepSounds.Array.data[2]'
+      value: 
+      objectReference: {fileID: 8300000, guid: cefe151854137fe40af79c00a8e85bc2, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[4].footstepSounds.Array.data[3]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 6bf46e0bdfa48d34fa3a6dd09ffdb208, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[4].footstepSounds.Array.data[4]'
+      value: 
+      objectReference: {fileID: 8300000, guid: a00a0ba9fd63c57439c0b12e8c00442d, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[5].footstepSounds.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 579000b7f68acda4188f0e93e42c8aaa, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[5].footstepSounds.Array.data[1]'
+      value: 
+      objectReference: {fileID: 8300000, guid: ebc15a417d5a0f64f901a141a2551afc, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[5].footstepSounds.Array.data[2]'
+      value: 
+      objectReference: {fileID: 8300000, guid: a9a41a18713bd5c429187c152e112a94, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[5].footstepSounds.Array.data[3]'
+      value: 
+      objectReference: {fileID: 8300000, guid: de6a3799b75671848b74e0ea8fb1caa1, type: 3}
+    - target: {fileID: 1297627017077128468, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
+        type: 3}
+      propertyPath: 'surfaceFootstepSounds.Array.data[5].footstepSounds.Array.data[4]'
+      value: 
+      objectReference: {fileID: 8300000, guid: 4a449f8550510c04b86768f88685da42, type: 3}
     - target: {fileID: 2386842303776306197, guid: 8c8cbadf332d70441a8edfb0639ae3b2,
         type: 3}
       propertyPath: items.Array.size
@@ -164555,6 +164830,43 @@ ParticleSystem:
         m_PostInfinity: 2
         m_RotationOrder: 4
     vectorLabel1_3: W
+--- !u!84 &1617962225
+RenderTexture:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Enviro Reflection Final Cubemap
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 6
+  m_Width: 128
+  m_Height: 128
+  m_AntiAliasing: 1
+  m_MipCount: -1
+  m_DepthStencilFormat: 90
+  m_ColorFormat: 48
+  m_MipMap: 1
+  m_GenerateMips: 0
+  m_SRGB: 0
+  m_UseDynamicScale: 0
+  m_UseDynamicScaleExplicit: 0
+  m_BindMS: 0
+  m_EnableCompatibleFormat: 1
+  m_EnableRandomWrite: 0
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 2
+    m_Aniso: 0
+    m_MipBias: 0
+    m_WrapU: 1
+    m_WrapV: 1
+    m_WrapW: 1
+  m_Dimension: 4
+  m_VolumeDepth: 1
+  m_ShadowSamplingMode: 2
 --- !u!1 &1619363180
 GameObject:
   m_ObjectHideFlags: 0
@@ -171237,7 +171549,6 @@ MonoBehaviour:
   frontSwingExtraDistance: 2.2
   teleportSnapDistance: 4
   freeCameraPositionSmoothTime: 0.03
-  freeCameraExtraDistance: 0.8
   toggleFreeCameraKey: 17
   freeCameraSensitivity: 1
   freePitchMin: -20
@@ -176921,9 +177232,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1514612649}
     uniqueID: Cloth_Blocked_03e6de51
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1951077694}
     uniqueID: Cloth_Success_f2b3b4b8
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1 &1654118068
 GameObject:
@@ -185054,7 +185367,7 @@ ReflectionProbe:
   m_RenderDynamicObjects: 0
   m_UseOcclusionCulling: 1
   m_Importance: 1
-  m_CustomBakedTexture: {fileID: 351220987}
+  m_CustomBakedTexture: {fileID: 1617962225}
 --- !u!114 &1765891961
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -190741,34 +191054,6 @@ Transform:
   - {fileID: 899822285}
   m_Father: {fileID: 702156283}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!21 &1778082900
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Enviro/Lite/EnviroFogRendering
-  m_Shader: {fileID: 4800000, guid: 5b0160f40adf130428015ffb5bfdb8a5, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs: []
-    m_Ints: []
-    m_Floats: []
-    m_Colors: []
-  m_BuildTextureStacks: []
-  m_AllowLocking: 1
 --- !u!23 &1779096187 stripped
 MeshRenderer:
   m_CorrespondingSourceObject: {fileID: -4869031235868546492, guid: f215db47e805bf5419eb0d341565e897,
@@ -196989,6 +197274,7 @@ MonoBehaviour:
   lifeTime: 1.5
   triggerOnce: 1
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 0
   completedEventType: 0
@@ -198232,6 +198518,7 @@ MonoBehaviour:
   lifeTime: 1.5
   triggerOnce: 0
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 0
   completedEventType: 1
@@ -204508,9 +204795,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 327394721}
     uniqueID: Alley1_DoorOpen_324dc1d6
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1748974044}
     uniqueID: Alley1_ClosedDoor_597a9752
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1 &1858896247
 GameObject:
@@ -205334,9 +205623,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 809496419}
     uniqueID: WhisperingHoleBlock_dab4c73f
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 569211027}
     uniqueID: WhisperingHoleSuccess_0602e95a
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1001 &1867584659
 PrefabInstance:
@@ -226574,12 +226865,15 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1909555823}
     uniqueID: Boundary1_8eeb91bd
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1324787260}
     uniqueID: Boundary2_69ccf4eb
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 800471290}
     uniqueID: Boundary3_f24077cd
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1001 &1985495352
 PrefabInstance:
@@ -227126,6 +227420,16 @@ MonoBehaviour:
     m_TableEntryReference:
       m_KeyId: 0
       m_Key: The door won't open.
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  entranceDoorLines: {fileID: 1478076505}
+  beforeRunnerLine:
+    m_TableReference:
+      m_TableCollectionName: GUID:6b2f63a3b85184e42a4b65beed82f262
+    m_TableEntryReference:
+      m_KeyId: 110248042102050816
+      m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
@@ -231613,6 +231917,7 @@ MonoBehaviour:
   lifeTime: 1.5
   triggerOnce: 0
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 0
   completedEventType: 0
@@ -231651,6 +231956,7 @@ MonoBehaviour:
   lifeTime: 1.5
   triggerOnce: 0
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 0
   completedEventType: 0
@@ -231710,6 +232016,7 @@ MonoBehaviour:
   lifeTime: 1.5
   triggerOnce: 0
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 1
   completedEventType: 0
@@ -232793,6 +233100,7 @@ MonoBehaviour:
   lifeTime: 1.5
   triggerOnce: 1
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 0
   completedEventType: 0
@@ -234429,7 +234737,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2068246712}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f8348947924e4fd47aac6f4e870c61f2, type: 3}
   m_Name: 
@@ -236036,9 +236344,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 416566710}
     uniqueID: Alley1_DoorOpen_e388d3a12
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 249930115}
     uniqueID: Alley1_ClosedDoor_c497c84b1
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!114 &2084473322
 MonoBehaviour:
@@ -238473,9 +238783,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1898324404}
     uniqueID: Alley1_DoorOpen_0dab49d7
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1723221532}
     uniqueID: Alley1_DoorOpen_0dab49d7
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!23 &2107840909 stripped
 MeshRenderer:
@@ -418033,6 +418345,16 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1466698935113272354, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1466698935113272354, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 1546483450317817665, guid: 6edbdb288cbed464a9300b27d07c910c,
         type: 3}
       propertyPath: m_IsActive
@@ -418131,6 +418453,26 @@ PrefabInstance:
     - target: {fileID: 2544051833654117658, guid: 6edbdb288cbed464a9300b27d07c910c,
         type: 3}
       propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2582062977136840604, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2582062977136840604, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2582062977136840604, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2582062977136840604, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2644776154226160110, guid: 6edbdb288cbed464a9300b27d07c910c,
@@ -418835,6 +419177,26 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 140.9
       objectReference: {fileID: 0}
+    - target: {fileID: 5960024438973766452, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5960024438973766452, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5960024438973766452, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5960024438973766452, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6175068118911667182, guid: 6edbdb288cbed464a9300b27d07c910c,
         type: 3}
       propertyPath: m_Name
@@ -419080,6 +419442,26 @@ PrefabInstance:
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
       objectReference: {fileID: 20739116}
+    - target: {fileID: 7036261815581255666, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7036261815581255666, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7036261815581255666, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7036261815581255666, guid: 6edbdb288cbed464a9300b27d07c910c,
+        type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7042255294933828375, guid: 6edbdb288cbed464a9300b27d07c910c,
         type: 3}
       propertyPath: m_IsActive

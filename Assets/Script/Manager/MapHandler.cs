@@ -106,8 +106,16 @@ public class MapHandler : MonoBehaviour
         mapInput.action.performed -= OnMapButtonPressed;
     }
 
+    SaveableUIImage[] markerSets;
+
     private void Update()
     {
+        // the map markers' saver sits on the (mostly closed) map screen: keep it watching while the map is shut
+        if (markerSets == null)
+            markerSets = System.Array.FindAll(FindObjectsByType<SaveableUIImage>(FindObjectsInactive.Include, FindObjectsSortMode.None), s => s.gameObject.scene == gameObject.scene);
+        foreach (var s in markerSets)
+            if (s != null && !s.isActiveAndEnabled) s.Poll();
+
         if (mapMenu != null && mapMenu.activeSelf && !MapLocationReveal.IsSequenceActive)
         {
             if (UnityEngine.Input.GetKeyDown(KeyCode.RightArrow) || UnityEngine.Input.GetKeyDown(KeyCode.D))
@@ -146,12 +154,19 @@ public class MapHandler : MonoBehaviour
         }
     }
 
+    /// <summary>Raised when the maps the player owns change (picked up, or set by a loaded save / checkpoint).</summary>
+    public static event System.Action OnMapsChanged;
+
+    /// <summary>Page 0 is the street map (map 1), page 1 the chalk drawing (map 2).</summary>
+    public bool OwnsPage(int page) => page <= 0 ? hasMap1 : hasMap2;
+
     public void UnlockMap1()
     {
         hasMap1 = true;
         PlayerPrefs.SetInt("HasMap1", 1);
         PlayerPrefs.Save();
         if (Player.instance != null) Player.instance.hasMap = true;
+        OnMapsChanged?.Invoke();
     }
 
     public void UnlockMap2()
@@ -159,6 +174,20 @@ public class MapHandler : MonoBehaviour
         hasMap2 = true;
         PlayerPrefs.SetInt("HasMap2", 1);
         PlayerPrefs.Save();
+        OnMapsChanged?.Invoke();
+    }
+
+    /// <summary>Sets both maps to what a loaded checkpoint / save had, including taking one away again: continuing from a
+    /// checkpoint before the map was found must not keep it.</summary>
+    public void SetMaps(bool map1, bool map2)
+    {
+        hasMap1 = map1;
+        hasMap2 = map2;
+        PlayerPrefs.SetInt("HasMap1", map1 ? 1 : 0);
+        PlayerPrefs.SetInt("HasMap2", map2 ? 1 : 0);
+        PlayerPrefs.Save();
+        if (Player.instance != null) Player.instance.hasMap = map1;
+        OnMapsChanged?.Invoke();
     }
 
     // Keep old UnlockMap for CashRegister compatibility

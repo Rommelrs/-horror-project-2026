@@ -159,7 +159,8 @@ public class PlayerSound : MonoBehaviour
                 // Find matching surface sounds
                 for (int i = 0; i < surfaceFootstepSounds.Length; i++)
                 {
-                    if (surfaceFootstepSounds[i].surfaceType == groundType.surfaceType)
+                    // a surface with no clips of its own (e.g. "Default") uses the default steps instead of going silent
+                    if (surfaceFootstepSounds[i].surfaceType == groundType.surfaceType && surfaceFootstepSounds[i].footstepSounds != null && surfaceFootstepSounds[i].footstepSounds.Length > 0)
                     {
                         if (surfaceFootstepSounds[i].volumeScale > 0f) volumeScale = surfaceFootstepSounds[i].volumeScale;
                         return surfaceFootstepSounds[i].footstepSounds;

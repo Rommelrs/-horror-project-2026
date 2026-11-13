@@ -40,8 +40,7 @@ public class CheckpointRestorer : MonoBehaviour
         if (p.health != null)
         {
             p.health.ResetHealth();
-            int dmg = p.health.GetMaxHealthValue() - data.health;
-            if (dmg > 0) p.health.Damage(dmg);
+            p.health.SetHealthSilently(data.health);   // not Damage(): that played a hit (sound, blood, hurt HUD, stability loss)
         }
 
         // ─ Stability
@@ -59,8 +58,7 @@ public class CheckpointRestorer : MonoBehaviour
         p.hasMap = data.hasMap;
         if (MapHandler.instance != null)
         {
-            if (data.hasMap1) MapHandler.instance.UnlockMap1();
-            if (data.hasMap2) MapHandler.instance.UnlockMap2();
+            MapHandler.instance.SetMaps(data.hasMap1, data.hasMap2);   // also takes a map away that this checkpoint didn't have yet
         }
 
         // ─ Inventory

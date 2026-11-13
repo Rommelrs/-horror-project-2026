@@ -46,6 +46,10 @@ public class EnemyAggroTrigger : MonoBehaviour
             {
                 if (enemy != null)
                 {
+                    // switched off on purpose by the story (e.g. the Alley 3 bag bearer gone at the knockdown door): stays gone
+                    var hidden = enemy.GetComponent<SaveableDisableState>();
+                    if (!enemy.gameObject.activeSelf && hidden != null && hidden.WasSwitchedOff) continue;
+
                     if (!enemy.gameObject.activeInHierarchy)
                     {
                         Debug.Log($"[AggroTrigger] Activating inactive enemy: {enemy.name}");

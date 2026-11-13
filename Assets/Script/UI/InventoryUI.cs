@@ -249,17 +249,18 @@ public class InventoryUI : MonoBehaviour
             conditionStr = healthyString.GetLocalizedString();
             conditionColor = healthyColor;
         }
-        else if (health >= 60)
+        // (tightened 2026-11-07: "Good" used to cover 60-99, so four Questioner claws still read Good)
+        else if (health >= 80)
         {
             conditionStr = goodString.GetLocalizedString();
             conditionColor = goodColor;
         }
-        else if (health >= 40)
+        else if (health >= 55)
         {
             conditionStr = okString.GetLocalizedString();
             conditionColor = okColor;
         }
-        else if (health >= 20)
+        else if (health >= 30)
         {
             conditionStr = badString.GetLocalizedString();
             conditionColor = badColor;
