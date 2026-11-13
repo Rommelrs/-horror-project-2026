@@ -196,6 +196,7 @@ public class PlayerQuickHeal : MonoBehaviour
             SoundEffectManager.instance.PlaySFX(useClip);
 
         inventory.RemoveItem(item);
+        HealTutorialPrompts.RecordUse(item);
         if (HealingItemsHUD.instance != null)
             HealingItemsHUD.instance.ShowCount(item, before, inventory.CountOf(item));
     }

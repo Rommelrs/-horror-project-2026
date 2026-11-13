@@ -32,7 +32,8 @@ public class HealTutorialPrompts : MonoBehaviour
     [Tooltip("At or below this much health with a medic kit: \"Hold [G] to use Medic Kit\" (comes first).")]
     [SerializeField, Range(0f, 1f)] float remindMedKitAt = 0.3f;
     [SerializeField] float reminderSeconds = 5f;
-    [Tooltip("The same reminder waits this long before it can show again (it also re-arms once health is back above its line).")]
+    [Tooltip("The same reminder waits this long before it can show again (it also re-arms once health is back above its line). " +
+             "Each reminder stops for good once the player has used that item twice.")]
     [SerializeField] float reminderCooldown = 45f;
 
     readonly Queue<Entry> queue = new Queue<Entry>();
@@ -73,7 +74,22 @@ public class HealTutorialPrompts : MonoBehaviour
         reminderRoutine = StartCoroutine(Co_Remind(pick));
     }
 
-    bool Ready(Entry e) => !nextReminder.TryGetValue(e, out float t) || Time.unscaledTime >= t;
+    bool Ready(Entry e) => !Retired(e.item) && (!nextReminder.TryGetValue(e, out float t) || Time.unscaledTime >= t);
+
+    // ---- the low-health reminders retire once the player has shown they know the item: used it this many times ----
+    const int UsesToRetire = 2;
+    static string UseFlag(Item item, int n) => "HealUsed:" + item.name + ":" + n;
+
+    /// <summary>Called by PlayerQuickHeal for every heal item used. Counted as story flags, so the count travels with saves
+    /// and checkpoints and resets on New Game.</summary>
+    public static void RecordUse(Item item)
+    {
+        if (item == null) return;
+        for (int n = 1; n <= UsesToRetire; n++)
+            if (!StoryFlags.Has(UseFlag(item, n))) { StoryFlags.Set(UseFlag(item, n)); return; }
+    }
+
+    static bool Retired(Item item) => item != null && StoryFlags.Has(UseFlag(item, UsesToRetire));
 
     IEnumerator Co_Remind(Entry e)
     {
