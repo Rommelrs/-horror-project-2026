@@ -7,6 +7,21 @@ public class EnemyAggroTrigger : MonoBehaviour
 
     private bool hasTriggered = false;
 
+    // Loaded from a save / checkpoint taken after the player woke them: the enemies must be awake again (the Runner between
+    // Alley 2 and 3 came back in his fixed, idle type and never chased). Waits a frame so SaveableEnemy has removed the dead.
+    private System.Collections.IEnumerator Start()
+    {
+        yield return null;
+        if (hasTriggered) yield break;
+        SaveableTrigger saveableTrigger = GetComponent<SaveableTrigger>();
+        if (saveableTrigger == null || !saveableTrigger.WasAlreadyTriggered()) yield break;
+        hasTriggered = true;
+        Debug.Log("[AggroTrigger] fired before this save: waking its enemies again");
+        WakeEnemies();
+        if (destroyTriggerAfterActivation)
+            Destroy(gameObject);
+    }
+
     private void OnTriggerEnter(Collider other)
     {
         // Only care about the player
@@ -39,6 +54,14 @@ public class EnemyAggroTrigger : MonoBehaviour
             saveableTrigger.MarkAsTriggered();
         }
 
+        WakeEnemies();
+
+        if (destroyTriggerAfterActivation)
+            Destroy(gameObject);
+    }
+
+    private void WakeEnemies()
+    {
         // Activate all enemies
         if (enemies != null && enemies.Length > 0)
         {
@@ -67,8 +90,5 @@ public class EnemyAggroTrigger : MonoBehaviour
                 }
             }
         }
-
-        if (destroyTriggerAfterActivation)
-            Destroy(gameObject);
     }
 }

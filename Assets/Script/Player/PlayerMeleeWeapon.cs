@@ -97,8 +97,6 @@ public class PlayerMeleeWeapon : MonoBehaviour
     [Tooltip("End of the wind-up (pipe drawn back over the shoulder): the strike starts, turning stops.")]
     [SerializeField] float strikeFrom = 0.1f;
     [SerializeField] float contactAt = 0.175f;
-    [Tooltip("A Shoot press from here on is remembered and swings again as soon as the recovery ends; earlier presses are ignored.")]
-    [SerializeField] float bufferFrom = 0.55f;
     [Tooltip("The attack hands back to the stance here (blended).")]
     [SerializeField] float attackEnd = 0.93f;
     [SerializeField] float returnBlend = 0.4f;
@@ -591,11 +589,11 @@ public class PlayerMeleeWeapon : MonoBehaviour
 
         if (ready)
         {
-            if (shootInput != null && shootInput.action.WasPressedThisFrame())
+            if (shootInput != null && shootInput.action.WasPressedThisFrame() && !FocusClickGuard.Blocked)
             {
                 // not until the raise has played: a press during it is remembered and swings as soon as he's ready
                 if (!attacking && StanceReady) StartAttack();
-                else if (!attacking || attackT >= bufferFrom) queued = true;
+                else queued = true;   // any press during a swing is remembered: the next swing follows as soon as this one ends
             }
             if (!attacking && queued && StanceReady && aimHeld) StartAttack();
             if (!attacking && switchTargetInput != null && switchTargetInput.action.WasPressedThisFrame()) SwitchTarget();

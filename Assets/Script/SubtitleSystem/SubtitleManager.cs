@@ -38,6 +38,22 @@ public class SubtitleManager : MonoBehaviour
     }
 
     bool shouldFreezeGame = true;
+    // time was frozen by a subtitle and must be given back when the subtitles close - even if a later, non-freezing line
+    // replaced the freezing one (the Store door: its own lines freeze, the "locked" line that replaces them doesn't, and the
+    // game stayed at timeScale 0 until Esc)
+    bool frozeTime = false;
+
+    void Freeze()
+    {
+        Time.timeScale = 0f;
+        frozeTime = true;
+    }
+
+    void Unfreeze()
+    {
+        if (frozeTime && !GameManager.IsPaused) Time.timeScale = 1f;
+        frozeTime = false;
+    }
     bool waitForContinue = false;   // the last line stays until the player presses interact (no auto-dismiss)
     Action callbackOnCompleted;
 
@@ -73,8 +89,7 @@ public class SubtitleManager : MonoBehaviour
         if (!subtitleBusy) return;
         StopAllCoroutines();
         subtitleTxt.text = string.Empty;
-        if (shouldFreezeGame && !GameManager.IsPaused)
-            Time.timeScale = 1f;
+        Unfreeze();
         subtitleBusy = false;
         lastClosedTime = Time.time;
         callbackOnCompleted?.Invoke();
@@ -110,8 +125,7 @@ public class SubtitleManager : MonoBehaviour
                     //No more subtitle to play so exit out of subtitle mode
                     subtitleTxt.text = string.Empty;
 
-                    if (shouldFreezeGame && !GameManager.IsPaused)
-                        Time.timeScale = 1f;
+                    Unfreeze();
 
                     subtitleBusy = false;
                     lastClosedTime = Time.time;
@@ -196,8 +210,8 @@ public class SubtitleManager : MonoBehaviour
     {
         bool spoken = showFor > 0f;
         subtitleBusy = true;
-        if (shouldFreezeGame)
-            Time.timeScale = 0f;
+        if (shouldFreezeGame) Freeze();
+        else Unfreeze();   // a line that doesn't freeze replaced one that did: the game runs again
 
         subtitleTxt.text = string.Empty;
 
@@ -223,8 +237,7 @@ public class SubtitleManager : MonoBehaviour
             // Close subtitle
             subtitleTxt.text = string.Empty;
 
-            if (shouldFreezeGame && !GameManager.IsPaused)
-                Time.timeScale = 1f;
+            Unfreeze();
 
             subtitleBusy = false;
             lastClosedTime = Time.time;

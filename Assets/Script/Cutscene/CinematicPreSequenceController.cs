@@ -62,6 +62,8 @@ public class CinematicPreSequenceController : MonoBehaviour
     {
         if (!other.CompareTag("Player")) return;
         if (triggerOnce && hasTriggered) return;
+        // the knockdown it leads into already played in this save (or its Runner is gone): nothing to lead into
+        if (knockdownSequence != null && !knockdownSequence.WouldStart) { hasTriggered = true; return; }
         hasTriggered = true;
 
         StartCoroutine(Co_RunPreSequence());

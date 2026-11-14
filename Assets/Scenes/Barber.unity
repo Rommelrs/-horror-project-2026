@@ -4591,6 +4591,7 @@ MonoBehaviour:
   lifeTime: 3
   triggerOnce: 0
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 0
   completedEventType: 1
@@ -9524,6 +9525,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 120344843}
     uniqueID: Alley1_DoorOpen_ba5ac643
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1 &68823552
 GameObject:
@@ -56244,12 +56246,15 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1416371251}
     uniqueID: Alley3_DoorOpen_716d2f0f
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 2064906924}
     uniqueID: Lock_Block_d049b694
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 97068399}
     uniqueID: LineAndSuccess_aef7806e
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1 &334371197
 GameObject:
@@ -63220,34 +63225,6 @@ MonoBehaviour:
   m_SelectedFaces: 
   m_SelectedEdges: []
   m_SelectedVertices: 
---- !u!21 &361474688
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: Enviro/Lite/EnviroFogRendering
-  m_Shader: {fileID: 4800000, guid: 5b0160f40adf130428015ffb5bfdb8a5, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs: []
-    m_Ints: []
-    m_Floats: []
-    m_Colors: []
-  m_BuildTextureStacks: []
-  m_AllowLocking: 1
 --- !u!1 &362775360
 GameObject:
   m_ObjectHideFlags: 0
@@ -74369,9 +74346,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1230567125}
     uniqueID: Boundary_00c84192
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 841534947}
     uniqueID: Boundary (1)_307f7f78
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!43 &432399884
 Mesh:
@@ -84571,6 +84550,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1256026757}
     uniqueID: Alley1_DoorOpen_0851c9cf
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1001 &488625798
 PrefabInstance:
@@ -94415,9 +94395,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 848159645}
     uniqueID: Alley1_DoorOpen_98b6890f
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 302930085}
     uniqueID: Alley1_ClosedDoor_a76f5d47
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1 &557478838
 GameObject:
@@ -105370,9 +105352,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1476336783}
     uniqueID: Alley1_DoorOpen_e388d3a1
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 396867195}
     uniqueID: Alley1_ClosedDoor_c497c84b
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!114 &616950167
 MonoBehaviour:
@@ -119753,6 +119737,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 785224311}
     uniqueID: Alley1_DoorOpen_3ffd91f6
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!43 &664549652
 Mesh:
@@ -123038,6 +123023,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 252928992}
     uniqueID: Alley1_DoorOpen_3642f1aa
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!43 &684434648
 Mesh:
@@ -183235,9 +183221,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 320033764}
     uniqueID: Cloth_Blocked_03e6de51
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 220343025}
     uniqueID: Cloth_Success_f2b3b4b8
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1001 &888410175
 PrefabInstance:
@@ -212046,9 +212034,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1622540375}
     uniqueID: Alley1_DoorOpen_1f47639f
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 394108613}
     uniqueID: Alley1_DoorClosed_8ce47274
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!43 &903603127
 Mesh:
@@ -215862,9 +215852,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1953061141}
     uniqueID: Alley1_DoorOpen_8a70872b
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 517347676}
     uniqueID: Alley1_ClosedDoor_545fc4d1
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!4 &923611429 stripped
 Transform:
@@ -228993,6 +228985,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1602763509}
     uniqueID: Alley1_DoorOpen_da0d4a50
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!4 &993020868 stripped
 Transform:
@@ -257628,12 +257621,15 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 452548396}
     uniqueID: Boundary1_8eeb91bd
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 741772105}
     uniqueID: Boundary2_69ccf4eb
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1786943910}
     uniqueID: Boundary3_f24077cd
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!43 &1152065117
 Mesh:
@@ -288892,9 +288888,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 240579842}
     uniqueID: Alley1_DoorOpen_0dab49d7
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 800381987}
     uniqueID: Alley1_DoorOpen_0dab49d7
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1 &1197067082
 GameObject:
@@ -290681,6 +290679,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 90001797}
     uniqueID: Goal_2d5ba2a4
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1 &1208554792
 GameObject:
@@ -297457,7 +297456,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isAddionalCamera: 0
-  material: {fileID: 361474688}
+  material: {fileID: 0}
   simpleFog: 0
 --- !u!114 &1258470605
 MonoBehaviour:
@@ -297471,7 +297470,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 433faa8b758afed4f9295b193c697276, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _PixelationFactor: 0.188
+  _PixelationFactor: 0.25
   _ColorEmulationMode: 2
   _FullscreenColorDepth: {x: 256, y: 256, z: 256}
   _FullscreenDitherDepth: {x: 32, y: 32, z: 32}
@@ -314186,6 +314185,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 983776006}
     uniqueID: Alley1_DoorOpen_52c3925d
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!43 &1363387100
 Mesh:
@@ -324035,6 +324035,12 @@ PrefabInstance:
       propertyPath: inspectionMenu
       value: 
       objectReference: {fileID: 953113212}
+    - target: {fileID: 9106262857249923814, guid: c61d6da4a595dfe4d8a101c7e2310cfe,
+        type: 3}
+      propertyPath: interactKeyIcon
+      value: 
+      objectReference: {fileID: 21300000, guid: c4154956b4c18ad41a72892da6d13d81,
+        type: 3}
     - target: {fileID: 9106262857249923814, guid: c61d6da4a595dfe4d8a101c7e2310cfe,
         type: 3}
       propertyPath: menuPanelSwitcher
@@ -351922,6 +351928,7 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 913190620}
     uniqueID: Alley1_DoorOpen_075e909e
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!43 &1583000455
 Mesh:
@@ -405632,9 +405639,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 712713810}
     uniqueID: Alley1_DoorOpen_e388d3a12
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 698167472}
     uniqueID: Alley1_ClosedDoor_c497c84b1
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!114 &1856641881
 MonoBehaviour:
@@ -407791,6 +407800,7 @@ MonoBehaviour:
   lifeTime: 3
   triggerOnce: 0
   freezeGame: 1
+  waitForInteract: 0
   subtitleTriggerType: 0
   subtitleType: 0
   completedEventType: 1
@@ -416128,9 +416138,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 583235533}
     uniqueID: Alley1_DoorOpen_324dc1d6
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 985128721}
     uniqueID: Alley1_ClosedDoor_597a9752
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!43 &1918400694
 Mesh:
@@ -436996,15 +437008,19 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 872739290}
     uniqueID: Boundary1_0ec8bc32
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 607162995}
     uniqueID: Boundary1 (1)_d247e2e5
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1549211829}
     uniqueID: Boundary1 (3)_a83851c1
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1431498120}
     uniqueID: Boundary1 (2)_3eac90ee
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1 &1996350066
 GameObject:
@@ -447361,9 +447377,11 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 747578590}
     uniqueID: WhisperingHoleBlock_dab4c73f
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 628771037}
     uniqueID: WhisperingHoleSuccess_0602e95a
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!1 &2050586972
 GameObject:
@@ -447815,57 +447833,75 @@ MonoBehaviour:
   markers:
   - marker: {fileID: 1866147923}
     uniqueID: Boundary3_04d7f2cd
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 7476379}
     uniqueID: Boundary3 (1)_20750c09
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 632121482}
     uniqueID: Boundary3 (2)_47c5881b
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1552104038}
     uniqueID: Boundary3 (3)_2127bad0
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1343514866}
     uniqueID: Boundary3 (4)_242921fd
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 43730723}
     uniqueID: Boundary3 (6)_d9fbf842
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1159426194}
     uniqueID: Boundary3 (8)_6141e6f6
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 460550165}
     uniqueID: Boundary3 (9)_5cbff1c8
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1384429286}
     uniqueID: Boundary3 (10)_8ec2d29d
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1822667403}
     uniqueID: Boundary3 (12)_dbf0f40d
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1335142055}
     uniqueID: Boundary3 (13)_f21c11ed
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1127367124}
     uniqueID: Boundary3 (14)_c1d8a3e6
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 502665943}
     uniqueID: Boundary3 (15)_02a115d1
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1738433507}
     uniqueID: Boundary3 (16)_d4edfd3c
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1599918777}
     uniqueID: Boundary3 (11)_bbb4aaf3
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1344824021}
     uniqueID: Boundary3 (17)_a5dddb53
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 1303269527}
     uniqueID: Boundary3 (7)_0b99220f
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
   - marker: {fileID: 528561736}
     uniqueID: Boundary3 (5)_dbb74cc4
+    hiddenBy: {fileID: 0}
     lastKnownState: 0
 --- !u!4 &2051888778 stripped
 Transform:

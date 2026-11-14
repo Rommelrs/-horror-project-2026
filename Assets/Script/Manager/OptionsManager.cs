@@ -185,6 +185,19 @@ public class OptionsManager : MonoBehaviour
             Player.instance.playerWeaponSystem.Sensitivity = saved;
     }
 
+    /// <summary>Controls page "Restore Defaults": aim sensitivity, free camera (off) and its speed, ammo counter (on).
+    /// Set through the page's own sliders / toggles, so the game applies and saves them exactly as if the player had.</summary>
+    public void ResetControlSettings()
+    {
+        if (sensitivitySlider != null) { sensitivitySlider.value = 1f; OnSensitivityChanged(); }
+        if (freeCameraToggle != null) { freeCameraToggle.isOn = false; OnFreeCameraToggled(false); }
+        else if (CameraSystem.Instance != null) CameraSystem.Instance.SetFreeCamera(false);
+        if (cameraSpeedSlider != null) { cameraSpeedSlider.value = 1f; OnCameraSpeedChanged(1f); }
+        if (ammoCounterToggle != null) { ammoCounterToggle.isOn = true; OnAmmoCounterToggled(true); }
+        else AmmoCounterUI.Enabled = true;
+        PlayerPrefs.Save();
+    }
+
     #region Free Camera
     void OnFreeCameraToggled(bool enabled)
     {

@@ -182,6 +182,10 @@ public class PlayerWeaponSystem : MonoBehaviour
     float stabilityDecreaseCooldownPeriod = 40f;
     float nextStabilityDecreaseTime = 0f;
     private float nextFire;
+    [Tooltip("A Shoot press this long before the gun can fire again (cooldown, end of a reload) is kept and fires as soon as it can.")]
+    [SerializeField] float fireBufferTime = 0.3f;
+    float firePressedAt = -100f;
+    bool fireQueued;
 
     PlayerEventHandler playerEvent; // Third-person event handler
     PlayerEventHandler firstPersonEventHandler; // First-person event handler
@@ -537,8 +541,19 @@ public class PlayerWeaponSystem : MonoBehaviour
     void HandleShooting()
     {
         //Handle Shooting - block if reloading
-        if (shootInput.action.WasPressedThisFrame() && Time.time > nextFire && !isReloading)
+        // a press is never lost: one made during the shot cooldown fires the moment the gun is ready again, one made just
+        // before a reload ends (fireBufferTime) fires right after it
+        if (shootInput.action.WasPressedThisFrame() && !FocusClickGuard.Blocked)
         {
+            firePressedAt = Time.unscaledTime;
+            fireQueued = Time.time <= nextFire && !isReloading;
+        }
+        if (!isAiming || isReloading) fireQueued = false;   // let go of aim / started reloading: the queued shot is dropped
+
+        if ((fireQueued || Time.unscaledTime - firePressedAt <= fireBufferTime) && Time.time > nextFire && !isReloading)
+        {
+            firePressedAt = -100f;
+            fireQueued = false;
             if (HasEnoughAmmo())
             {
                 nextFire = Time.time + fireRate;

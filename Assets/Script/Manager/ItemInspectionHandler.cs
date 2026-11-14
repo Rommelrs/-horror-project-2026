@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 public class ItemInspectionHandler : MonoBehaviour
 {
@@ -97,25 +98,61 @@ public class ItemInspectionHandler : MonoBehaviour
                 itemRoot.transform.Rotate(Vector3.up * itemRootRotateSpeed * Time.unscaledDeltaTime, Space.Self);
         }
 
-        // a subtitle (e.g. the note on the knife handle) runs across the bottom of the screen: the Read / Close hints step
-        // aside until it's gone instead of being written over
-        bool subtitleUp = SubtitleManager.instance != null && SubtitleManager.instance.IsSubtitleBusy();
-        SetHintVisible(readHint, !subtitleUp);
-        SetHintVisible(exitHint, !subtitleUp);
+        // a subtitle ("I got 2 ammo", the note on the knife handle) runs across the bottom of the screen: the Read / Close hints
+        // sit above it instead of being written over. Decided once per inspection and never animated - the pickup's line starts
+        // in the same frame the item opens, so the hints simply appear in the raised spot and stay there until it closes.
+        if (InspectionMenuIsActive() && SubtitleManager.instance != null && SubtitleManager.instance.IsSubtitleBusy())
+            hintsRaised = true;
+        hintLift = hintsRaised ? subtitleHintLift : 0f;
+        PositionExitHint();
     }
 
-    static void SetHintVisible(GameObject hint, bool visible)
+    [Tooltip("How far the Read / Close hints rise while a subtitle is on screen (canvas pixels).")]
+    [SerializeField] float subtitleHintLift = 230f;
+    float hintLift;
+    bool hintsRaised;
+    float inspectionOpenedAt = -10f;
+
+    [Tooltip("Key shown on the Close hint for items (they close with interact). Notes keep the hint's own Esc key.")]
+    [SerializeField] Sprite interactKeyIcon;
+    Sprite escKeyIcon;
+    Image exitKeyImage;
+
+    void SetExitKeyIcon(bool note)
     {
-        if (hint == null) return;
-        var group = hint.GetComponent<CanvasGroup>();
-        if (group == null) group = hint.AddComponent<CanvasGroup>();
-        group.alpha = visible ? 1f : 0f;
+        if (exitKeyImage == null)
+        {
+            var t = exitHint.transform.Find("Image");
+            if (t == null) return;
+            exitKeyImage = t.GetComponent<Image>();
+            if (exitKeyImage == null) return;
+            escKeyIcon = exitKeyImage.sprite;
+        }
+        var sprite = note || interactKeyIcon == null ? escKeyIcon : interactKeyIcon;
+        if (sprite == null) return;
+        exitKeyImage.sprite = sprite;
+        var rt = (RectTransform)exitKeyImage.transform;
+        float h = rt.sizeDelta.y;
+        rt.sizeDelta = new Vector2(h * sprite.rect.width / sprite.rect.height, h);
     }
+    Vector2 readHintBase;
+    bool haveReadHintBase;
 
     public void OnInteractButtonPressed(InputAction.CallbackContext callbackContext)
     {
         if (SubtitleManager.instance != null && (SubtitleManager.instance.IsSubtitleBusy() || SubtitleManager.instance.IsWithinCooldownPeriod()))
             return;
+
+        // An item (not a note) on the inspect screen closes with the interact key too - the hint shows [E] Close for them.
+        // A short guard so the press that opened it doesn't also close it. Notes keep Esc (and F to read).
+        if (callbackContext.performed && InspectionMenuIsActive() && currentItem != null && currentItem.itemType != ItemType.Note
+            && !isReading && Time.unscaledTime > inspectionOpenedAt + 0.25f)
+        {
+            if (IsOpenedThroughInventory && InventoryUI.instance != null) InventoryUI.instance.EnableInventoryUI(true);
+            else CloseInspectionMenu();
+            if (Player.instance != null) Player.instance.SetLastInteractionTime(Time.unscaledTime);
+            return;
+        }
 
         if (GameManager.IsPaused)
             return;
@@ -185,6 +222,8 @@ public class ItemInspectionHandler : MonoBehaviour
     public void InspectItem(Item item, bool openedThroughInventory = false)
     {
         this.currentItem = item;
+        hintsRaised = false;
+        inspectionOpenedAt = Time.unscaledTime;
 
         isOpenedThroughInventory = openedThroughInventory;
 
@@ -213,7 +252,10 @@ public class ItemInspectionHandler : MonoBehaviour
 
         //Let the player know ESC closes the inspection
         if (exitHint != null)
+        {
             exitHint.SetActive(item != null);
+            SetExitKeyIcon(item != null && item.itemType == ItemType.Note);
+        }
         PositionExitHint();
 
         //Play Note Pickup Clip
@@ -252,6 +294,7 @@ public class ItemInspectionHandler : MonoBehaviour
 
     public void CloseInspectionMenu()
     {
+        hintsRaised = false;
         //Hide Inspection Items
         for (int i = 0; i < inspectionItemObjects.Length; i++)
         {
@@ -363,7 +406,10 @@ public class ItemInspectionHandler : MonoBehaviour
 
         RectTransform exitRect = (RectTransform)exitHint.transform;
         RectTransform readRect = (RectTransform)readHint.transform;
-        exitRect.anchoredPosition = readRect.anchoredPosition + (readHint.activeSelf ? new Vector2(0f, -exitHintSpacing) : Vector2.zero);
+        if (!haveReadHintBase) { readHintBase = readRect.anchoredPosition; haveReadHintBase = true; }
+        Vector2 lift = new Vector2(0f, hintLift);
+        readRect.anchoredPosition = readHintBase + lift;
+        exitRect.anchoredPosition = readHintBase + lift + (readHint.activeSelf ? new Vector2(0f, -exitHintSpacing) : Vector2.zero);
     }
 
     public bool IsNoteAndReading()

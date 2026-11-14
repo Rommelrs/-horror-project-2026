@@ -15030,6 +15030,7 @@ GameObject:
   - component: {fileID: 6384014343968090096}
   - component: {fileID: 3870858266573210253}
   - component: {fileID: 3379466334404918386}
+  - component: {fileID: 7425739599049824993}
   m_Layer: 5
   m_Name: MapMiddleGroup
   m_TagString: Untagged
@@ -15094,6 +15095,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &7425739599049824993
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5878671167885925858}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f807516f310dfe04982fcfbd6ddf9627, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedImage
+  english: {fileID: 21300000, guid: 303ca85fdd30d83478c55b8bd6340662, type: 3}
+  arabic: {fileID: 21300000, guid: 2b19bf5257e608242916d6d7f28280b7, type: 3}
 --- !u!1 &5939875414879579982
 GameObject:
   m_ObjectHideFlags: 0

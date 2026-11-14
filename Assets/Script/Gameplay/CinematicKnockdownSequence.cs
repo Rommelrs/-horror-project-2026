@@ -115,6 +115,26 @@ public class CinematicKnockdownSequence : MonoBehaviour
     public UnityEvent OnPlayerStoodUp;
 
     bool hasTriggered = false;
+
+    // Done-state lives in the save's progress (it rolls back with checkpoints): loading a checkpoint taken after the knockdown
+    // must not replay it - the Runner is gone by then and Khalid walked forever waiting for his push.
+    string DoneKey => "knockdown-done:" + gameObject.scene.name + "/" + gameObject.name;
+    bool AlreadyDone => SaveManager.instance != null && SaveManager.instance.IsInteractableUsed(DoneKey);
+
+    /// <summary>No Runner to push him (dead, gone or never set): the scene can't play, so it doesn't start.</summary>
+    bool RunnerReady => runnerEnemy != null && runnerEnemy.gameObject.activeInHierarchy &&
+                        (runnerEnemy.health == null || !runnerEnemy.health.IsDead) && runnerEnemy.stateMachine != null;
+
+    /// <summary>Would the knockdown play now? (A pre-sequence asks first, so it doesn't lock the player for a scene that won't come.)</summary>
+    public bool WouldStart => !hasTriggered && !AlreadyDone && RunnerReady;
+
+    bool CanStart()
+    {
+        if (hasTriggered) return false;
+        if (AlreadyDone) { hasTriggered = true; Debug.Log("[Knockdown] already played in this save - skipped"); return false; }
+        if (!RunnerReady) { Debug.Log("[Knockdown] no living Runner to push him - not started"); return false; }
+        return true;
+    }
     bool autoAiming = false;
     bool fallStarted = false;     // the knockdown animation has begun (isKnockdownAnimPlaying is still false for the first 0.05 s)
     float clearedAt = -1f;
@@ -294,8 +314,8 @@ public class CinematicKnockdownSequence : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (hasTriggered) return;
         if (!other.CompareTag("Player")) return;
+        if (!CanStart()) return;
         hasTriggered = true;
 
         StartCoroutine(Co_RunSequence());
@@ -525,6 +545,7 @@ public class CinematicKnockdownSequence : MonoBehaviour
     {
         if (!isPlayerDowned) return;
         isPlayerDowned = false;
+        if (SaveManager.instance != null) SaveManager.instance.RegisterUsedInteractable(DoneKey);
         isKnockdownAnimPlaying = false;
         autoAiming = false;
         fallStarted = false;
@@ -710,7 +731,7 @@ public class CinematicKnockdownSequence : MonoBehaviour
     /// </summary>
     public void StartSequence()
     {
-        if (hasTriggered) return;
+        if (!CanStart()) return;
         hasTriggered = true;
         StartCoroutine(Co_RunSequence());
     }

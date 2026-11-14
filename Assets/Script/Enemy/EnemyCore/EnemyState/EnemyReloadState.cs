@@ -12,6 +12,8 @@ public class EnemyReloadState : EnemyState
     }
 
     Coroutine reloadCR;
+    float animSpeedBefore = 1f;
+    float Slow(float seconds) => seconds / bagBearerEnemy.ReloadSpeed;
 
     public override void Enter()
     {
@@ -21,6 +23,10 @@ public class EnemyReloadState : EnemyState
             enemy.agent.isStopped = true;
 
         canLeave = false;
+
+        // the whole reload plays slower (animation and its timings together)
+        animSpeedBefore = enemy.anim.speed;
+        enemy.anim.speed = bagBearerEnemy.ReloadSpeed;
 
         if (reloadCR != null) enemy.StopCoroutine(reloadCR);
         reloadCR = enemy.StartCoroutine(Co_Reload());
@@ -37,17 +43,17 @@ public class EnemyReloadState : EnemyState
                 enemy.anim.SetFloat("ReloadIndex", bagBearerEnemy.bagBearerReloadGroup[i].reloadIndex);
                 enemy.anim.SetTrigger("Reload");
 
-                yield return new WaitForSeconds(bagBearerEnemy.bagBearerReloadGroup[i].weakpointShowDelay);
+                yield return new WaitForSeconds(Slow(bagBearerEnemy.bagBearerReloadGroup[i].weakpointShowDelay));
 
                 //Spawn Weakpoints
                 bagBearerEnemy.enemyWeakpoint.SpawnEnemyWeakpoint();
 
-                yield return new WaitForSeconds(bagBearerEnemy.bagBearerReloadGroup[i].reloadDurationStart);
+                yield return new WaitForSeconds(Slow(bagBearerEnemy.bagBearerReloadGroup[i].reloadDurationStart));
 
                 bagBearerEnemy.bagBearerReloadGroup[i].isReloaded = true;
                 bagBearerEnemy.bagBearerReloadGroup[i].reloadObject.SetActive(true);
 
-                yield return new WaitForSeconds(bagBearerEnemy.bagBearerReloadGroup[i].reloadDurationEnd);
+                yield return new WaitForSeconds(Slow(bagBearerEnemy.bagBearerReloadGroup[i].reloadDurationEnd));
 
                 //Destory Spawned Weakpoints
                 bagBearerEnemy.enemyWeakpoint.DestorySpawnedWeakpoint();
@@ -62,6 +68,7 @@ public class EnemyReloadState : EnemyState
         base.Exit();
 
         if (reloadCR != null) enemy.StopCoroutine(reloadCR);
+        enemy.anim.speed = animSpeedBefore;
 
         //Destory Spawned Weakpoints
         bagBearerEnemy.enemyWeakpoint.DestorySpawnedWeakpoint();

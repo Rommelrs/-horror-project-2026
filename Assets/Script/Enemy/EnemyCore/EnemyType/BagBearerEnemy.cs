@@ -29,6 +29,9 @@ public class BagBearerEnemy : Enemy
     [Tooltip("He spawns with no bags and does not reload straight away. The first time he sees the player (line of sight, within 'First Reload Distance') he stops and reloads in front of them, showing his weak point. After that he behaves normally.")]
     [SerializeField] bool startWithoutBags = false;
     [SerializeField] float firstReloadDistance = 11f;
+    [Tooltip("Reload playback speed (animation and its timings together, so the bag still appears in his hand). Below 1 = slower.")]
+    [SerializeField, Range(0.3f, 1.5f)] float reloadSpeed = 0.75f;
+    public float ReloadSpeed => Mathf.Max(0.05f, reloadSpeed);
     bool firstReloadPending = false;
 
     [Header("Spacing Settings")]

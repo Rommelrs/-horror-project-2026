@@ -300,6 +300,11 @@ public class Projectile : MonoBehaviour, IPoolable
         if (!canCollide)
             return;
 
+        // A bag hung on a door as its lock (the Store's back door) is not flying: only the lock's own breaking (the pipe, a
+        // bullet, a Bag Bearer's bag) may burst it. A box knocked into it in a cutscene used to pop it as a "landing".
+        if (GetComponent<Lock>() != null)
+            return;
+
         // Projectiles never hit other projectiles, and fly straight through enemies like a ghost:
         // stop colliding with that object for good and keep the velocity we had before the bump
         if (collision.collider.GetComponentInParent<Projectile>() != null || collision.collider.GetComponentInParent<Enemy>() != null)

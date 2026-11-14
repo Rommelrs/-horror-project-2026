@@ -219,8 +219,8 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   IsDead: 0
-  health: 350
-  maxHealth: 350
+  health: 250
+  maxHealth: 250
   hitBoxCenter: {x: 0, y: 0, z: 0}
   healthBar: {fileID: 0}
   healthUIBehaviour: 0
@@ -459,10 +459,12 @@ MonoBehaviour:
   OnAttackStarted:
     m_PersistentCalls:
       m_Calls: []
+  footstepSource: {fileID: 0}
   damageDirection: {x: 0, y: 0, z: 0}
   damageForceMultiplier: 0
   pendingKnockbackScale: 1
   pendingMeleeHit: 0
+  pendingEnvironmentHit: 0
   chaseStartDelayEnabled: 1
   playerDetected: 0
   onPlayerDetected:
@@ -471,6 +473,8 @@ MonoBehaviour:
   projectilePrefab: {fileID: 5654521602082323331, guid: 6282eefff98ad1a459cd401fa6c77f16,
     type: 3}
   positionOffset: -0.8
+  lowThrows: 0
+  lowThrowAngle: 0
   bagBearerReloadGroup:
   - reloadIndex: 0
     reloadObject: {fileID: 7652641080138560588}
@@ -495,6 +499,8 @@ MonoBehaviour:
     m_Bits: 128
   wallAvoidanceDistance: 1
   wallAvoidanceForce: 1
+  questionerNearPlayer: 8
+  throwGapNearQuestioner: 7
 --- !u!114 &2206201274027556818
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -509,6 +515,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemDrops: []
   dropOffset: {x: 0, y: 0.5, z: 0}
+  snapToGround: 1
+  lowHealthDrop: {fileID: 0}
+  lowHealthBelow: 0.4
+  onlyIfOutOf: []
+  lowHealthDropOffset: {x: 0.6, y: 0.5, z: 0}
 --- !u!114 &-7640194765309346968
 MonoBehaviour:
   m_ObjectHideFlags: 0
