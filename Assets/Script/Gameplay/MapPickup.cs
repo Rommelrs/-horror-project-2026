@@ -6,6 +6,9 @@ public class MapPickup : Interactable
     [SerializeField] AudioClip pickupSound;
     [Tooltip("If true, unlocks Map 2 (A/D navigation). If false, unlocks Map 1 only.")]
     [SerializeField] bool isSecondMap = false;
+    [Tooltip("Optional: said a moment after the map opens (Khalid reading it).")]
+    [SerializeField] SubtitleTrigger afterOpenSubtitle;
+    [SerializeField] float subtitleDelay = 2f;
     AudioSource audioSource;
 
     private void Awake()
@@ -50,6 +53,15 @@ public class MapPickup : Interactable
         MapHandler.instance.EnableMapMenu();
         if (isSecondMap)
             MapHandler.instance.GoToPage(1);
+
+        if (afterOpenSubtitle != null)
+        {
+            yield return new WaitForSecondsRealtime(subtitleDelay);
+            afterOpenSubtitle.TriggerSubtitle();
+            yield return new WaitForSecondsRealtime(0.5f);
+            while (SubtitleManager.instance != null && SubtitleManager.instance.IsSubtitleBusy())
+                yield return null;
+        }
 
         // Destroy after map opens
         yield return new WaitForSeconds(1.5f);

@@ -199,6 +199,10 @@ public class StoreBlackoutSequence : MonoBehaviour
         if (fuseHeldSince < 0f) fuseHeldSince = Time.time;
         if (expedited) return;
 
+        // rushing to the fuse box with the fuse cuts the power at once (the user wants it instant): whatever is left of the
+        // Runner scene is skipped and the door locks. The Training Note is far from the fuse drawer, so in normal play the
+        // Runner has already been seen by then.
+
         // near the fuse box (a generous radius: the box itself is high on the wall and its interaction trigger is tiny), or in that
         // trigger: the same moment 'Press I to open inventory' would show up
         bool atFusebox = PlayerAtFusebox();

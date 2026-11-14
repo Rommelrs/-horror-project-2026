@@ -18,6 +18,7 @@ public static class QuestionerMovesetBuilder
 {
     const string ModelPath = "Assets/Models/TheQuestioner/TheQuestioner.fbx";
     const string MovesPath = "Assets/Models/TheQuestioner/TheQuestioner_Moves.fbx";
+    const string TurnPath = "Assets/Models/TheQuestioner/TheQuestioner_Turn.fbx";
     const string ControllerPath = "Assets/Animations/EnemyAnimCon/TheQuestionerAnimCon.controller";
     const string PrefabPath = "Assets/Prefab/Enemy/QuestionerEnemyNoRunning.prefab";
     const string PlayerPrefabPath = "Assets/Prefab/Player/Player.prefab";
@@ -37,12 +38,14 @@ public static class QuestionerMovesetBuilder
         ("Q_StaggerDown", "Q_StaggerDown", 1f), ("Q_StaggerLoop", "Q_StaggerLoop", 1f), ("Q_StaggerUp", "Q_StaggerUp", 1f),
         ("Q_DeathKneel", "Q_DeathKneel", 1f), ("Q_Hurt", "Q_Hurt", 1f),
         ("Q_GrabScream", "Q_GrabScream", 1f), ("Q_BiteSlow", "Q_BiteSlow", 1f),
+        ("Q_Turn180", "Q_Turn180", 1f),      // the storage-room cutscene's turn on the spot (q21_turn.py)
     };
 
     [MenuItem("Tools/Questioner/Build Spec Moveset")]
     public static void Build()
     {
         ImportMoves();
+        ImportTurn();
         BuildController();
         BuildPrefab();
         BuildPlayer();
@@ -83,11 +86,45 @@ public static class QuestionerMovesetBuilder
 
     static AnimationClip FindClip(string name)
     {
-        foreach (var path in new[] { MovesPath, ModelPath })
+        foreach (var path in new[] { MovesPath, TurnPath, ModelPath })
             foreach (var o in AssetDatabase.LoadAllAssetsAtPath(path))
                 if (o is AnimationClip c && c.name == name) return c;
         Debug.LogWarning("[QuestionerMovesetBuilder] clip not found: " + name);
         return null;
+    }
+
+    /// <summary>Only the turn clip (AnimationTools/questioner/q21_turn.py): import settings + its state, nothing else touched.</summary>
+    [MenuItem("Tools/Questioner/Add Turn Clip (Q_Turn180)")]
+    public static void AddTurnClip()
+    {
+        ImportTurn();
+        var ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
+        var sm = ctrl.layers[0].stateMachine;
+        foreach (var st in sm.states.ToArray()) if (st.state.name == "Q_Turn180") sm.RemoveState(st.state);
+        var state = sm.AddState("Q_Turn180", new Vector3(1400, -200, 0));
+        state.motion = FindClip("Q_Turn180");
+        state.writeDefaultValues = true;
+        EditorUtility.SetDirty(ctrl);
+        AssetDatabase.SaveAssets();
+        Debug.Log("[QuestionerMovesetBuilder] Q_Turn180: " + (state.motion != null ? ((AnimationClip)state.motion).length + " s" : "CLIP MISSING"));
+    }
+
+    static void ImportTurn()
+    {
+        var src = (ModelImporter)AssetImporter.GetAtPath(ModelPath);
+        var mi = AssetImporter.GetAtPath(TurnPath) as ModelImporter;
+        if (mi == null) { Debug.LogError("[QuestionerMovesetBuilder] " + TurnPath + " missing - run AnimationTools/questioner/q21_turn.py"); return; }
+        mi.animationType = ModelImporterAnimationType.Generic;
+        mi.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+        mi.globalScale = src.globalScale;
+        mi.useFileScale = src.useFileScale;
+        mi.materialImportMode = ModelImporterMaterialImportMode.None;
+        mi.importAnimation = true;
+        mi.animationCompression = ModelImporterAnimationCompression.Off;      // slow feet: reduction would let them creep
+        var clips = mi.defaultClipAnimations;
+        foreach (var c in clips) { c.loopTime = false; c.keepOriginalPositionY = true; }
+        mi.clipAnimations = clips;
+        mi.SaveAndReimport();
     }
 
     // ---------------- animator ----------------

@@ -35,14 +35,19 @@ public class DistanceCuller : MonoBehaviour
     [SerializeField, Min(1)] int framesPerPass = 3;
 
     bool[] visible;
+    bool[] managed;     // false = it was already hidden when we started (hidden on purpose, e.g. replaced by the store makeover): never touched
     Camera cam;
     int cursor;
 
     void OnEnable()
     {
         visible = new bool[renderers.Length];
+        managed = new bool[renderers.Length];
         for (int i = 0; i < visible.Length; i++)
+        {
             visible[i] = renderers[i] != null && renderers[i].enabled;
+            managed[i] = visible[i];
+        }
     }
 
     void OnDisable()
@@ -50,7 +55,7 @@ public class DistanceCuller : MonoBehaviour
         // leave everything visible if the culler is switched off
         if (renderers == null) return;
         for (int i = 0; i < renderers.Length; i++)
-            if (renderers[i] != null)
+            if (renderers[i] != null && (managed == null || i >= managed.Length || managed[i]))
                 renderers[i].enabled = true;
     }
 
@@ -71,7 +76,7 @@ public class DistanceCuller : MonoBehaviour
             if (cursor >= renderers.Length) cursor = 0;
             int i = cursor++;
             Renderer r = renderers[i];
-            if (r == null) continue;
+            if (r == null || !managed[i]) continue;
 
             float sqr = r.bounds.SqrDistance(camPos);
             if (visible[i])

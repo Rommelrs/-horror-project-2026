@@ -22,6 +22,8 @@ public class StoreFootstepsSequence : MonoBehaviour
     [SerializeField] bool startOnSequenceStart = false;
     [Tooltip("Start when the player finds the fuse: when it appears in the last cabinet, or when they pick it up.")]
     [SerializeField] FuseTrigger startOnFuse = FuseTrigger.FusePickedUp;
+    [Tooltip("Start (with the short delays) when the player closes this note after reading it - Samir's Training Note. Empty = off.")]
+    [SerializeField] string startOnNoteRead = "Training Note";
 
     [Header("Actor")]
     [SerializeField] RunnerPuppet actor;
@@ -92,6 +94,8 @@ public class StoreFootstepsSequence : MonoBehaviour
     public bool Started { get; private set; }
     public bool Finished { get; private set; }
     public bool EntranceLocked { get; private set; }
+    /// <summary>The Runner has left (ran off into the fog, or the scene was skipped / restored).</summary>
+    public bool ActorGone { get; private set; }
 
     bool lockedLineShown;
     bool fastStart;
@@ -146,6 +150,22 @@ public class StoreFootstepsSequence : MonoBehaviour
             if (startOnFuse == FuseTrigger.FuseRevealed) FuseHuntManager.instance.onFuseRevealed.AddListener(BeginFromFuse);
             else if (startOnFuse == FuseTrigger.FusePickedUp) FuseHuntManager.instance.onFusePickedUp.AddListener(BeginFromFuse);
         }
+
+        if (!string.IsNullOrEmpty(startOnNoteRead) && ItemInspectionHandler.instance != null)
+            ItemInspectionHandler.instance.onCloseInspection += OnInspectionClosed;
+    }
+
+    void OnDestroy()
+    {
+        if (ItemInspectionHandler.instance != null)
+            ItemInspectionHandler.instance.onCloseInspection -= OnInspectionClosed;
+    }
+
+    void OnInspectionClosed(string itemName)
+    {
+        if (Started || itemName != startOnNoteRead) return;
+        Debug.Log("[Footsteps] triggered by reading '" + itemName + "'");
+        BeginFromFuse();
     }
 
     public void BeginFromFuse()
@@ -222,6 +242,7 @@ public class StoreFootstepsSequence : MonoBehaviour
         Debug.Log("[Footsteps] running away");
         yield return Co_MoveAlong(runAwayPoints, runSpeed, runStepLength, runVolume, runPitch, vanishBeyondCamera);
         if (actor != null) actor.gameObject.SetActive(false);
+        ActorGone = true;
         onActorGone?.Invoke();
 
         // 5. later: rapid running footsteps somewhere else outside
@@ -237,7 +258,7 @@ public class StoreFootstepsSequence : MonoBehaviour
     /// <summary>Loaded from a save: the scene is long over and the door stays locked. No click, no Runner, no events.</summary>
     public void RestoreFinished()
     {
-        Started = Finished = EntranceLocked = true;
+        Started = Finished = EntranceLocked = ActorGone = true;
         RestoreEntranceLines();
         if (actor != null) actor.gameObject.SetActive(false);
         if (entranceDoor != null)
@@ -255,6 +276,7 @@ public class StoreFootstepsSequence : MonoBehaviour
         if (runCR != null) StopCoroutine(runCR);
         runCR = null;
         if (actor != null) actor.gameObject.SetActive(false);
+        ActorGone = true;
         Debug.Log("[Footsteps] scene skipped - the player is heading for the fuse box");
         LockEntrance();
         Finished = true;

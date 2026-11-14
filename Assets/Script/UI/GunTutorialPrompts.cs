@@ -50,6 +50,16 @@ public class GunTutorialPrompts : MonoBehaviour
         routine = StartCoroutine(Co_Tutorial());
     }
 
+    /// <summary>Starts the hints right away: whoever calls this has already played its own cutscene, so there is nothing to
+    /// wait for (the Store's storage-room meeting: the prompts must be up the moment the player has the controls back).</summary>
+    public void StartTutorialNow()
+    {
+        skipCutsceneWait = true;
+        StartTutorial();
+    }
+
+    bool skipCutsceneWait;
+
     private void OnDestroy()
     {
         if (weapon != null)
@@ -73,7 +83,7 @@ public class GunTutorialPrompts : MonoBehaviour
         if (kind == WeaponKind.Gun)
             weapon.OnShotFired += OnShotFired;
 
-        if (waitForCutscene != null)
+        if (waitForCutscene != null && !skipCutsceneWait)
             yield return Co_WaitForCutscene();
 
         State shown = State.None;

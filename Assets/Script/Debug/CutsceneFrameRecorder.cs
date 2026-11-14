@@ -38,7 +38,7 @@ public class CutsceneFrameRecorder : MonoBehaviour
             PlayableDirector playing = null;
             foreach (var d in FindObjectsByType<PlayableDirector>(FindObjectsSortMode.None))
                 if (d.state == PlayState.Playing) { playing = d; break; }
-            if (playing == null && index > 0 && !CowardMeetingCutscene.IsPlaying) break;
+            if (playing == null && index > 0 && !CowardMeetingCutscene.IsPlaying && !StorageMeetingCutscene.IsPlaying) break;
 
             var shot = ScreenCapture.CaptureScreenshotAsTexture();
             int h = Mathf.RoundToInt(width * shot.height / (float)shot.width);

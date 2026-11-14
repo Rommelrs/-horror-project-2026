@@ -153,6 +153,14 @@ public class DoorInteractionHandler : MonoBehaviour
                         return;
                     }
 
+                    //Has the key but this door wants the map first ("Wait... the map behind the counter.")
+                    if (currentInteractable.MissingRequiredMap())
+                    {
+                        currentInteractable.ShowNeedMapLine();
+                        Debug.Log("[Door] '" + currentInteractable.name + "': has the key but not the map -> map line");
+                        return;
+                    }
+
                     //Has the key: with the unlock step the first press only unlocks the door, the next one goes through
                     if (currentInteractable.unlockStepWithKey && !currentInteractable.IsUnlocked)
                     {

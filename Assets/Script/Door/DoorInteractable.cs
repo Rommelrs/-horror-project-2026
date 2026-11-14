@@ -34,6 +34,12 @@ public class DoorInteractable : MonoBehaviour
     [Tooltip("Fires when the key unlocks the door (not when a saved unlocked door is loaded).")]
     public UnityEvent OnUnlocked;
 
+    [Header("Map first (needs 'Requires Key')")]
+    [Tooltip("On: even with the key, the door won't unlock until the player owns this map page (0 = the first map). Khalid says 'Need Map Line' instead.")]
+    public bool requireMapBeforeKey = false;
+    public int requiredMapPage = 0;
+    public LocalizedString needMapLine;
+
     [Header("One-way (shortcut doors)")]
     [Tooltip("On: from the 'Blocked Side' the door says it does not open from this side - until the player has opened it once from the other side. From then on it works from both sides (like a shortcut in the Souls games). The opened state is saved: this object needs a UniqueID.")]
     public bool oneWayUntilOpened = false;
@@ -114,6 +120,14 @@ public class DoorInteractable : MonoBehaviour
     public void ShowLockedLine() { Say(lockedLine); }
     public void ShowUnlockedLine() { Say(unlockedLine); }
     public void ShowWrongSideLine() { Remark(wrongSideLine); }
+    public void ShowNeedMapLine() { Remark(needMapLine); }
+
+    /// <summary>True when this door wants the map first and the player doesn't have it yet.</summary>
+    public bool MissingRequiredMap()
+    {
+        if (!requireMapBeforeKey) return false;
+        return MapHandler.instance != null && !MapHandler.instance.OwnsPage(requiredMapPage);
+    }
 
     void Say(LocalizedString line)
     {

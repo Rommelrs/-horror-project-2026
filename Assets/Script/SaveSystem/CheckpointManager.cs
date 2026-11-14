@@ -381,6 +381,8 @@ public class CheckpointManager : MonoBehaviour
 
     Item FindItemInResources(string itemName)
     {
+        // Renamed items: old saves still hold the old name.
+        if (itemName == "Steel Pipe") itemName = "Hammer";
         Item[] all = Resources.LoadAll<Item>("Items");
         foreach (var item in all)
             if (item.itemName == itemName || item.name == itemName)

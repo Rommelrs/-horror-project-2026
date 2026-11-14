@@ -28,6 +28,8 @@ public class CashRegisterInteractable : Interactable
 
     [SerializeField] Fusebox fuseBox;
     [SerializeField] SubtitleTrigger mapOpenedSubtitleTrigger;
+    [Tooltip("On (old store): the right code also gives the map and opens it. Off: the map is a separate pickup (the delivery map on the wall).")]
+    [SerializeField] bool givesMap = true;
 
     public UnityEvent OnCashRegisterOpenedSuccessfully;
 
@@ -67,7 +69,7 @@ public class CashRegisterInteractable : Interactable
         coll.enabled = false;
         
         // Unlock map
-        if (MapHandler.instance != null)
+        if (givesMap && MapHandler.instance != null)
             MapHandler.instance.UnlockMap();
         
         // Show drawer panel
@@ -170,7 +172,7 @@ public class CashRegisterInteractable : Interactable
         UpdateCodeText();
         
         // If code was correct, auto-open the map
-        if (correctCodeSubmitted && MapHandler.instance != null)
+        if (givesMap && correctCodeSubmitted && MapHandler.instance != null)
         {
             StartCoroutine(Co_OpenMapAfterClose());
         }
@@ -258,6 +260,23 @@ public class CashRegisterInteractable : Interactable
         if (typeClip != null) audioSource.PlayOneShot(typeClip);
     }
 
+    /// <summary>The register's C key: wipes what has been typed so far.</summary>
+    public void OnClearButtonPressed()
+    {
+        if (correctCodeSubmitted || !cashRegisterMenuActivated || !cashRegisterMenu.activeInHierarchy)
+            return;
+
+        if (fuseBox.hasEnergy == false)
+        {
+            if (wrongCodeClip != null) audioSource.PlayOneShot(wrongCodeClip);
+            return;
+        }
+
+        currentCode = "";
+        UpdateCodeText();
+        if (typeClip != null) audioSource.PlayOneShot(typeClip);
+    }
+
     void OnEnterPressed(InputAction.CallbackContext context)
     {
         //if (context.action.WasPerformedThisFrame())
@@ -326,7 +345,7 @@ public class CashRegisterInteractable : Interactable
         OnCashRegisterOpenedSuccessfully?.Invoke();
 
         //Unlock Map
-        if (MapHandler.instance != null)
+        if (givesMap && MapHandler.instance != null)
             MapHandler.instance.UnlockMap();
 
         //Play SFX

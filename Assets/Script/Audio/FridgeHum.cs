@@ -43,6 +43,9 @@ public class FridgeHum : MonoBehaviour
 
     public void SetPowered(bool on)
     {
+        // a machine that is switched off in the scene (never woke up, e.g. replaced by the store makeover) just stays silent.
+        // Throwing here used to kill the whole blackout sequence: no power cut, no crash, fuse box blocked for good.
+        if (source == null || !isActiveAndEnabled) return;
         if (on) StartHum(true);
         else StopHum(true);
     }

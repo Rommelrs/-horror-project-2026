@@ -29,6 +29,9 @@ public class FuseHuntManager : MonoBehaviour
     [Header("Fuse")]
     [Tooltip("The fuse pickup that is in the scene. It is hidden at the start and moved into the last cabinet that is searched.")]
     public GameObject fuseObject;
+    [Tooltip("Set: the fuse is ALWAYS in this drawer (Samir's note says where it is). It can be opened at any time; every other " +
+             "cabinet just says 'Nothing useful'. Empty: the old hunt (the fuse is in the last cabinet searched).")]
+    public SearchableCabinet fixedFuseCabinet;
 
     [Header("Lines (Subtitles table)")]
     [Tooltip("Said when the player tries a cabinet before the problem is identified (the cabinet stays shut).")]
@@ -142,7 +145,7 @@ public class FuseHuntManager : MonoBehaviour
     }
 
     /// <summary>False until the player has worked out what is wrong: the cabinets stay shut.</summary>
-    public bool CanSearch { get { return ProblemIdentified; } }
+    public bool CanSearch { get { return fixedFuseCabinet != null || ProblemIdentified; } }
 
     /// <summary>Called by a SearchableCabinet when the player tries it before they know the problem.</summary>
     public void NotifyBlocked(SearchableCabinet cabinet)
@@ -156,6 +159,12 @@ public class FuseHuntManager : MonoBehaviour
     /// <summary>Called by a SearchableCabinet every time the player opens it (only once the problem is identified).</summary>
     public void NotifyOpened(SearchableCabinet cabinet)
     {
+        if (fixedFuseCabinet != null)
+        {
+            NotifyOpenedFixed(cabinet);
+            return;
+        }
+
         bool isNew = searched.Add(cabinet);
         if (isNew && !FuseRevealed) SearchCounted?.Invoke(searched.Count, CountActiveCabinets(), cabinet);
 
@@ -182,6 +191,27 @@ public class FuseHuntManager : MonoBehaviour
             Say(noFuseHereLines, ref lastNoFuseIdx);
             Debug.Log("[FuseHunt] '" + cabinet.displayName + "' searched (" + searched.Count + "/" + CountActiveCabinets() + ") - no fuse here");
         }
+    }
+
+    // The fuse is always in one known drawer. Other cabinets are just "Nothing useful", but still feed the dread director
+    // (1st wrong cabinet: something falls, then whispers). Opening the right drawer is the "last search" (the storage scrape).
+    void NotifyOpenedFixed(SearchableCabinet cabinet)
+    {
+        bool isNew = searched.Add(cabinet);
+        if (cabinet == fixedFuseCabinet)
+        {
+            if (!FuseRevealed)
+            {
+                if (isNew) SearchCounted?.Invoke(searched.Count, searched.Count, cabinet);
+                RevealFuse(cabinet);
+            }
+            else if (FuseCollected()) Say(nothingUsefulLines, ref lastNothingIdx);
+            return;
+        }
+
+        if (isNew && !FuseRevealed) SearchCounted?.Invoke(searched.Count, searched.Count + 1, cabinet);
+        Say(nothingUsefulLines, ref lastNothingIdx);
+        Debug.Log("[FuseHunt] '" + cabinet.displayName + "' opened - not the fuse drawer");
     }
 
     int CountActiveCabinets()

@@ -33,6 +33,10 @@ public class FluorescentFixture : MonoBehaviour
     [SerializeField, Range(0f, 1f)] float flickerLevel = 0.6f;
     [Tooltip("Tube glow when On.")]
     [SerializeField, Range(0f, 2f)] float onGlow = 0.9f;
+    [Tooltip("Flicker mode only: copy this fixture's flicker instead of running an own pattern, so the whole room stutters together (like the Store's lights following the sun). Empty = own pattern.")]
+    [SerializeField] FluorescentFixture flickerLeader;
+
+    bool Follows => flickerLeader != null && flickerLeader != this;
 
     [Header("Audio")]
     [SerializeField] AudioClip buzzClip;
@@ -93,6 +97,14 @@ public class FluorescentFixture : MonoBehaviour
 
     void Update()
     {
+        if (mode == Mode.Flicker && Follows)
+        {
+            // the leader's state, scaled to this fixture's own levels
+            float g = flickerLeader.onGlow > 0f ? flickerLeader.glow / flickerLeader.onGlow : 0f;
+            float l = flickerLeader.flickerLevel > 0f ? flickerLeader.lampK / flickerLeader.flickerLevel : 0f;
+            Apply(onGlow * g, flickerLevel * l);
+            return;
+        }
         if (mode != Mode.Mirror) return;
         float k = 0f;
         if (stutterOverride >= 0f) k = stutterOverride;
@@ -138,7 +150,7 @@ public class FluorescentFixture : MonoBehaviour
         {
             case Mode.Off: Apply(0f, 0f); break;
             case Mode.On: modeCR = StartCoroutine(Co_On(startup)); break;
-            case Mode.Flicker: modeCR = StartCoroutine(Co_Flicker(startup)); break;
+            case Mode.Flicker: if (!Follows) modeCR = StartCoroutine(Co_Flicker(startup)); break;   // a follower copies its leader in Update
             default: break;   // Mirror: Update does it
         }
     }

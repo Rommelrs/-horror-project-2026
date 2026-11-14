@@ -21,6 +21,11 @@ public class FuseHuntDirector : MonoBehaviour
     [SerializeField] StoreBlackoutSequence blackout;
     [Tooltip("Normally the hunt begins when the player has inspected the cash register and the fuse box (FuseHuntManager.onProblemIdentified). Turn this on to start it at the blackout instead.")]
     [SerializeField] bool beginHuntOnBlackout = false;
+    [Tooltip("On: the dread events only start at the blackout (not when the problem is identified), so nothing creepy happens while the store still looks normal.")]
+    [SerializeField] bool dreadStartsAtBlackout = true;
+    [Tooltip("On: the dread events keep going until the fuse is IN (power back), not just until it is picked up - the fuse is easy to find now.")]
+    [SerializeField] bool runUntilPowerRestored = true;
+    [SerializeField] Fusebox fusebox;
 
     [Header("Pacing")]
     [Tooltip("Seconds between ambient events (random in this range). Counted from the end of the previous event.")]
@@ -94,6 +99,7 @@ public class FuseHuntDirector : MonoBehaviour
             hunt.onProblemIdentified.AddListener(OnProblemIdentified);
             if (hunt.ProblemIdentified) OnProblemIdentified();
         }
+        if (fusebox != null) fusebox.onEnergyRestored.AddListener(OnPowerRestored);
         if (blackout != null)
         {
             blackout.onBlackout.AddListener(OnBlackout);
@@ -110,6 +116,7 @@ public class FuseHuntDirector : MonoBehaviour
 
     void OnProblemIdentified()
     {
+        if (dreadStartsAtBlackout) return;
         if (hunt != null && hunt.FusePickedUp) return;
         HuntRunning = true;
         ScheduleNextAmbient(Time.time);
@@ -119,6 +126,7 @@ public class FuseHuntDirector : MonoBehaviour
     void OnBlackout()
     {
         if (beginHuntOnBlackout && hunt != null) { hunt.BeginHunt(); HuntRunning = true; }
+        if (dreadStartsAtBlackout && !powerRestored && !(hunt != null && hunt.FusePickedUp && !runUntilPowerRestored)) HuntRunning = true;
         if (!HuntRunning) return;
         crashPending = true;
         lockedUntil = float.MaxValue;   // wait for the crash
@@ -134,6 +142,16 @@ public class FuseHuntDirector : MonoBehaviour
 
     void OnFusePickedUp()
     {
+        if (runUntilPowerRestored) return;
+        HuntRunning = false;
+        queue.Clear();
+    }
+
+    bool powerRestored;
+
+    void OnPowerRestored()
+    {
+        powerRestored = true;
         HuntRunning = false;
         queue.Clear();
     }
@@ -146,6 +164,7 @@ public class FuseHuntDirector : MonoBehaviour
     void OnSearchCounted(int n, int total, SearchableCabinet cabinet)
     {
         searches = n;
+        if (!HuntRunning) return;   // before the blackout the store is still "normal"
         Debug.Log("[FuseHuntDirector] search " + n + "/" + total + " (" + cabinet.displayName + ")");
         Func<IEnumerator> ev;
         // the last search must not wait behind the earlier events: drop anything that has not started yet
