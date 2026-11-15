@@ -9,6 +9,10 @@ public class MapPickup : Interactable
     [Tooltip("Optional: said a moment after the map opens (Khalid reading it).")]
     [SerializeField] SubtitleTrigger afterOpenSubtitle;
     [SerializeField] float subtitleDelay = 2f;
+    [Tooltip("Optional: the map also goes into the Notes tab of the inventory (an Item of type Note with a model in the inspection lists).")]
+    [SerializeField] Item notesEntry;
+    [Tooltip("Optional: 'Press [M] to open Map' once the map has been closed again (like after the candy wrapper).")]
+    [SerializeField] MapHintPrompt mapHint;
     AudioSource audioSource;
 
     private void Awake()
@@ -49,6 +53,10 @@ public class MapPickup : Interactable
         else
             MapHandler.instance.UnlockMap1();
 
+        // ... and into the Notes, where it can be found again
+        if (notesEntry != null && Player.instance != null && Player.instance.inventory != null)
+            Player.instance.inventory.AddItem(notesEntry, 1);
+
         // Open map with fade, on the correct page
         MapHandler.instance.EnableMapMenu();
         if (isSecondMap)
@@ -62,6 +70,9 @@ public class MapPickup : Interactable
             while (SubtitleManager.instance != null && SubtitleManager.instance.IsSubtitleBusy())
                 yield return null;
         }
+
+        // how to open it again: shown once the player has closed it (the hint waits for that itself)
+        if (mapHint != null) mapHint.ShowHint();
 
         // Destroy after map opens
         yield return new WaitForSeconds(1.5f);

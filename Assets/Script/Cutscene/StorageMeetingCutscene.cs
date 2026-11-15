@@ -194,12 +194,46 @@ public class StorageMeetingCutscene : MonoBehaviour
             khalidAnim.Play("WalkMove", 0, 0f);
         }
 
+        SilenceStore();
+        if (steps == null) steps = gameObject.AddComponent<ScriptedFootsteps>();
+        steps.End();
+        if (khalidAnim != null && trackKhalidSteps) steps.Track(khalidAnim, 1f);
+        if (puppetAnim != null) steps.Track(puppetAnim, 0.85f);
+
         var cam = Camera.main;
         brain = cam != null ? cam.GetComponent<CinemachineBrain>() : null;
         if (brain != null) { savedBlend = brain.m_DefaultBlend; brain.m_DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Style.Cut, 0f); }
         ikWeight = 1f; bow = 0f; boxFalling = boxLanded = false; hammerGiven = false; cashierYaw = cashierYaw0;
         if (jaw != null) jaw.closed = 1f;
         Evaluate();
+    }
+
+    [Tooltip("Khalid's own walk plays its footstep events through PlayerSound; on: the cutscene also listens to his feet (only if those events are missing).")]
+    [SerializeField] bool trackKhalidSteps = false;
+    ScriptedFootsteps steps;
+
+    /// <summary>Nothing of the store's own scares may play over the meeting: the storage-room presence and the fuse hunt stop
+    /// for good, new dread events are held, and every one-shot still ringing is cut. Loops stay (fridge hums, the store's
+    /// ambience, music) - only what isn't part of this cutscene is touched.</summary>
+    void SilenceStore()
+    {
+        DreadEvents.HoldFor(99999f);
+        var scene = gameObject.scene;
+        foreach (var root in scene.GetRootGameObjects())
+        {
+            foreach (var p in root.GetComponentsInChildren<StorageRoomPresence>(true)) p.enabled = false;
+            foreach (var d in root.GetComponentsInChildren<FuseHuntDirector>(true)) d.enabled = false;
+            foreach (var a in root.GetComponentsInChildren<AudioSource>(true))
+            {
+                if (a == null || !a.isPlaying) continue;
+                if (a.transform.IsChildOf(transform)) continue;                                       // the cutscene's own
+                if (puppet != null && a.transform.IsChildOf(puppet.transform)) continue;
+                if (Player.instance != null && a.transform.IsChildOf(Player.instance.transform)) continue;
+                if (a.GetComponent<FridgeHum>() != null) continue;
+                if (a.loop && a.GetComponent<Projectile>() == null) continue;                        // hums, ambience, music
+                a.Stop();
+            }
+        }
     }
 
     void Disable(Behaviour b)
@@ -250,6 +284,7 @@ public class StorageMeetingCutscene : MonoBehaviour
         if (CutsceneSkipper.Instance != null) CutsceneSkipper.Instance.HideHint();
         if (tutorial != null) tutorial.StartTutorialNow();      // the controls are back: the prompts with them
 
+        if (steps != null) steps.End();
         running = false; IsPlaying = false; done = true; skipping = false;
     }
 

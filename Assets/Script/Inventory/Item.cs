@@ -18,6 +18,11 @@ public class Item : ScriptableObject
     public ItemType itemType;
     [Tooltip("Notes show a 'Press [Read] to read' hint by default. Turn off only for notes with no actual text content (e.g. a drawing meant to just be looked at), since the read prompt would otherwise show and reveal nothing.")]
     public bool showReadPrompt = true;
+    [Tooltip("Notes: opens straight on the reading page (no Read press needed).")]
+    public bool readOnOpen = false;
+    [Tooltip("Notes: can't be read while the power is out in the store (too dark); Khalid says 'tooDarkLine' instead.")]
+    public bool needsLightToRead = false;
+    public UnityEngine.Localization.LocalizedString tooDarkLine;
     public int healingAmount;
     public int stabilityIncreaseAmount;
     public int energyDrinkDuration;

@@ -19,8 +19,22 @@ MonoBehaviour:
   maxStackSize: 1
   itemType: 13
   showReadPrompt: 1
+  readOnOpen: 1
+  needsLightToRead: 1
+  tooDarkLine:
+    m_TableReference:
+      m_TableCollectionName: GUID:6b2f63a3b85184e42a4b65beed82f262
+    m_TableEntryReference:
+      m_KeyId: 110866458450120704
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
   healingAmount: 0
   stabilityIncreaseAmount: 0
   energyDrinkDuration: 0
   calmingInhalerDuration: 0
   keyCode: 0
+  references:
+    version: 2
+    RefIds: []

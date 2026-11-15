@@ -41,6 +41,8 @@ public class CashRegisterInteractable : Interactable
     Collider coll;
     bool cashRegisterMenuActivated = false;
     bool correctCodeSubmitted = false;
+    /// <summary>The code has been entered: the register is done with (its dust stops, nothing more to do here).</summary>
+    public bool CodeSolved => correctCodeSubmitted;
     string currentCode = "";
     Coroutine activatingCashRegisterCR;
     SaveableInteractable saveableInteractable;

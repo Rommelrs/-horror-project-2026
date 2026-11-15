@@ -16,7 +16,8 @@ public class SubtitleManager : MonoBehaviour
     [SerializeField] Text subtitleTxt;
     [SerializeField] bool useTypewriterEffect = true;
     [SerializeField] float letterDelay = 0.03f; // typing speed
-    [SerializeField] float autoDismissDelay = 3f; // auto-dismiss last subtitle after this delay
+    [Tooltip("Unused: subtitles no longer close by themselves (only spoken cutscene lines do, with their voice). Kept so the scenes' saved value stays.")]
+    [SerializeField] float autoDismissDelay = 3f;
     //[SerializeField] float groupDelay = 0.4f;
     [SerializeField] InputActionReference continueInput;
 
@@ -228,11 +229,12 @@ public class SubtitleManager : MonoBehaviour
             subtitleTxt.text = subtitle;
         }
 
-        // Auto-dismiss last subtitle if no more in queue
+        // The last line of the group: a spoken cutscene line closes with its voice; every other line stays until the
+        // player presses interact (OnContinueButtonPressed) - they read at their own pace, nothing is skipped for them.
         if (currentSubtitleList == null || currentSubtitleList.Count <= 0)
         {
-            if (waitForContinue && !spoken) yield break;   // closed by OnContinueButtonPressed
-            yield return new WaitForSecondsRealtime(spoken ? showFor : autoDismissDelay);
+            if (!spoken) yield break;
+            yield return new WaitForSecondsRealtime(showFor);
             
             // Close subtitle
             subtitleTxt.text = string.Empty;

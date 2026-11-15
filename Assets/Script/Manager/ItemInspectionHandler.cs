@@ -250,6 +250,14 @@ public class ItemInspectionHandler : MonoBehaviour
         else
             readHint.SetActive(false);
 
+        // a note that opens straight on its page (the credit book) - unless it is too dark in here to read it
+        bool readNow = false;
+        if (item != null && item.itemType == ItemType.Note && item.readOnOpen && item.showReadPrompt)
+        {
+            if (TooDark(item)) { readHint.SetActive(false); SayTooDark(item); }
+            else readNow = true;
+        }
+
         //Let the player know ESC closes the inspection
         if (exitHint != null)
         {
@@ -290,6 +298,35 @@ public class ItemInspectionHandler : MonoBehaviour
 
         //Pause the Game
         GameManager.IsPaused = true;
+
+        if (readNow) BeginReading();
+    }
+
+    static bool TooDark(Item item) => item != null && item.needsLightToRead && StoreBlackoutSequence.TooDarkToRead;
+
+    Coroutine tooDarkCR;
+    void SayTooDark(Item item)
+    {
+        if (tooDarkCR != null) StopCoroutine(tooDarkCR);
+        tooDarkCR = StartCoroutine(Co_SayTooDark(item));
+    }
+
+    // a moment after the book opens: he tries to make it out, then gives up
+    IEnumerator Co_SayTooDark(Item item)
+    {
+        yield return new WaitForSecondsRealtime(0.7f);
+        tooDarkCR = null;
+        if (currentItem != item || !InspectionMenuIsActive() || item.tooDarkLine == null || item.tooDarkLine.IsEmpty) yield break;
+        SubtitleManager.ShowSubtitle(item.tooDarkLine, false);
+    }
+
+    void BeginReading()
+    {
+        isReading = true;
+        for (int i = 0; i < readNoteUIs.Length; i++)
+            readNoteUIs[i].SetActive(readNoteUIs[i].name == currentItem.itemName);
+        readHint.SetActive(false);
+        PositionExitHint();
     }
 
     public void CloseInspectionMenu()
@@ -379,21 +416,14 @@ public class ItemInspectionHandler : MonoBehaviour
                 //Close Reading
                 CancelReading();
             }
+            else if (TooDark(currentItem))
+            {
+                if (SubtitleManager.instance == null || !SubtitleManager.instance.IsSubtitleBusy()) SayTooDark(currentItem);
+            }
             else
             {
                 //Enable Reading
-                isReading = true;
-
-                for (int i = 0; i < readNoteUIs.Length; i++)
-                {
-                    if (readNoteUIs[i].name == currentItem.itemName)
-                        readNoteUIs[i].SetActive(true);
-                    else
-                        readNoteUIs[i].SetActive(false);
-                }
-
-                readHint.SetActive(false);
-                PositionExitHint();
+                BeginReading();
             }
         }
     }

@@ -11,10 +11,13 @@ public class SubtitleTrigger : MonoBehaviour
     [SerializeField] bool autoTriggerOnStart = false;
     [SerializeField] float autoTriggerOnStartDelay = 0f;
 
+    [Tooltip("Spoken lines only (see 'Spoken Line'): how long the line stays, in step with the voice.")]
     [SerializeField] float lifeTime = 3f;
+    [Tooltip("A line said out loud in a cutscene: it shows whole at once and closes after 'Life Time' seconds, with the voice. Every other subtitle stays until the player presses interact.")]
+    [SerializeField] bool spokenLine = false;
     [SerializeField] bool triggerOnce = false;
     [SerializeField] bool freezeGame = true;
-    [Tooltip("The last line stays on screen until the player presses interact (otherwise it closes by itself after a few seconds).")]
+    [Tooltip("Unused: every subtitle that is not a spoken line now waits for the player to press interact.")]
     [SerializeField] bool waitForInteract = false;
 
     [System.Serializable]
@@ -112,7 +115,7 @@ public class SubtitleTrigger : MonoBehaviour
             _ => null
         };
         if (subtitleType == SubtitleType.Single)
-            SubtitleManager.ShowSubtitle(subtitleRef, freezeGame, onDone, -1f, waitForInteract);
+            SubtitleManager.ShowSubtitle(subtitleRef, freezeGame, onDone, spokenLine ? Mathf.Max(0.5f, lifeTime) : -1f, waitForInteract);
         else if (subtitleType == SubtitleType.Group)
             SubtitleManager.ShowSubtitleGroup(subtitleGroupRef, freezeGame, onDone, waitForInteract);
     }

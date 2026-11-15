@@ -102,6 +102,13 @@ public class StoreBlackoutSequence : MonoBehaviour
 
     public bool Started { get; private set; }
     public bool PowerIsOut { get; private set; }
+
+    /// <summary>The store sequence in the loaded scene (or null).</summary>
+    public static StoreBlackoutSequence Active { get; private set; }
+    /// <summary>The store is dark: notes that need light can't be read.</summary>
+    public static bool TooDarkToRead => Active != null && Active.PowerIsOut;
+    void OnEnable() { Active = this; }
+    void OnDisable() { if (Active == this) Active = null; }
     public bool Finished { get; private set; }
 
     readonly List<AudioSource> pool = new List<AudioSource>();

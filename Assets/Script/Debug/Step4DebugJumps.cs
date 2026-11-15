@@ -9,6 +9,7 @@ using UnityEngine.SceneManagement;
 ///   F6 (Store scene)  - play the storage-room cutscene now, from the door.
 ///   F7 (Store scene)  - take the hammer and leave through the back door: the Game scene loads and the exit cutscene plays.
 ///   F7 (Game scene)   - play the exit cutscene now, from where the back door puts Khalid.
+///   F8 (Game scene)   - the kidnap at the park toilet now (then the chase to Block 1).
 /// </summary>
 public class Step4DebugJumps : MonoBehaviour
 {
@@ -33,6 +34,11 @@ public class Step4DebugJumps : MonoBehaviour
             if (cs != null) cs.DebugPlayNow();
         }
         if (kb.f7Key.wasPressedThisFrame && (scene == "Store" || scene == "Game")) StartCoroutine(Co_ExitCutscene(scene));
+        if (kb.f8Key.wasPressedThisFrame && scene == "Game")
+        {
+            var k = FindFirstObjectByType<KidnapSequence>(FindObjectsInactive.Include);
+            if (k != null) k.DebugPlayNow();
+        }
     }
 
     static OnPlayerTrigger ExitTrigger()

@@ -514,6 +514,8 @@ public class QuestionerEnemy : HeadshotEnemy
 
     void OnDied()
     {
+        // the mouth's glowing weak point (and its hitbox) goes with him: a dead body has nothing left to aim at
+        RemoveMouthWeakpoints();
         ReleaseToken();
         combatState.ForceReleasePlayer();
         jawTarget = killedWhileStaggered ? 0.5f : 0.8f;

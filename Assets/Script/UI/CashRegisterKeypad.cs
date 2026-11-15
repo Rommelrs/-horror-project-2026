@@ -20,6 +20,7 @@ public class CashRegisterKeypad : MonoBehaviour
     public int startDigit = 5;
 
     readonly List<CashRegisterKey> keys = new List<CashRegisterKey>();
+    bool subtitleWasUp;
     CashRegisterKey selected;
     /// <summary>The key that is pointed at right now.</summary>
     public CashRegisterKey Selected => selected;
@@ -35,7 +36,7 @@ public class CashRegisterKeypad : MonoBehaviour
     void OnEnable()
     {
         Select(Find(CashRegisterKey.Kind.Digit, startDigit));
-        lastStick = Vector2Int.zero;
+        lastStick = Vector2Int.zero; subtitleWasUp = false;
     }
 
     public void Select(CashRegisterKey key)
@@ -87,11 +88,14 @@ public class CashRegisterKeypad : MonoBehaviour
         if (kb != null)
         {
             press = kb.spaceKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame;
-            // E is also "next line" of a subtitle: not while one is up
-            if (kb.eKey.wasPressedThisFrame && (SubtitleManager.instance == null || !SubtitleManager.instance.IsSubtitleBusy())) press = true;
+            if (kb.eKey.wasPressedThisFrame) press = true;
         }
         if (pad != null && pad.buttonSouth.wasPressedThisFrame) press = true;
-        if (press && selected != null) selected.Press();
+        // E / the pad's button also close a subtitle: the press that closed one (it is gone by now, the input callback ran
+        // first this frame) must not type on the register as well
+        bool subtitleUp = SubtitleManager.instance != null && SubtitleManager.instance.IsSubtitleBusy();
+        if (press && selected != null && !subtitleUp && !subtitleWasUp) selected.Press();
+        subtitleWasUp = subtitleUp;
 
         // ---- typing on the keyboard's own number keys
         if (kb == null) return;
