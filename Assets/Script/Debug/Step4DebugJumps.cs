@@ -10,6 +10,8 @@ using UnityEngine.SceneManagement;
 ///   F7 (Store scene)  - take the hammer and leave through the back door: the Game scene loads and the exit cutscene plays.
 ///   F7 (Game scene)   - play the exit cutscene now, from where the back door puts Khalid.
 ///   F8 (Game scene)   - the kidnap at the park toilet now (then the chase to Block 1).
+///   F9 (Game scene)   - the Runner drops the bridge plank now (each press starts from the next marked Runner spot).
+///   F10 (Game scene)  - just short of the pistol pickup (walk in: auto pickup + the "Pistol pickup" checkpoint).
 /// </summary>
 public class Step4DebugJumps : MonoBehaviour
 {
@@ -39,6 +41,24 @@ public class Step4DebugJumps : MonoBehaviour
             var k = FindFirstObjectByType<KidnapSequence>(FindObjectsInactive.Include);
             if (k != null) k.DebugPlayNow();
         }
+        if (kb.f9Key.wasPressedThisFrame && scene == "Game")
+        {
+            // each press: in from the next marked Runner spot
+            var b = FindFirstObjectByType<BridgeRunnerSequence>(FindObjectsInactive.Include);
+            if (b != null && b.SpawnCount > 0) { b.DebugPlayNow(bridgeSpawn % b.SpawnCount); bridgeSpawn++; }
+        }
+        if (kb.f10Key.wasPressedThisFrame && scene == "Game") JumpToPistol(player: Player.instance);
+    }
+
+    int bridgeSpawn;
+
+    // a few steps short of the pistol's walk-in trigger, facing it
+    static void JumpToPistol(Player player)
+    {
+        if (player.controller != null) player.controller.enabled = false;
+        player.transform.SetPositionAndRotation(new Vector3(-84f, 1.6f, 50.6f), Quaternion.Euler(0f, 90f, 0f));
+        if (player.controller != null) player.controller.enabled = true;
+        player.OnPlayerTelported?.Invoke();
     }
 
     static OnPlayerTrigger ExitTrigger()
