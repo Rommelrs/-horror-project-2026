@@ -69,13 +69,14 @@ public class KidnapSequence : MonoBehaviour
     [SerializeField] float runnerMinSpeed = 3.0f, runnerMaxSpeed = 5.5f;
     [Tooltip("Runner speed while carrying him off in the cutscene / after the gate.")]
     [SerializeField] float runnerCarrySpeed = 3.9f, runnerEscapeSpeed = 4.4f;
-    [Tooltip("Further ahead than this (m along the line) he is lost in the fog: he waits there until Khalid comes closer.")]
-    [SerializeField] float waitBeyondGap = 14f;
+    [Tooltip("It only stands still where the camera can't see it (user, 2026-11-18): further than this from the camera (lost in " +
+             "the storm), or off screen and at least offScreenRestDistance ahead. In sight it always runs.")]
+    [SerializeField] float sightDistance = 22f, offScreenRestDistance = 14f;
 
     [Header("Falling behind (user: camera to the runner + \"I better chase him!\")")]
     [Tooltip("The Runner has stood waiting (Khalid hardly moving) this long -> the camera turns to it and Khalid says the line.")]
     [SerializeField] float hintAfterWaiting = 3.5f;
-    [SerializeField] float hintSeconds = 2.4f, hintCooldown = 15f, hintFov = 32f;
+    [SerializeField] float hintSeconds = 2.4f, hintCooldown = 15f;
     [SerializeField] string hintLine = "I better chase him!";
     [Tooltip("Khalid further than this (m, straight line) from the Runner for farSeconds -> the reminder, whatever he is doing: " +
              "he stops, turns to face it and the camera shows it.")]
@@ -83,8 +84,6 @@ public class KidnapSequence : MonoBehaviour
     [Tooltip("Beyond this he is running off the wrong way: the reminder comes again as soon as the last one ends.")]
     [SerializeField] float leashDistance = 28f;
     [SerializeField] float lineCooldown = 10f;
-    [Tooltip("Enviro height fog while the zoom holds: the storm parts so he shows at 20-30 m.")]
-    [SerializeField] float hintFogDensity = 0.3f;
     [Tooltip("Ground speed the Runner's run clip is played for at animator speed 1 (lower = quicker legs for the same speed).")]
     [SerializeField] float runnerClipSpeed = 3.2f;
     [SerializeField] float adelWalkSpeed = 1.1f;
@@ -133,14 +132,15 @@ public class KidnapSequence : MonoBehaviour
     // falling behind
     CinemachineVirtualCamera hintShot;
     float waitingTime, lastHint = -999f, hintUntil = -1f, restoreBlendAt = -1f;
-    // the reminder is a ZOOM from Khalid's side onto the Runner (user: "dont make it like some sort of cut, make it zoom on the
-    // runner location"): the camera eases from the gameplay view to a spot by Khalid (lifted until it can see over walls) and
-    // the lens closes on him; the storm thins a little meanwhile so he reads at 20-30 m
-    Vector3 hintOffset;          // camera spot relative to Khalid, chosen when the reminder starts
-    float hintStart, hintFog;
+    // the reminder is the game camera itself, turned toward the Runner (user 2026-11-18: "make it like the original camera
+    // exactly" - same spot behind Khalid, same lens incl. its 25 m far clip, no zoom, the storm stays as it is); it eases over
+    // from the gameplay view and back, never a cut
+    Vector3 hintOffset;          // camera spot relative to Khalid, taken from the game camera when the reminder starts
     bool hintTurnsKhalid, pausedByHint;
     float farTime, lastLine = -999f;
     Vector3 lastPlayerPos;
+    float lastPlayerS, chaseEffort;
+    float gameFov = 60f, gameNear = 0.2f, gameFar = 25f;
     CinemachineBlendDefinition gameplayBlend;
 
     // khalid
@@ -195,7 +195,7 @@ public class KidnapSequence : MonoBehaviour
         var hgo = new GameObject("Chase hint (look at the Runner)");
         hgo.transform.SetParent(transform, false);
         hintShot = hgo.AddComponent<CinemachineVirtualCamera>();
-        hintShot.m_Lens.FieldOfView = hintFov; hintShot.m_Lens.NearClipPlane = 0.08f;
+        hintShot.m_Lens.FieldOfView = gameFov; hintShot.m_Lens.NearClipPlane = gameNear; hintShot.m_Lens.FarClipPlane = gameFar;
         hintShot.Priority = 0;
         hintShot.m_StandbyUpdate = CinemachineVirtualCameraBase.StandbyUpdateMode.Always;
     }
@@ -305,6 +305,7 @@ public class KidnapSequence : MonoBehaviour
         }
         else if (phase == Phase.Chase) UpdateChase(Time.deltaTime);
         else if (phase == Phase.Done && runnerOnPath && !runnerGone) AdvanceRunner(Time.deltaTime, false);
+        if (phase != Phase.Cutscene && phase != Phase.Chase) UpdateGateLeash(Time.deltaTime);
         UpdateStorm(Time.deltaTime);
     }
 
@@ -313,7 +314,8 @@ public class KidnapSequence : MonoBehaviour
         if (hintUntil >= 0f) UpdateHintShot(false);
         if (hintUntil >= 0f && hintTurnsKhalid && Player.instance != null && runner != null)
         {
-            Vector3 d = Flat(runner.transform.position - Player.instance.transform.position);
+            // he turns the way the camera looks (toward it, or down the lane it went)
+            Vector3 d = Flat(hintLook - Player.instance.transform.position);
             if (d.sqrMagnitude > 0.01f)
                 Player.instance.transform.rotation = Quaternion.RotateTowards(Player.instance.transform.rotation, Quaternion.LookRotation(d), 240f * Time.deltaTime);
         }
@@ -321,9 +323,7 @@ public class KidnapSequence : MonoBehaviour
         // Enviro eases the fog back to its weather preset every frame: ours goes on top while the storm lasts
         if (fogBase >= 0f && EnviroSkyLite.instance != null)
         {
-            hintFog = Mathf.MoveTowards(hintFog, hintUntil >= 0f ? 1f : 0f, Time.deltaTime / 0.8f);
-            float dens = Mathf.Lerp(fogBase, stormFogDensity, storm);
-            EnviroSkyLite.instance.fogSettings.heightDensity = Mathf.Lerp(dens, Mathf.Min(dens, hintFogDensity), Mathf.SmoothStep(0f, 1f, hintFog));
+            EnviroSkyLite.instance.fogSettings.heightDensity = Mathf.Lerp(fogBase, stormFogDensity, storm);
             if (storm <= 0f && stormTarget <= 0f) fogBase = -1f;   // done: Enviro has it back (already at its own value)
         }
     }
@@ -521,6 +521,7 @@ public class KidnapSequence : MonoBehaviour
         HideGun(player, true);
         playerS = ProjectOnPath(player.transform.position, 0f);
         lastPlayerPos = player.transform.position; waitingTime = 0f; farTime = 0f; hintUntil = -1f; restoreBlendAt = -1f;
+        lastPlayerS = playerS; chaseEffort = 3f;     // he starts out chasing
     }
 
     void UpdateChase(float dt)
@@ -543,37 +544,106 @@ public class KidnapSequence : MonoBehaviour
     void UpdateFallingBehind(Player player, float dt)
     {
         Vector3 pos = player.transform.position;
-        float speed = dt > 0f ? Flat(pos - lastPlayerPos).magnitude / dt : 0f;
+        Vector3 vel = dt > 0f ? Flat(pos - lastPlayerPos) / dt : Vector3.zero;
+        float speed = vel.magnitude;
         lastPlayerPos = pos;
         if (runnerWaiting && speed < 1.5f) waitingTime += dt; else waitingTime = 0f;
         float dist = runner != null ? Flat(runner.transform.position - pos).magnitude : 0f;
-        if (dist > farDistance) farTime += dt; else farTime = 0f;
+        // running its way (toward it, or on along its line) is doing it right however far behind he is: no reminder then
+        // (user: it "ruins the moment")
+        float toward = runner != null && dist > 0.1f ? Vector3.Dot(vel, Flat(runner.transform.position - pos) / dist) : 0f;
+        float along = dt > 0f ? (playerS - lastPlayerS) / dt : 0f;
+        lastPlayerS = playerS;
+        chaseEffort = Mathf.Lerp(chaseEffort, Mathf.Max(toward, along), 1f - Mathf.Exp(-3f * dt));
+        bool chasing = chaseEffort > 0.8f;
+        if (dist > farDistance && !chasing) farTime += dt; else farTime = 0f;
         bool canHint = hintUntil < 0f && runner != null && runner.gameObject.activeSelf;
         bool hangingBack = waitingTime >= hintAfterWaiting && Time.time - lastHint >= hintCooldown;
         bool tooFar = farTime >= farSeconds && Time.time - lastHint >= (dist > leashDistance ? hintSeconds + 1f : farCooldown);
         if (canHint && (hangingBack || tooFar))
         {
-            lastHint = Time.time; hintUntil = Time.time + hintSeconds; waitingTime = 0f; farTime = 0f;
-            if (brain == null && Camera.main != null) brain = Camera.main.GetComponent<CinemachineBrain>();
-            // far away he'd be a speck in the storm over Khalid's shoulder: show him from close by instead
-            hintOffset = HintCameraOffset(player);
-            hintStart = Time.time;
+            waitingTime = 0f; farTime = 0f;
             // wandering off: Khalid stops and turns to face it (he comes out of it pointing the right way)
-            hintTurnsKhalid = tooFar;
-            if (hintTurnsKhalid && !player.pauseMovement) { player.pauseMovement = true; pausedByHint = true; }
-            if (brain != null)
-            {
-                if (restoreBlendAt < 0f) gameplayBlend = brain.m_DefaultBlend;
-                // never a cut: the view eases over to the zoom and back
-                brain.m_DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Style.EaseInOut, 0.7f);
-                restoreBlendAt = -1f;
-            }
-            UpdateHintShot(true);
-            hintShot.Priority = 70;
-            if (Time.time - lastLine >= lineCooldown) { lastLine = Time.time; Say(hintLine, 2.2f); }
+            StartHint(player, tooFar, false, hintLine);
         }
         if (hintUntil >= 0f && Time.time >= hintUntil) EndHint();
         if (restoreBlendAt >= 0f && Time.time >= restoreBlendAt) { if (brain != null) brain.m_DefaultBlend = gameplayBlend; restoreBlendAt = -1f; }
+    }
+
+    bool hintAtGate;
+
+    /// <summary>A reminder: the game camera as it is right now (its spot behind Khalid and its lens) eases round to look at the
+    /// Runner (or, after the chase, the Block 1 gate), and Khalid says the line.</summary>
+    void StartHint(Player player, bool turnKhalid, bool atGate, string line)
+    {
+        lastHint = Time.time; hintUntil = Time.time + hintSeconds; hintAtGate = atGate;
+        if (brain == null && Camera.main != null) brain = Camera.main.GetComponent<CinemachineBrain>();
+        var cam = Camera.main;
+        if (cam != null)
+        {
+            if (brain == null || !brain.IsBlending) { gameFov = cam.fieldOfView; gameNear = cam.nearClipPlane; gameFar = cam.farClipPlane; }
+            hintOffset = cam.transform.position - player.transform.position;
+        }
+        else hintOffset = Vector3.up * 2.5f - player.transform.forward * 3f;
+        hintShot.m_Lens.FieldOfView = gameFov; hintShot.m_Lens.NearClipPlane = gameNear; hintShot.m_Lens.FarClipPlane = gameFar;
+        hintTurnsKhalid = turnKhalid;
+        if (hintTurnsKhalid && !player.pauseMovement) { player.pauseMovement = true; pausedByHint = true; }
+        if (brain != null)
+        {
+            if (restoreBlendAt < 0f) gameplayBlend = brain.m_DefaultBlend;
+            // never a cut: the view eases over and back
+            brain.m_DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Style.EaseInOut, 0.7f);
+            restoreBlendAt = -1f;
+        }
+        UpdateHintShot(true);
+        hintShot.Priority = 70;
+        if (Time.time - lastLine >= lineCooldown) { lastLine = Time.time; Say(line, 2.2f); }
+    }
+
+    // ------------------------------------------------------------------ after the chase: back to the gate
+
+    [Header("After the chase (user: wandering off -> \"He might be there!\", camera to the Block 1 gate)")]
+    [SerializeField] Vector3 gateLook = new Vector3(-176.6f, 2.6f, 12.6f);
+    [Tooltip("Further than this from the gate (and not heading to it) for farSeconds -> the reminder. Until he has been through it.")]
+    [SerializeField] float gateLeashDistance = 18f;
+    [SerializeField] string gateLine = "He might be there!";
+    [Tooltip("Hard boundary (user: \"player can still go very far away\"): further than this from the gate -> a dip to black and " +
+             "he is back at the last spot he stood comfortably inside it, facing the gate, and the reminder plays.")]
+    [SerializeField] float gateBoundary = 32f;
+    float gateFarTime, gateEffort = 3f;
+    Vector3 gateLastPos;
+    bool gateInit;
+    Vector3 gateSafePos; bool gateSafeValid, gateTeleporting; float gateSafeNext;
+
+    void UpdateGateLeash(float dt)
+    {
+        if (restoreBlendAt >= 0f && Time.time >= restoreBlendAt) { if (brain != null) brain.m_DefaultBlend = gameplayBlend; restoreBlendAt = -1f; }
+        if (gateTeleporting) return;
+        if (hintUntil >= 0f) { if (Time.time >= hintUntil) EndHint(); return; }
+        var player = Player.instance;
+        if (player == null || !AlreadyDone || GateEntryLock.PastGate) return;
+        Vector3 pos = player.transform.position;
+        // through the gate into Block 1: over for good
+        if (pos.z < 11.3f && pos.z > -2f && pos.x > -183f && pos.x < -170f) { StoryFlags.Set(GateEntryLock.EnteredFlag); return; }
+        if (!gateInit || dt <= 0f) { gateInit = true; gateLastPos = pos; gateEffort = 3f; return; }
+        Vector3 vel = Flat(pos - gateLastPos) / dt;
+        gateLastPos = pos;
+        if (GameManager.IsPaused || CheckpointManager.IsLoadingCheckpoint || IsPlaying || player.pauseMovement) { gateFarTime = 0f; return; }
+        Vector3 to = Flat(gateLook - pos);
+        float dist = to.magnitude;
+        // a trail of spots well inside the boundary, standing on the ground: where he comes back to
+        if (dist < gateBoundary - 6f && Time.time >= gateSafeNext && player.controller != null && player.controller.isGrounded)
+        { gateSafePos = pos; gateSafeValid = true; gateSafeNext = Time.time + 0.5f; }
+        if (dist > gateBoundary) { StartCoroutine(Co_BackInsideBoundary(player)); return; }
+        // heading back to the gate is fine however far he went
+        float toward = dist > 0.1f ? Vector3.Dot(vel, to / dist) : 0f;
+        gateEffort = Mathf.Lerp(gateEffort, toward, 1f - Mathf.Exp(-3f * dt));
+        if (dist > gateLeashDistance && gateEffort < 0.8f) gateFarTime += dt; else gateFarTime = 0f;
+        if (gateFarTime >= farSeconds && Time.time - lastHint >= farCooldown)
+        {
+            gateFarTime = 0f;
+            StartHint(player, true, true, gateLine);
+        }
     }
 
     void EndHint()
@@ -587,6 +657,59 @@ public class KidnapSequence : MonoBehaviour
 
     Vector3 RunnerChest => runner.transform.position + Vector3.up * 1.3f;
 
+    /// <summary>The reminder: the game camera's own spot behind Khalid and its lens, turned toward the Runner.</summary>
+    void UpdateHintShot(bool snap)
+    {
+        var player = Player.instance;
+        if (hintShot == null || player == null || runner == null) return;
+        Vector3 pos = player.transform.position + hintOffset;
+        hintLook = HintLookTarget(pos);
+        Quaternion rot = Quaternion.LookRotation(hintLook - pos, Vector3.up);
+        hintShot.transform.SetPositionAndRotation(pos, snap ? rot : Quaternion.Slerp(hintShot.transform.rotation, rot, 1f - Mathf.Exp(-8f * Time.deltaTime)));
+        hintShot.m_Lens.FieldOfView = gameFov;
+    }
+
+    /// <summary>Past the boundary: dip to black, back at the last safe spot facing the gate, back in, and the reminder.</summary>
+    IEnumerator Co_BackInsideBoundary(Player player)
+    {
+        gateTeleporting = true; gateFarTime = 0f;
+        bool paused = false;
+        if (!player.pauseMovement) { player.pauseMovement = true; paused = true; }
+        if (FadeScreenUI.instance != null) FadeScreenUI.instance.FadeOut(0.35f);
+        yield return new WaitForSecondsRealtime(0.45f);
+        Vector3 at = gateSafeValid ? gateSafePos : Ground(chaseEnd);
+        Vector3 face = Flat(gateLook - at);
+        if (player.controller != null) player.controller.enabled = false;
+        player.transform.SetPositionAndRotation(at + Vector3.up * 0.05f, face.sqrMagnitude > 0.01f ? Quaternion.LookRotation(face) : player.transform.rotation);
+        if (player.controller != null) player.controller.enabled = true;
+        player.OnPlayerTelported?.Invoke();
+        gateLastPos = player.transform.position; gateEffort = 3f;
+        yield return null;
+        if (FadeScreenUI.instance != null) FadeScreenUI.instance.FadeIn(0.5f);
+        if (paused) player.pauseMovement = false;
+        lastLine = -999f;                       // he always says it here
+        StartHint(player, true, true, gateLine);
+        gateTeleporting = false;
+    }
+
+    Vector3 hintLook;
+
+    /// <summary>Where the reminder looks: at the Runner if nothing is in the way, else the furthest point of its line the camera
+    /// can see from where it is (still in the lane: down the lane to where it went - not the lane wall).</summary>
+    Vector3 HintLookTarget(Vector3 camPos)
+    {
+        if (hintAtGate) return gateLook;
+        Vector3 chest = RunnerChest;
+        if (!Blocked(camPos, chest)) return chest;
+        for (float s = runnerS; s >= playerS - 4f; s -= 2f)
+        {
+            Vector3 p = PathPoint(Mathf.Max(0f, s), out _) + Vector3.up * 1.3f;
+            if (!Blocked(camPos, p)) return p;
+        }
+        var player = Player.instance;
+        return player != null ? player.transform.position + player.transform.forward * 10f + Vector3.up * 1.3f : chest;
+    }
+
     /// <summary>Anything solid between a and b, Khalid himself not counted.</summary>
     static bool Blocked(Vector3 a, Vector3 b)
     {
@@ -596,44 +719,18 @@ public class KidnapSequence : MonoBehaviour
         return false;
     }
 
-    /// <summary>The zoom: from Khalid's side (offset chosen at the start) onto the Runner, lens closing over ~1 s.</summary>
-    void UpdateHintShot(bool snap)
+    /// <summary>Can the camera see it? No: lost in the storm (further than sightDistance from the camera), or out of the frame
+    /// while it's well ahead of Khalid.</summary>
+    bool RunnerUnseen(float straight, bool waiting)
     {
-        var player = Player.instance;
-        if (hintShot == null || player == null || runner == null) return;
-        Vector3 target = RunnerChest;
-        Vector3 pos = player.transform.position + hintOffset;
-        Quaternion rot = Quaternion.LookRotation(target - pos, Vector3.up);
-        hintShot.transform.SetPositionAndRotation(pos, snap ? rot : Quaternion.Slerp(hintShot.transform.rotation, rot, 1f - Mathf.Exp(-8f * Time.deltaTime)));
-        // the lens closes on him: from a normal view down to ~4.5 m of frame height at his distance
-        float dist = Vector3.Distance(pos, target);
-        float tight = Mathf.Clamp(2f * Mathf.Atan(2.25f / Mathf.Max(1f, dist)) * Mathf.Rad2Deg, 9f, 40f);
-        float u = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(hintStart + 0.2f, hintStart + 1.1f, Time.time));
-        hintShot.m_Lens.FieldOfView = Mathf.Lerp(50f, tight, u);
-    }
-
-    /// <summary>Where the zoom looks from, relative to Khalid: over his shoulder if that sees the Runner, otherwise lifted
-    /// above him until it clears the walls (in the lane), else just over his head.</summary>
-    Vector3 HintCameraOffset(Player player)
-    {
-        Vector3 k = player.transform.position;
-        Vector3 head = k + Vector3.up * 1.7f;
-        Vector3 target = RunnerChest;
-        Vector3 to = Flat(target - head);
-        if (to.sqrMagnitude < 0.01f) to = player.transform.forward;
-        to.Normalize();
-        Vector3 right = Vector3.Cross(Vector3.up, to);
-        foreach (float lift in new[] { 0.2f, 1.2f, 2.5f, 4f, 6f })
-        {
-            Vector3 p = head - to * 1.3f + right * 0.45f + Vector3.up * lift;
-            if (!Blocked(head, p) && !Blocked(p, target)) return p - k;
-        }
-        foreach (float lift in new[] { 1.5f, 3f, 5f })
-        {
-            Vector3 p = head + Vector3.up * lift;
-            if (!Blocked(head, p) && !Blocked(p, target)) return p - k;
-        }
-        return head - to * 0.6f + Vector3.up * 0.4f - k;
+        var cam = Camera.main;
+        Vector3 chest = RunnerChest;
+        float camDist = cam != null ? Vector3.Distance(cam.transform.position, chest) : straight;
+        if (camDist > (waiting ? sightDistance - 2f : sightDistance)) return true;
+        if (cam == null) return false;
+        Vector3 v = cam.WorldToViewportPoint(chest);
+        bool onScreen = v.z > 0f && v.x > -0.15f && v.x < 1.15f && v.y > -0.15f && v.y < 1.15f;
+        return !onScreen && straight > offScreenRestDistance;
     }
 
     /// <summary>The Runner along the line. chasing: kept ~gapWanted ahead of Khalid (waits in the fog if he falls far behind);
@@ -644,10 +741,10 @@ public class KidnapSequence : MonoBehaviour
         float gap = runnerS - playerS;
         float sp = chasing ? Mathf.Clamp(chaseSprintSpeed + (gapWanted - gap) * 0.5f, runnerMinSpeed, runnerMaxSpeed) : runnerEscapeSpeed;
         bool beforeGate = vaultSegment <= 0 || runnerS < cum[Mathf.Min(cum.Count - 1, vaultSegment)];
-        // lost in the fog far ahead: he waits for Khalid there (nobody can see him stand)
+        // it only stands still where the camera can't see it (lost in the storm, or off screen and well ahead) - there it waits
+        // for Khalid to catch up; in sight it keeps running, a reminder or not (user 2026-11-18)
         float straight = Player.instance != null ? Flat(runner.transform.position - Player.instance.transform.position).magnitude : 0f;
-        bool wait = chasing && beforeGate && (runnerWaiting ? gap > waitBeyondGap - 2f || straight > waitBeyondGap + 2f
-                                                            : gap > waitBeyondGap || straight > waitBeyondGap + 4f);
+        bool wait = chasing && beforeGate && RunnerUnseen(straight, runnerWaiting);
         if (wait != runnerWaiting) { runnerWaiting = wait; if (wait) runner.Idle(); else runner.Run(); }
         if (wait) sp = 0f;
         // the jump over the gate at its own pace, and past it he just gets away

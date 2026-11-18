@@ -8,8 +8,9 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Tools > Cutscenes > Build Bridge Runner Sequence (Game scene): after the knife handle, walking into the user's drawn area
-/// shows the Runner (Adel on its shoulder) crossing the plank bridge over the ravine and shoving the plank in
-/// (BridgeRunnerSequence). Also adds the "Pistol pickup" checkpoint to the pistol. Safe to run again.
+/// the Runner (Adel on its shoulder) bursts out from behind a parked car, Khalid chases it to the plank bridge over the
+/// ravine and it shoves the plank in (BridgeRunnerSequence). Also the cars it hides behind, the Block 1 funnel and the
+/// "Pistol pickup" checkpoint on the pistol. Safe to run again.
 /// </summary>
 public static class BridgeRunnerSequenceBuilder
 {
@@ -17,20 +18,41 @@ public static class BridgeRunnerSequenceBuilder
     const string AdelFbx = "Assets/Models/Adel/Adel_ All animations_ In one track.fbx";
     const string AdelController = "Assets/Cutscenes/Kidnap/Adel_Kidnap.controller";
     const string RunnerPrefab = "Assets/Prefab/Enemy/RunnerPuppet.prefab";
-    const string RunnerSnarl = "Assets/Audio/Enemies/Runner/Ruuner_Attack 1.mp3";
+    const string ChaseMusic = "Assets/Audio/Glass Table/Music.mp3";     // the park chase's (KidnapSequence)
     const string PlankCreak = "Assets/Audio/Bridge Pass/SubtleMovement.mp3";
     const string PlankDrop = "Assets/Audio/Bridge Pass/BridgeDrop.mp3";
     const string PistolCheckpointName = "Pistol pickup";
 
-    // the user's R marks on the main road (from their screenshot)
-    static readonly Vector3[] Spawns =
+    // Where the Runner waits (user 2026-11-18: "make the runner comes from something instead of randomly spawning ... move/add
+    // cars"): crouched behind a car parked at the lower kerb by each of the user's R marks (-112.1,-3.2) (-112.3,-30.6)
+    // (-112.4,-60.1), on the road side of it, so Khalid coming up from the plaza / car lot / east side can't see it.
+    // The R2 car is the road's own Car 4 (1), moved there from z -37; R1 and R3 are copies of the road's Car 2 (the tallest, 2.3 m).
+    class Cover
     {
-        new Vector3(-112.1f, 1.5f, -3.2f), new Vector3(-112.3f, 1.5f, -30.6f), new Vector3(-112.4f, 1.5f, -60.1f)
+        public string carName;      // existing car under Environment/Cars: moved (copy == false) or copied (copy == true)
+        public bool copy;
+        public Vector3 carCentre; public float carYaw;
+        public Vector3 hide; public float crouch;
+        public Vector3[] leadIn;
+    }
+    static readonly Cover[] Covers =
+    {
+        new Cover { carName = "Car 2", copy = true, carCentre = new Vector3(-109.9f, 1.5f, -2.8f), carYaw = 92f,   // a bit toward the car lot: Khalid comes from there
+                    hide = new Vector3(-107.6f, 1.5f, -1.5f), crouch = 1.0f,
+                    leadIn = new[] { new Vector3(-106.9f, 1.5f, -4.6f), new Vector3(-106.2f, 1.5f, -7.0f) } },
+        new Cover { carName = "Car 4 (1)", copy = false, carCentre = new Vector3(-109.9f, 1.5f, -30.5f), carYaw = 266f,
+                    hide = new Vector3(-107.6f, 1.5f, -30.5f), crouch = 1.2f,
+                    leadIn = new[] { new Vector3(-106.3f, 1.5f, -27.5f), new Vector3(-106.0f, 1.5f, -14f), new Vector3(-105.6f, 1.5f, -10.5f) } },
+        // at the far road's mouth (z -63), level with where Khalid comes up that road: out of its north end he's in sight at once
+        new Cover { carName = "Car 2", copy = true, carCentre = new Vector3(-109.9f, 1.5f, -63.0f), carYaw = 87f,
+                    hide = new Vector3(-107.6f, 1.5f, -63.0f), crouch = 1.0f,
+                    leadIn = new[] { new Vector3(-106.5f, 1.5f, -59.8f), new Vector3(-105.6f, 1.5f, -56f), new Vector3(-105.0f, 1.5f, -52.0f), new Vector3(-105.8f, 1.5f, -47f),
+                                     new Vector3(-106.0f, 1.5f, -14f), new Vector3(-105.6f, 1.5f, -10.5f) } },
     };
     // up the side road, over the plank (z -8.15, between the invisible rails), to the shove spot on the far side
     static readonly Vector3[] Route =
     {
-        new Vector3(-110.6f, 1.5f, -8.6f), new Vector3(-104f, 1.5f, -8.3f), new Vector3(-95f, 1.5f, -8.2f),
+        new Vector3(-104f, 1.5f, -8.3f), new Vector3(-95f, 1.5f, -8.2f),
         new Vector3(-90.6f, 1.5f, -8.15f), new Vector3(-82.7f, 1.7f, -8.15f), new Vector3(-81.4f, 1.5f, -7.95f)
     };
     static readonly Vector3[] Away = { new Vector3(-76f, 1.5f, -7.9f), new Vector3(-70f, 1.5f, -8.3f), new Vector3(-62f, 1.5f, -8.6f) };
@@ -59,13 +81,13 @@ public static class BridgeRunnerSequenceBuilder
         var runnerGo = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(RunnerPrefab), scene);
         runnerGo.name = "Bridge Runner";
         runnerGo.transform.SetParent(root.transform, true);
-        runnerGo.transform.position = Ground(Spawns[0]);
+        runnerGo.transform.position = Ground(Covers[0].hide);
         runnerGo.SetActive(false);
 
         var adelGo = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(AdelFbx), scene);
         adelGo.name = "Bridge Adel";
         adelGo.transform.SetParent(root.transform, true);
-        adelGo.transform.position = Ground(Spawns[0]) + Vector3.up * 1.5f;
+        adelGo.transform.position = Ground(Covers[0].hide) + Vector3.up * 1.5f;
         var adelAnim = adelGo.GetComponent<Animator>();
         if (adelAnim == null) adelAnim = adelGo.AddComponent<Animator>();
         adelAnim.runtimeAnimatorController = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(AdelController);
@@ -88,11 +110,23 @@ public static class BridgeRunnerSequenceBuilder
         so.FindProperty("runner").objectReferenceValue = runnerGo.GetComponent<RunnerPuppet>();
         so.FindProperty("adel").objectReferenceValue = adelAnim;
         so.FindProperty("plank").objectReferenceValue = plankGo.transform;
-        SetList(so.FindProperty("spawns"), Spawns.Select(Ground).ToArray());
+        var cars = BuildCoverCars(all.Where(t => t != null).ToList(), root.transform);
+        var spawns = so.FindProperty("spawns");
+        spawns.arraySize = Covers.Length;
+        for (int i = 0; i < Covers.Length; i++)
+        {
+            var e = spawns.GetArrayElementAtIndex(i);
+            e.FindPropertyRelative("hide").vector3Value = Ground(Covers[i].hide);
+            e.FindPropertyRelative("cover").objectReferenceValue = cars[i];
+            e.FindPropertyRelative("crouch").floatValue = Covers[i].crouch;
+            SetList(e.FindPropertyRelative("leadIn"), Covers[i].leadIn);
+        }
         SetList(so.FindProperty("route"), Route);
         SetList(so.FindProperty("away"), Away);
         so.FindProperty("sfxGroup").objectReferenceValue = Group("SFX");
-        so.FindProperty("runnerScreech").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(RunnerSnarl);
+        // no Runner voice here (user), only its footsteps; the park chase's music
+        so.FindProperty("musicGroup").objectReferenceValue = Group("Music");
+        so.FindProperty("music").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(ChaseMusic);
         so.FindProperty("plankCreak").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(PlankCreak);
         so.FindProperty("plankDrop").objectReferenceValue = AssetDatabase.LoadAssetAtPath<AudioClip>(PlankDrop);
         so.ApplyModifiedPropertiesWithoutUndo();
@@ -107,6 +141,37 @@ public static class BridgeRunnerSequenceBuilder
         Debug.Log("[BridgeRunner] built: " + root.name + " under " + parent.name);
     }
 
+    /// <summary>The parked cars the Runner hides behind: copies go under the sequence (rebuilt with it), the moved one stays
+    /// where it is in Environment/Cars. Placed by their visible middle, wheels on the road.</summary>
+    static Transform[] BuildCoverCars(System.Collections.Generic.List<Transform> all, Transform root)
+    {
+        Transform carsParent = all.FirstOrDefault(t => t.name == "Cars" && t.parent != null && t.parent.name.Contains("Environment"));
+        var group = new GameObject("Runner Cover Cars");
+        group.transform.SetParent(root, true);
+        var result = new Transform[Covers.Length];
+        for (int i = 0; i < Covers.Length; i++)
+        {
+            var c = Covers[i];
+            Transform src = carsParent != null ? carsParent.Cast<Transform>().FirstOrDefault(t => t.name == c.carName) : null;
+            if (src == null) { Debug.LogError("[BridgeRunner] cover car '" + c.carName + "' not found under Environment/Cars"); continue; }
+            Transform car = src;
+            if (c.copy)
+            {
+                car = Object.Instantiate(src.gameObject, group.transform, true).transform;
+                car.name = "Cover Car (R" + (i + 1) + ")";
+            }
+            car.rotation = Quaternion.Euler(270f, c.carYaw, 0f);
+            car.position = c.carCentre;
+            var rs = car.GetComponentsInChildren<Renderer>();
+            var b = rs[0].bounds; foreach (var r in rs) b.Encapsulate(r.bounds);
+            float ground = GroundIgnoring(c.carCentre, car).y;
+            car.position += new Vector3(c.carCentre.x - b.center.x, ground - b.min.y, c.carCentre.z - b.center.z);
+            EditorUtility.SetDirty(car);
+            result[i] = car;
+        }
+        return result;
+    }
+
     // ------------------------------------------------------------------ Block 1 funnel (user, 2026-11-17)
     // "block the main entrance of block 1 ... replace this gate with rubble blockade, and put some tree obstacles in these red
     // lines, this way every player will be forced to the place". The gate is the only way IN, so it is buried only once the
@@ -117,11 +182,13 @@ public static class BridgeRunnerSequenceBuilder
     static readonly Vector3 GateCentre = new Vector3(-176.6f, 1.5f, 11.7f);
     // (x, z offset from the gate line, yaw, scale)
     static readonly Vector4[] RubblePiles = { new Vector4(-180.2f, 0.4f, 15f, 1.6f), new Vector4(-176.6f, -0.2f, 200f, 1.85f), new Vector4(-173.0f, 0.3f, 95f, 1.6f) };
-    // tree lines: from Block 1's fence (x -146.2) to just inside the area (x -131): plaza edge, and the car lot's right palm row
-    const float LineFromX = -146.4f, LineToX = -129.4f;
+    // tree lines: from Block 1's fence (x -146.2) to the area's near edge (x -120, moved up 2026-11-18 from -131): plaza edge,
+    // and the car lot's right palm row
+    const float LineFromX = -146.4f, LineToX = -120f;
     const float PlazaEdgeZ = -6.6f, LotRowZ = -28.5f;
-    static readonly float[] PlazaPalmsX = { -145.3f, -143.1f, -140.9f, -138.7f, -136.5f, -134.3f, -132.1f, -129.9f };
-    static readonly float[] LotPalmsX = { -145.2f, -142.6f, -138.1f, -133.1f };   // between the row's own palms (-140, -136, -130)
+    static readonly float[] PlazaPalmsX = { -145.3f, -143.1f, -140.9f, -138.7f, -136.5f, -134.3f, -132.1f, -129.9f, -127.7f, -125.5f, -123.3f, -121.1f };
+    // between the row's own palms (-140, -136, -130, -124.7, -117.4)
+    static readonly float[] LotPalmsX = { -145.2f, -142.6f, -138.1f, -133.1f, -127.4f, -122.1f };
 
     static void BuildFunnel(Scene scene, string knifeId)
     {

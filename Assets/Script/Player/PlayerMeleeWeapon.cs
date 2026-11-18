@@ -955,6 +955,8 @@ public class PlayerMeleeWeapon : MonoBehaviour
                 }
 
                 WallHits++;
+                // anything that wants to react to being hit (e.g. MeleeHitLine on the sealed wardrobe)
+                wall.collider.SendMessageUpwards("OnMeleeHit", SendMessageOptions.DontRequireReceiver);
                 if (SoundEffectManager.instance != null) SoundEffectManager.instance.PlaySFXAtPosition(Pick(wallHitClips), wall.point, wallVolume);
                 if (sparkEffect != null) Destroy(Instantiate(sparkEffect, wall.point, Quaternion.LookRotation(wall.normal)), 3f);
                 Shake(shakeIntensity * 0.5f, shakeDuration);

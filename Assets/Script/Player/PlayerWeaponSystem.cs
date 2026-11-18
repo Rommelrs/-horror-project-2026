@@ -44,6 +44,8 @@ public class PlayerWeaponSystem : MonoBehaviour
     private const float _threshold = 0.01f;
     public bool LockCameraPosition = false;
     public bool aimingOverrideForTesting = false;
+    /// <summary>The player is holding the aim button himself (a sequence that forces aiming hands it back then).</summary>
+    public bool AimButtonHeld => aimInput != null && aimInput.action != null && aimInput.action.ReadValue<float>() > 0.1f;
     /// <summary>Set true to block HandleAiming (e.g. downed state handles ADS externally).</summary>
     [HideInInspector] public bool blockAimingSystem = false;
     /// <summary>Set true to grant infinite ammo (ammo is never decremented). Restored to false on stand up.</summary>
