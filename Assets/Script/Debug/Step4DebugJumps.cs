@@ -17,7 +17,7 @@ using UnityEngine.SceneManagement;
 ///   F12 (Game scene)  - Block 2 wardrobe prototype, FRESH run (checkpoint reset to a clean snapshot + reload): at the
 ///                       wardrobe with knife + gate key (order A). Shift+F12: same at the Block 3 cloth (order B).
 ///                       Ctrl+F12: straight to the cinder-block escape door (no reset).
-///                       Alt+F12: the swarm escape cutscene now (A if the Block 3 cloth is cut, B if not).
+/// The ` in-game menu (TaskJump.cs) uses the same jumps.
 /// </summary>
 public class Step4DebugJumps : MonoBehaviour
 {
@@ -26,10 +26,19 @@ public class Step4DebugJumps : MonoBehaviour
     {
         var go = new GameObject("[Step4DebugJumps]") { hideFlags = HideFlags.HideAndDontSave };
         DontDestroyOnLoad(go);
-        go.AddComponent<Step4DebugJumps>();
+        inst = go.AddComponent<Step4DebugJumps>();
     }
 
+    static Step4DebugJumps inst;
     bool busy;
+
+    // ------------------------------------------------------------------ the same jumps, for the ` menu (TaskJump)
+    public static bool Busy => inst != null && inst.busy;
+    /// <summary>F12 / Shift+F12: fresh wardrobe run (checkpoint reset + reload), at the wardrobe or the Block 3 cloth.</summary>
+    public static void FreshWardrobeRun(bool atBlock3) { if (inst != null && !inst.busy) inst.StartCoroutine(inst.Co_FreshWardrobeRun(atBlock3)); }
+    /// <summary>Ctrl+F12: a step back from the cinder-block escape door, facing it.</summary>
+    public static void GoToEscapeDoor() => JumpTo(FindT("DoorInteractableBlocks", "Action Sequence"), 0f, true);
+    public static Transform Find(string name, string parentName) => FindT(name, parentName);
 
     void Update()
     {
@@ -68,16 +77,8 @@ public class Step4DebugJumps : MonoBehaviour
         {
             bool shift = kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed;
             bool ctrl = kb.leftCtrlKey.isPressed || kb.rightCtrlKey.isPressed;
-            bool alt = kb.leftAltKey.isPressed || kb.rightAltKey.isPressed;
-            if (alt)
-            {
-                // the escape cutscene right now, exactly as the cinder-block door starts it: version A if the Block 3 cloth is
-                // cut, version B (street walk, rests outside the cloth) if not
-                var doorT = FindT("DoorInteractableBlocks", "Action Sequence");
-                var door = doorT != null ? doorT.GetComponent<DoorInteractable>() : null;
-                if (door != null) { Debug.Log("[F12] escape cutscene now (A or B by the Block 3 cloth)"); door.OnInteractedSuccess.Invoke(); }
-            }
-            else if (ctrl) JumpTo(FindT("DoorInteractableBlocks", "Action Sequence"), 0f, true);
+            // (Alt+F12, the swarm escape cutscene now, removed 2026-11-19: approved)
+            if (ctrl) GoToEscapeDoor();
             else StartCoroutine(Co_FreshWardrobeRun(shift));
         }
     }

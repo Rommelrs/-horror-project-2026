@@ -33,6 +33,11 @@ public class MapLocationReveal : MonoBehaviour
     [Tooltip("The exact item name of the note that triggers this reveal. Leave empty to trigger manually.")]
     [SerializeField] string triggerNoteItemName;
 
+    [Header("Skip")]
+    [Tooltip("No reveal at all if the player already has this item - the place it points to has nothing left for him (the bloody " +
+             "note's duct tape spot once the tape is found). For the duct tape a wall hole already taped counts as having it.")]
+    [SerializeField] Item skipIfPlayerHas;
+
     bool revealed = false;
     bool isRunning = false;
 
@@ -81,9 +86,22 @@ public class MapLocationReveal : MonoBehaviour
 
     bool OwnsMap => MapHandler.instance == null || MapHandler.instance.OwnsPage(mapPageIndex);
 
+    bool PlayerAlreadyHasSkipItem()
+    {
+        if (skipIfPlayerHas == null) return false;
+        var p = Player.instance;
+        if (p != null && p.inventory != null && p.inventory.HasItem(skipIfPlayerHas)) return true;
+        // the tape already used on a wall hole: he had it
+        if (skipIfPlayerHas.itemType == ItemType.DuctTape)
+            foreach (var hole in FindObjectsByType<WallHoleInteractable>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (!hole.CanApplyTape()) return true;
+        return false;
+    }
+
     void OnMapsChanged()
     {
         if (revealed || isRunning || markerCanvasGroup == null || !StoryFlags.Has(PendingFlag) || !OwnsMap) return;
+        if (PlayerAlreadyHasSkipItem()) return;     // a waiting marker for a place he no longer needs
         revealed = true;
         markerCanvasGroup.alpha = 1f;
         markerCanvasGroup.gameObject.SetActive(true);
@@ -101,6 +119,11 @@ public class MapLocationReveal : MonoBehaviour
     public void TriggerReveal()
     {
         if (isRunning || revealed) return;
+        if (PlayerAlreadyHasSkipItem())
+        {
+            Debug.Log("[MapReveal] '" + name + "': the player already has " + skipIfPlayerHas.name + " - no marker");
+            return;
+        }
         if (markerCanvasGroup != null && markerCanvasGroup.gameObject.activeSelf)
         {
             revealed = true;

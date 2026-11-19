@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 /// <summary>
 /// Tools > Cutscenes > Build Adel Pole Sequence (Game scene). See AdelPoleSequence. Builds 'Between Alley 2-3 Gameplay/
 /// Adel Pole Sequence': Adel (copy of 'Bridge Adel') tied to the light pole on the middle street's corner (Environment7/POLES/
-/// Pole (4)) with rope made here (tube meshes, the wardrobe rope's PS2 texture), the cut rope for afterwards, his way to Block 3's
+/// the lamp at the end of the red strip south of the street by the crossroads) with rope made here (tube meshes, the wardrobe rope's PS2 texture), the cut rope for afterwards, his way to Block 3's
 /// side gate, the camera at the gate, the two lines. Also digs a small hollow in the sand under the gate's right leaf (the gate
 /// leaves only 11 cm - a kid can't get under that); the terrain asset is backed up to AnimationTools/adel_pole first.
 /// Safe to run again.
@@ -23,6 +23,9 @@ public static class AdelPoleSequenceBuilder
     const float RopeR = 0.013f;
 
     static readonly Vector3 GateHollow = new Vector3(-46.0f, 0f, -41.1f);
+    static readonly Vector3 PoleXZ = new Vector3(-37.3f, 0f, -15.9f);
+    // the cutscene starts on the north-south road through the crossroads (the user's line: x -21, z -40 .. 21.7)
+    static readonly Vector3 AreaCenter = new Vector3(-21.0f, 3f, -9.2f), AreaSize = new Vector3(6f, 16f, 62f);
     const float HollowDepth = 0.42f, HollowRx = 0.95f, HollowRz = 1.6f;
 
     [MenuItem("Tools/Cutscenes/Build Adel Pole Sequence (Game scene)")]
@@ -34,11 +37,15 @@ public static class AdelPoleSequenceBuilder
         var all = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<Transform>(true)).ToList();
         Transform group = all.FirstOrDefault(t => t.name == "Between Alley 2-3 Gameplay");
         Transform runnerT = all.FirstOrDefault(t => t.name == "RunnerEnemy (1)" && t.parent == group);
-        Transform pole = all.FirstOrDefault(t => t.name == "Pole (4)" && t.parent != null && t.parent.name == "POLES" && t.parent.parent != null && t.parent.parent.name == "Environment7");
+        // the lamp at the end of the red strip, in the sand lot just south of the street (by the crossroads): there are
+        // switched-off copies named alike, so the switched-on one nearest the spot
+        Transform pole = all.Where(t => t.name.StartsWith("Pole") && t.gameObject.activeInHierarchy && t.parent != null && t.parent.name == "POLES")
+                            .OrderBy(t => (new Vector2(t.position.x, t.position.z) - new Vector2(PoleXZ.x, PoleXZ.z)).sqrMagnitude)
+                            .FirstOrDefault(t => (new Vector2(t.position.x, t.position.z) - new Vector2(PoleXZ.x, PoleXZ.z)).magnitude < 2f);
         Transform bridgeAdel = all.FirstOrDefault(t => t.name == "Bridge Adel");
         var block3 = all.Select(t => t.GetComponent<BurnableObstacle>()).FirstOrDefault(b => b != null && b.name == "ClothBlockage");
         if (group == null || runnerT == null || pole == null || bridgeAdel == null)
-        { Debug.LogError("[AdelPole] Between Alley 2-3 Gameplay / RunnerEnemy (1) / Pole (4) / Bridge Adel not found"); return; }
+        { Debug.LogError("[AdelPole] Between Alley 2-3 Gameplay / RunnerEnemy (1) / the pole at " + PoleXZ + " / Bridge Adel not found"); return; }
 
         DigGateHollow(scene);
 
@@ -85,11 +92,11 @@ public static class AdelPoleSequenceBuilder
         var cut = RopeObject("Rope (cut, on the ground)", root.transform, CutRope(new Vector3(pc.x, groundY, pc.z), radius, north, east), "RopeCut", mat);
         tied.SetActive(false); cut.SetActive(false);
 
-        // ---- his way to the gate (west lane of the side street: the parked cars are in the east one), then under it
+        // ---- his way to the gate: straight down the sand lot behind the pole (Block 3's side gate is at its south end), then under it
         var path = new List<Vector3>
         {
-            new Vector3(-60.6f, 0f, -15.2f), new Vector3(-58.0f, 0f, -18.5f), new Vector3(-57.8f, 0f, -33.0f),
-            new Vector3(-53.0f, 0f, -36.0f), new Vector3(-46.5f, 0f, -37.8f), new Vector3(-46.0f, 0f, -39.45f)
+            new Vector3(pc.x - 1.2f, 0f, pc.z - 1.6f), new Vector3(-40.0f, 0f, -24.0f), new Vector3(-43.6f, 0f, -33.0f),
+            new Vector3(-45.6f, 0f, -37.6f), new Vector3(-46.0f, 0f, -39.45f)
         };
         for (int i = 0; i < path.Count; i++) path[i] = new Vector3(path[i].x, GroundY(path[i] + Vector3.up * 6f), path[i].z);
         Vector3 crawlTo = new Vector3(-46.0f, 0f, -41.35f); crawlTo.y = GroundY(crawlTo + Vector3.up * 6f);
@@ -112,7 +119,8 @@ public static class AdelPoleSequenceBuilder
 
         // ---- the Runner's far spots (the street's two ends, on its NavMesh)
         var far = new List<Vector3>();
-        foreach (var s in new[] { new Vector3(-34.5f, 1.5f, -10.0f), new Vector3(-76.0f, 1.5f, -9.6f) })
+        // west of Adel (he comes in at the crossroads) / east of him (the rare way in from the west, by the pole itself)
+        foreach (var s in new[] { new Vector3(-44.0f, 1.5f, -10.5f), new Vector3(-27.0f, 1.5f, -10.0f) })
             far.Add(NavMesh.SamplePosition(s, out NavMeshHit nh, 3f, NavMesh.AllAreas) ? nh.position : s);
 
         // ---- lines
@@ -137,6 +145,8 @@ public static class AdelPoleSequenceBuilder
         var ag = so.FindProperty("afterGate"); ag.arraySize = after.Count;
         for (int i = 0; i < after.Count; i++) ag.GetArrayElementAtIndex(i).vector3Value = after[i];
         so.FindProperty("gateShot").objectReferenceValue = gateShot;
+        so.FindProperty("areaCenter").vector3Value = AreaCenter;
+        so.FindProperty("areaSize").vector3Value = AreaSize;
         if (block3 != null)
         {
             var b3 = new SerializedObject(block3);

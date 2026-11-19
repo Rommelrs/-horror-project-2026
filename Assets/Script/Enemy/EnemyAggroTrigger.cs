@@ -7,6 +7,13 @@ public class EnemyAggroTrigger : MonoBehaviour
 
     private bool hasTriggered = false;
 
+    /// <summary>True if this trigger wakes that enemy (AdelPoleSequence switches the street's trigger off while Adel waits).</summary>
+    public bool Wakes(Enemy enemy)
+    {
+        if (enemies != null) foreach (var e in enemies) if (e == enemy) return true;
+        return false;
+    }
+
     // Loaded from a save / checkpoint taken after the player woke them: the enemies must be awake again (the Runner between
     // Alley 2 and 3 came back in his fixed, idle type and never chased). Waits a frame so SaveableEnemy has removed the dead.
     private System.Collections.IEnumerator Start()

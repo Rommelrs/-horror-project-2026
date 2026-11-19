@@ -331,6 +331,15 @@ public class PlayerWeaponSystem : MonoBehaviour
             ammoTxt.text = currentAmmo.ToString();
     }
 
+    /// <summary>Scripted moments (AdelPoleSequence): at least this many rounds in the gun. Never takes rounds away.</summary>
+    public void EnsureLoaded(int rounds)
+    {
+        rounds = Mathf.Min(rounds, maxAmmoCapacity > 0 ? maxAmmoCapacity : rounds);
+        if (currentAmmo >= rounds) return;
+        currentAmmo = rounds;
+        UpdateAmmoCount();
+    }
+
     /// <summary>Spare rounds for this weapon in the player's inventory (what a reload draws from).</summary>
     public int GetReserveAmmo()
     {

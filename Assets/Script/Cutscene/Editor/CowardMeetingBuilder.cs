@@ -17,7 +17,7 @@ using UnityEngine.UI;
 // the virtual cameras, audio sources, the four timelines (Open / A / B / End) and the CowardMeetingCutscene controller.
 // Re-runnable: it deletes its own "CowardMeeting1" object and rebuilds everything from the numbers below, so timing
 // and camera tweaks are best made here (or afterwards directly in the Timeline window).
-public static class CowardMeetingBuilder
+public static partial class CowardMeetingBuilder   // (EscapeCowardTalkBuilder.cs adds the swarm escape talk)
 {
     const string Dir = "Assets/Cutscenes/CowardMeeting1";
     const string AudioDir = "Assets/Audio/Cutscenes/CowardMeeting1";
@@ -248,7 +248,10 @@ public static class CowardMeetingBuilder
         trigger.isTrigger = true; trigger.size = new Vector3(1.0f, 3f, 2.8f); trigger.center = new Vector3(0, 1.5f, 0);
         var cs = root.AddComponent<CowardMeetingCutscene>();
         cs.open = dOpen; cs.openPipe = dOpenPipe; cs.versionA = dA; cs.versionB = dB; cs.end = dEnd;
-        cs.versionBEnabled = true;
+        // Version B (Alley 2 visited first) can't happen any more - every player meets him before that. Switched off, NOT
+        // removed: its timeline, recordings and lines stay in the game files for anyone who digs (cs.versionBEnabled = true
+        // brings it back). The gun Open is the same story (nobody has the gun here now) - still built, never chosen.
+        cs.versionBEnabled = false;
         cs.otherVersionSink = otherVersion;
         cs.knifeHandle = AssetDatabase.LoadAssetAtPath<Item>("Assets/Resources/Items/Key items/Knife Handle.asset");
         cs.combinedKnife = AssetDatabase.LoadAssetAtPath<Item>("Assets/Resources/Items/Key items/Knife.asset");
@@ -400,21 +403,33 @@ public static class CowardMeetingBuilder
         // A: "You locked me in that store." / B (Alley 2 visited, the knife-carrying copies of him came at Khalid there):
         // "You... you tried to kill me!" - each on its own one-version track, centred in the same room, so everything
         // after it is the same for both
-        float k1Room = Mathf.Max(LineLength("CW2_02"), LineLength("CW2_B02"));
-        Say(tl, voK, voC, "CW2_02", k1At + (k1Room - LineLength("CW2_02")) * 0.5f, VersionTrack(tl, d, "VO Khalid", c.voK, "A"));
-        Say(tl, voK, voC, "CW2_B02", k1At + (k1Room - LineLength("CW2_B02")) * 0.5f, VersionTrack(tl, d, "VO Khalid", c.voK, "B"));
+        // the hammer Open (script v3, 2026-11-19 - the version every player sees: nobody has the gun yet here) asks
+        // "Where is he?! Where did you take him?!" - one line, no A/B track
+        float k1Room = pipe ? LineLength("CW3_02") : Mathf.Max(LineLength("CW2_02"), LineLength("CW2_B02"));
+        if (pipe) Say(tl, voK, voC, "CW3_02", k1At);
+        else
+        {
+            Say(tl, voK, voC, "CW2_02", k1At + (k1Room - LineLength("CW2_02")) * 0.5f, VersionTrack(tl, d, "VO Khalid", c.voK, "A"));
+            Say(tl, voK, voC, "CW2_B02", k1At + (k1Room - LineLength("CW2_B02")) * 0.5f, VersionTrack(tl, d, "VO Khalid", c.voK, "B"));
+        }
         var c2 = Say(tl, voK, voC, "CW2_03", k1At + k1Room + 0.8f);
         var k2 = Say(tl, voK, voC, "CW2_04", c2.end + 1.1f);      // "...Other versions?" - taking it in
         var c3 = Say(tl, voK, voC, "CW2_05", k2.end + 0.8f);
         var k3 = Say(tl, voK, voC, "CW2_06", c3.end + 1.2f);      // a breath, the gun coming down
         var c4 = Say(tl, voK, voC, "CW2_07", k3.end + 0.9f);
         var k4 = Say(tl, voK, voC, "CW2_08", c4.end + 1.0f);
-        var k5 = Say(tl, voK, voC, "CW2_09", k4.end + KhalidTurnBack);
-        var c5 = Say(tl, voK, voC, "CW2_10", k5.end + 1.0f);
-        var k6 = Say(tl, voK, voC, "CW2_11", c5.end + 1.0f);
-        float len = k6.end + 0.6f;
+        // v3 (hammer): "The one who took him. Where did he go?" - "...The kid? Who is he to you?" - "He's my brother." -
+        // (a beat) "...I saw one of them carrying a kid." (then A: "The alley by the school.")
+        // gun Open (old script, kept but unreachable): "Have you seen a kid with a blue backpack?" ... "He's my brother. Where did he go?"
+        var k5 = Say(tl, voK, voC, pipe ? "CW3_09" : "CW2_09", k4.end + KhalidTurnBack);
+        var c5 = Say(tl, voK, voC, pipe ? "CW3_10" : "CW2_10", k5.end + 1.0f);
+        var k6 = Say(tl, voK, voC, pipe ? "CW3_11" : "CW2_11", c5.end + 1.0f);
+        var c6 = pipe ? Say(tl, voK, voC, "CW3_12", k6.end + 1.3f) : null;
+        float len = (pipe ? c6.end : k6.end) + 0.6f;
         kStep = k1At - 0.2f; dipStart = k2.start - 0.25f; gunDown = k3.start - 0.2f; handsDown = k3.end + 0.15f;
-        lookAwayAt = k4.start - 0.25f; lookBackAt = k4.end + 0.1f; fogFrom = c5.start; fogTo = c5.end;
+        lookAwayAt = k4.start - 0.25f; lookBackAt = k4.end + 0.1f;
+        // he looks off into the fog where he saw it: the boy (gun) / the one carrying a kid (hammer)
+        fogFrom = pipe ? c6.start : c5.start; fogTo = pipe ? c6.end : c5.end;
 
         Activation(tl, d, c.coward, 0, len, ActivationTrack.PostPlaybackState.LeaveAsIs);
         // with the pipe there is no Khalid track: his own Animator Controller carries / raises it (the controller's phase
@@ -449,16 +464,25 @@ public static class CowardMeetingBuilder
         Chain(cw, "Talking_TwoHands", c2.start - 0.3f, c2.end + 0.3f, C1, CowardYaw);    // "It wasn't me!..."
         Chain(cw, "Nervously_Look_Around", c2.end, c4.start + 0.1f, C1, CowardYaw);
         Chain(cw, "Talking_TwoHands", c4.start - 0.3f, c4.end + 0.3f, C1, CowardYaw);    // "Look, I'm trying to help you..."
-        Chain(cw, "Nervously_Look_Around", c4.end, c5.start + 0.2f, C1, CowardYaw);
-        Chain(cw, "Look_Around_Nervously", c5.start - 0.1f, c5.end + 0.3f, C1, CowardYaw); // peering into the fog for the boy
-        openEndPhase = Chain(cw, "Nervously_Look_Around", c5.end, len, C1, CowardYaw);
+        if (pipe)
+        {
+            Chain(cw, "Nervously_Look_Around", c4.end, c6.start + 0.2f, C1, CowardYaw);
+            Chain(cw, "Look_Around_Nervously", c6.start - 0.1f, c6.end + 0.3f, C1, CowardYaw); // "I saw one of them carrying a kid" - into the fog
+            openEndPhase = Chain(cw, "Nervously_Look_Around", c6.end, len, C1, CowardYaw);
+        }
+        else
+        {
+            Chain(cw, "Nervously_Look_Around", c4.end, c5.start + 0.2f, C1, CowardYaw);
+            Chain(cw, "Look_Around_Nervously", c5.start - 0.1f, c5.end + 0.3f, C1, CowardYaw); // peering into the fog for the boy
+            openEndPhase = Chain(cw, "Nervously_Look_Around", c5.end, len, C1, CowardYaw);
+        }
 
         var cm = Cameras(tl, d, c.brain);
         Shot(cm, d, v[0], 0f, 4f);                                   // (opens under the fade from black)
         Shot(cm, d, v[1], 4f, GunUp);                                // he spots him
         Shot(cm, d, v[2], GunUp, handsShot);                         // the gun comes up - "Wait, wait!"
         Shot(cm, d, v[3], handsShot, kStep);                         // hands up, over the gun
-        Shot(cm, d, v[7], kStep, c2.start - 0.15f);                  // "You locked me in that store." (B: "you tried to kill me!") gun steady
+        Shot(cm, d, v[7], kStep, c2.start - 0.15f);                  // hammer: "Where is he?!" / gun: "You locked me in that store." (B: "you tried to kill me!")
         Shot(cm, d, v[8], c2.start - 0.15f, c2.phrases[2] - 0.1f);
         Shot(cm, d, v[5], c2.phrases[2] - 0.1f, k2.start - 0.15f);
         Shot(cm, d, v[6], k2.start - 0.15f, c3.start - 0.15f);       // "...Other versions?"
@@ -466,10 +490,20 @@ public static class CowardMeetingBuilder
         Shot(cm, d, v[7], gunDown - 0.1f, c4.start - 0.1f);          // the gun comes down, so do his hands
         Shot(cm, d, v[8], c4.start - 0.1f, c4.phrases[2] - 0.1f);
         Shot(cm, d, v[3], c4.phrases[2] - 0.1f, k4.start - 0.15f);
-        Shot(cm, d, v[6], k4.start - 0.15f, c5.start - 0.15f);       // "I'm not leaving." - he looks back - "Have you seen a kid..."
-        Shot(cm, d, v[9], c5.start - 0.15f, c5.phrases[2] - 0.1f);
-        Shot(cm, d, v[7], c5.phrases[2] - 0.1f, k6.start - 0.15f);
-        Shot(cm, d, v[6], k6.start - 0.15f, len);                    // "He's my brother. Where did he go?"
+        if (pipe)
+        {
+            Shot(cm, d, v[6], k4.start - 0.15f, c5.start - 0.15f);   // "I'm not leaving." - he looks back - "The one who took him..."
+            Shot(cm, d, v[9], c5.start - 0.15f, k6.start - 0.15f);   // "...The kid? Who is he to you?"
+            Shot(cm, d, v[6], k6.start - 0.15f, c6.start - 0.15f);   // "He's my brother."
+            Shot(cm, d, v[10], c6.start - 0.15f, len);               // "...I saw one of them carrying a kid." (A cuts in closer)
+        }
+        else
+        {
+            Shot(cm, d, v[6], k4.start - 0.15f, c5.start - 0.15f);   // "I'm not leaving." - he looks back - "Have you seen a kid..."
+            Shot(cm, d, v[9], c5.start - 0.15f, c5.phrases[2] - 0.1f);
+            Shot(cm, d, v[7], c5.phrases[2] - 0.1f, k6.start - 0.15f);
+            Shot(cm, d, v[6], k6.start - 0.15f, len);                // "He's my brother. Where did he go?"
+        }
 
         // his footsteps in the sand (a step every half cycle of the careful walk)
         var sfx = AudioTrackFor(tl, d, "SFX (coward)", c.sfxAlcove);
@@ -495,7 +529,8 @@ public static class CowardMeetingBuilder
         var (voK, voC) = VoiceTracks(tl, d, c);
         var c6 = Say(tl, voK, voC, "CW2_A1", AFirstLine);
         Say(tl, voK, voC, "CW2_A2", AThanks);
-        var c7 = Say(tl, voK, voC, "CW2_A3", AWalkStart + FalterAt - LineLength("CW2_A3") - 0.05f);   // ends as his stride falters
+        // v3: "Wait! You saw what they are! He could already be—" (was "He went in there hours ago!")
+        var c7 = Say(tl, voK, voC, "CW3_A3", AWalkStart + FalterAt - LineLength("CW3_A3") - 0.05f);   // ends as his stride falters
 
         Activation(tl, d, c.coward, 0, len, ActivationTrack.PostPlaybackState.LeaveAsIs);
         var k = Anim(tl, d, "Khalid", c.khalid, TrackOffset.ApplySceneOffsets);
@@ -1107,8 +1142,10 @@ public static class CowardMeetingBuilder
     {
         var line = lines[id];
         string audio = line.spk == "C" ? "Paced/" + (CowardVoice != "" ? CowardVoice : "Original") + "/" + Path.ChangeExtension(line.audio, ".wav") : line.audio;
-        var clipAsset = AssetDatabase.LoadAssetAtPath<AudioClip>(VoiceDir + "/" + audio);
-        if (clipAsset == null) Debug.LogError("[CowardMeeting] missing voice line " + VoiceDir + "/" + audio + " (run pace_voice.py)");
+        // a full asset path (Khalid's recordings of another cutscene) is taken as it is
+        string audioPath = line.audio.StartsWith("Assets/") ? line.audio : VoiceDir + "/" + audio;
+        var clipAsset = AssetDatabase.LoadAssetAtPath<AudioClip>(audioPath);
+        if (clipAsset == null) Debug.LogError("[CowardMeeting] missing voice line " + audioPath + " (run pace_voice.py)");
         var clip = (only ?? (line.spk == "K" ? k : c)).CreateClip(clipAsset);
         clip.start = start; clip.displayName = id;
 

@@ -112,8 +112,12 @@ public static class EscapeCutsceneBBuilder
         var rest = new GameObject("Rest Offset (outside the cloth)").transform;
         rest.SetParent(b, false);
         rest.localPosition = RestShift;
-        foreach (var n in new[] { "KhalidSadPose", "Shot6", "Shot7", "Shot8", "Shot9", "Shot10", "Shot11", "Shot12", "PlayerTimelineHolder (5)", "SpawnPoint" })
-            b.Find(n).SetParent(rest, false);
+        foreach (var n in new[] { "KhalidSadPose", "Shot6", "Shot7", "Shot8", "Shot9", "Shot10", "Shot11", "Shot12", "PlayerTimelineHolder (5)", "SpawnPoint",
+                                  "Escape Coward Talk" })   // the coward finding him (EscapeCowardTalkBuilder) comes along
+        {
+            var t = b.Find(n);
+            if (t != null) t.SetParent(rest, false);
+        }
 
         // Shot7: down the empty street instead of down the Block 3 corridor (which is behind the cloth now)
         rest.Find("Shot7").SetPositionAndRotation(Shot7Pos, Quaternion.Euler(Shot7Euler));

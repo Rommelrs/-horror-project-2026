@@ -278,7 +278,9 @@ public class CowardMeetingCutscene : MonoBehaviour
         foreach (var g in debugShow) if (g != null) g.SetActive(true);
         // stand him in the trigger, facing out of the gate
         if (player.controller != null) player.controller.enabled = false;
-        player.transform.SetPositionAndRotation(new Vector3(transform.position.x, player.transform.position.y, transform.position.z), Quaternion.Euler(0f, 90f, 0f));
+        // at the trigger's own floor height: keeping his current height (from wherever he was, e.g. Block 2 lower down) sank
+        // him into the ground for the whole cutscene
+        player.transform.SetPositionAndRotation(transform.position + Vector3.up * 0.05f, Quaternion.Euler(0f, 90f, 0f));
         if (player.controller != null) player.controller.enabled = true;
         player.OnPlayerTelported?.Invoke();
         Begin();

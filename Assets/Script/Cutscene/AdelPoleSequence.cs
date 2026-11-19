@@ -67,6 +67,7 @@ public class AdelPoleSequence : MonoBehaviour
 
     // ---- tuning
     const float AdelRunSpeed = 3.6f, AdelClipSpeed = 3.6f, CrawlSpeed = 0.7f;
+    const int IntroRounds = 3;          // rounds in the gun when the intro starts (topped up, never taken away)
     const float KhalidRun = 2.9f, KhalidWalk = 1.25f;
     [Tooltip("The Runner's speed while it barges in from the far end (its normal chase is 2): back to normal once it's close.")]
     [SerializeField] float bargeSpeed = 3.6f;
@@ -74,6 +75,11 @@ public class AdelPoleSequence : MonoBehaviour
     enum Phase { Waiting, Intro, Fight, Outro, Done }
     Phase phase = Phase.Waiting;
     bool debugArmed, forceAim, runnerDied, barging, tpAim, bladeSecured, runnerHeld;
+    // the street's old aggro trigger (Between Alley 2-3 Gameplay/EnemyAggroTrigger) woke the Runner before Khalid reached the
+    // area, so the fight started with no cutscene: while Adel waits at the pole it is off,
+    // and the Runner sleeps - idle, its AI paused - until the cutscene wakes it
+    readonly List<Collider> aggroBoxes = new List<Collider>();
+    bool runnerDormant, wokenEarly;
     Transform camFollow; Vector3 followOffset, followLook;
     float savedRunnerSpeed = -1f;
     float runnerDiedAt;
@@ -147,11 +153,63 @@ public class AdelPoleSequence : MonoBehaviour
 
     void Start()
     {
-        if (runner != null) runner.OnEnemyDied.AddListener(OnRunnerDied);
+        if (runner != null)
+        {
+            runner.OnEnemyDied.AddListener(OnRunnerDied);
+            var hp = runner.GetComponent<Health>();
+            if (hp != null) hp.OnDamageTaken += OnRunnerHurt;
+            foreach (var t in FindObjectsByType<EnemyAggroTrigger>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (t.Wakes(runner))
+                    aggroBoxes.AddRange(t.GetComponents<Collider>());
+        }
         IdleState();
     }
 
-    void OnDestroy() { if (runner != null) runner.OnEnemyDied.RemoveListener(OnRunnerDied); }
+    void OnDestroy()
+    {
+        if (runner == null) return;
+        runner.OnEnemyDied.RemoveListener(OnRunnerDied);
+        var hp = runner.GetComponent<Health>();
+        if (hp != null) hp.OnDamageTaken -= OnRunnerHurt;
+    }
+
+    // shot while it slept (from far off, before the cutscene): no cutscene then, it simply comes for him - a normal fight,
+    // and the outro still plays once it is dead
+    void OnRunnerHurt(int dmg)
+    {
+        if (!runnerDormant || phase != Phase.Waiting) return;
+        SetRunnerDormant(false);
+        wokenEarly = true;
+        runner.ChangeEnemyType(EnemyType.Aggressive);
+        phase = Phase.Fight;
+    }
+
+    /// <summary>While Adel waits at the pole: the aggro trigger off, the Runner asleep. Off again when the cutscene starts.</summary>
+    void KeepRunnerAsleep(bool asleep)
+    {
+        foreach (var c in aggroBoxes) if (c != null && c.enabled == asleep) c.enabled = !asleep;
+        if (asleep && !RunnerDead)
+        {
+            if (runner.stats != null && runner.stats.enemyType != EnemyType.Fixed) runner.ChangeEnemyType(EnemyType.Fixed);   // a save's trigger re-wake
+            if (!runnerDormant) SetRunnerDormant(true);
+        }
+        else if (runnerDormant) SetRunnerDormant(false);
+    }
+
+    void SetRunnerDormant(bool on)
+    {
+        runnerDormant = on;
+        if (runner == null) return;
+        runner.PauseEnemyState(on);
+        if (runner.agent != null && runner.agent.isOnNavMesh) runner.agent.isStopped = on;
+    }
+
+    // the road through the crossroads (the area box), or right up to the pole by any other way
+    bool InStartArea(Vector3 pos)
+    {
+        if (new Bounds(areaCenter, areaSize).Contains(pos)) return true;
+        return pole != null && Flat(pos - pole.position).magnitude < 11f && Mathf.Abs(pos.y - pole.position.y) < 4f;
+    }
 
     void OnRunnerDied() { runnerDied = true; runnerDiedAt = Time.time; }
 
@@ -195,7 +253,8 @@ public class AdelPoleSequence : MonoBehaviour
         {
             case Phase.Waiting:
                 IdleState();
-                if (Armed && p != null && new Bounds(areaCenter, areaSize).Contains(p.transform.position) && CanStart(p))
+                KeepRunnerAsleep(Armed);
+                if (Armed && p != null && InStartArea(p.transform.position) && CanStart(p))
                 {
                     if (RunnerDead) StartCoroutine(Co_Outro());     // killed from a distance before he walked in
                     else StartCoroutine(Co_Intro());
@@ -277,16 +336,28 @@ public class AdelPoleSequence : MonoBehaviour
     {
         var player = Player.instance;
         phase = Phase.Intro; IsPlaying = true;
+        KeepRunnerAsleep(false);
         HoldKhalid(player, false);
         bool hasGun = player.inventory != null && player.inventory.HasWeapon();
         if (hasGun && PlayerMeleeWeapon.Equipped) PlayerMeleeWeapon.SelectGun();      // the gun comes out while we look at Adel
         if (hasGun && player.playerWeaponSystem != null) player.playerWeaponSystem.weaponIsEnabled = true;
+        // never an empty gun in the forced aim: at least 3 rounds in it (more stay if he has them)
+        if (hasGun && player.playerWeaponSystem != null) player.playerWeaponSystem.EnsureLoaded(IntroRounds);
 
         // the Runner, idle at the far end of the street from him
         Vector3 k = player.transform.position;
         Vector3 far = runner.transform.position;
-        float best = -1f;
-        foreach (var s in runnerFarSpots) { float d = Flat(s - k).sqrMagnitude; if (d > best) { best = d; far = s; } }
+        // about 22 m down the street from him (not so far it's lost in the fog); the farthest spot if none is far enough
+        float best = float.MaxValue, farthest = -1f; Vector3 farthestSpot = far; bool anyOk = false;
+        foreach (var s in runnerFarSpots)
+        {
+            float d = Flat(s - k).magnitude;
+            if (d > farthest) { farthest = d; farthestSpot = s; }
+            if (d < 14f) continue;
+            float score = Mathf.Abs(d - 22f);
+            if (score < best) { best = score; far = s; anyOk = true; }
+        }
+        if (!anyOk) far = farthestSpot;
         runner.ChangeEnemyType(EnemyType.Fixed);
         if (runner.agent != null && runner.agent.isOnNavMesh) runner.agent.Warp(far); else runner.transform.position = Ground(far);
         runner.transform.rotation = Quaternion.LookRotation(Flat(k - far));
@@ -296,9 +367,14 @@ public class AdelPoleSequence : MonoBehaviour
 
         // shot 1 (0 - 3.2): over his shoulder, he sees Adel tied to the pole
         lookAt = adelChest; lookAtSet = true;
+        // over Khalid's shoulder only when he's close: past ~9 m the cutscene fog hides Adel, so then the camera is down the
+        // street near the pole, on Khalid's side of it, looking at Adel tied there
         Vector3 toAdel = Flat(adelChest - k).normalized;
         Vector3 side = Vector3.Cross(Vector3.up, toAdel);
-        SetShot(camA, k - toAdel * 3.3f + side * 1.35f + Vector3.up * 1.8f, adelChest, 26f, 55f);
+        if (Flat(adelChest - k).magnitude < 9f)
+            SetShot(camA, k - toAdel * 3.3f + side * 1.35f + Vector3.up * 1.8f, adelChest, 26f, 55f);
+        else
+            SetShot(camA, adelChest - toAdel * 5.2f + side * 1.3f + Vector3.up * 0.55f, adelChest + Vector3.up * 0.1f, 34f, 55f);
         yield return Wait(3.2f);
 
         // shot 2 (3.2 - 6.6): on the Runner itself, down the street - standing there with the knife, facing him
@@ -915,6 +991,8 @@ public class AdelPoleSequence : MonoBehaviour
     void OnDisable()
     {
         if (barging) EndBarge();
+        if (runnerDormant) SetRunnerDormant(false);
+        foreach (var c in aggroBoxes) if (c != null) c.enabled = true;
         if (runnerHeld && runner != null) { runner.PauseEnemyState(false); if (runner.agent != null && runner.agent.isOnNavMesh) runner.agent.isStopped = false; }
         if (phase == Phase.Intro || phase == Phase.Outro || forceAim)
         {
@@ -951,8 +1029,8 @@ public class AdelPoleSequence : MonoBehaviour
         phase = Phase.Waiting;
         if (adel != null) adel.gameObject.SetActive(false);
         IdleState();
-        Vector3 at = Ground(new Vector3(-58.6f, 2f, -27.5f));       // the side street's west lane (cars park in the east one)
-        TeleportKhalid(p, at, Quaternion.Euler(0f, 0f, 0f));
+        Vector3 at = Ground(new Vector3(-10.0f, 2f, -9.5f));        // the street east of the crossroads: walk west onto the road through it
+        TeleportKhalid(p, at, Quaternion.Euler(0f, 270f, 0f));
     }
 
     public string DebugState => phase + " forceAim " + forceAim + " runnerDead " + RunnerDead + " armed " + Armed;
