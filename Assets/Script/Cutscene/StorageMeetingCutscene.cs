@@ -170,9 +170,11 @@ public class StorageMeetingCutscene : MonoBehaviour
         if (player == null || running || done) return;
         running = true; IsPlaying = true; t = prevT = 0f; skipHeld = 0f;
 
-        // a checkpoint at the door first: dying in the fight comes back here and the meeting plays again
+        // a checkpoint at the door first: dying in the fight comes back here and the meeting plays again.
+        // The checkpoint is written at the END of this frame, so "meeting done" is registered a frame later: registered here it
+        // went into that checkpoint, and dying in the fight came back to no meeting, no hammer on the shelf, no Questioner - stuck.
         if (checkpoint != null) checkpoint.Trigger();
-        if (SaveManager.instance != null) SaveManager.instance.RegisterUsedInteractable(SaveKey);
+        StartCoroutine(Co_MarkDoneAfterCheckpoint());
 
         PlayerMeleeWeapon.SetCutscene(PlayerMeleeWeapon.CutsceneHold.Away);
         if (player.playerWeaponSystem != null) player.playerWeaponSystem.ExitOutOfAiming();
@@ -206,6 +208,12 @@ public class StorageMeetingCutscene : MonoBehaviour
         ikWeight = 1f; bow = 0f; boxFalling = boxLanded = false; hammerGiven = false; cashierYaw = cashierYaw0;
         if (jaw != null) jaw.closed = 1f;
         Evaluate();
+    }
+
+    IEnumerator Co_MarkDoneAfterCheckpoint()
+    {
+        yield return null;   // past the end of the frame the checkpoint was collected in
+        if (SaveManager.instance != null) SaveManager.instance.RegisterUsedInteractable(SaveKey);
     }
 
     [Tooltip("Khalid's own walk plays its footstep events through PlayerSound; on: the cutscene also listens to his feet (only if those events are missing).")]
@@ -560,6 +568,7 @@ public class StorageMeetingCutscene : MonoBehaviour
         go.transform.SetParent(transform, false);
         var v = go.AddComponent<CinemachineVirtualCamera>();
         v.m_Lens.FieldOfView = fov; v.m_Lens.NearClipPlane = 0.08f;
+        v.m_Lens.FarClipPlane = 25f;   // the 5000 default drew everything outside the storeroom too
         v.Priority = 0;
         v.m_StandbyUpdate = CinemachineVirtualCameraBase.StandbyUpdateMode.Always;
         shots.Add(v);

@@ -140,6 +140,7 @@ public class ItemInspectionHandler : MonoBehaviour
 
     public void OnInteractButtonPressed(InputAction.CallbackContext callbackContext)
     {
+        if (PlayerCloseCombat.instance != null && PlayerCloseCombat.instance.BlocksInteract) return;   // held by a Questioner: E is the escape sliders' key
         if (SubtitleManager.instance != null && (SubtitleManager.instance.IsSubtitleBusy() || SubtitleManager.instance.IsWithinCooldownPeriod()))
             return;
 

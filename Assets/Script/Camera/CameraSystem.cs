@@ -306,6 +306,13 @@ public class CameraSystem : MonoBehaviour
         debugLastEvent = "SNAP BEHIND";
     }
 
+    /// <summary>Puts the rig straight behind the player (a script that turned him and wants the view to stay that way,
+    /// e.g. after a camera glance). Does nothing in a fixed camera zone.</summary>
+    public void SnapBehind()
+    {
+        if (activeZone == null && followTarget != null && lookAtTarget != null) SnapBehindPlayer();
+    }
+
     /// <summary>Switches between the classic tank camera (false) and the free mouse camera (true).</summary>
     public void SetFreeCamera(bool enabled, bool showMessage = false)
     {

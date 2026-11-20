@@ -236,6 +236,7 @@ public class QuestionerEnemy : HeadshotEnemy
     /// <summary>A new horde sequence (ItemPickupEnemySpawner starting): its chorus can happen again.</summary>
     public static void ResetHordeChorus()
     {
+        QuestionerHordeDirector.Reset();
         chorusDone = chorusLanded = chorusForced = false;
         chorusFirstEngage = -1f;
     }
@@ -529,9 +530,13 @@ public class QuestionerEnemy : HeadshotEnemy
         base.AlertToSound(soundPosition);
     }
 
+    /// <summary>How many times this one has caught Khalid: each catch after the first makes the escape sliders faster.</summary>
+    public int GrabsLanded { get; set; }
+
     public override void OnPool()
     {
         base.OnPool();
+        GrabsLanded = 0;
         killedWhileStaggered = false;
         RestoreWeakpoint();
         SetWeakpointScale(1f);
@@ -556,6 +561,41 @@ public class QuestionerEnemy : HeadshotEnemy
     }
 
     /// <summary>The scream wind-up opens the mouth wide: the weak point gets bigger (best moment to shoot).</summary>
+    // ---------------- mouth glow flare (the horde's attack warning) ----------------
+
+    MaterialPropertyBlock glowBlock;
+    Renderer glowRenderer;
+    float glowFlare;
+    Color glowBaseColor;
+    float glowBaseSize, glowBaseCore;
+
+    /// <summary>0 = the mouth glow as it is, 1 = flared: bigger, brighter, hotter - the "this one is coming" warning.</summary>
+    public void SetGlowFlare(float k)
+    {
+        k = Mathf.Clamp01(k);
+        if (glowRenderer == null && k <= 0f) { glowFlare = 0f; return; }     // nothing flared (or no mouth left): no search
+        if (glowRenderer != null && Mathf.Abs(k - glowFlare) < 0.02f && (k > 0f || glowFlare == 0f)) return;
+        if (glowRenderer == null)
+        {
+            var hb = FindWeakpoint();
+            glowRenderer = hb != null ? hb.GetComponentInChildren<MeshRenderer>(true) : null;
+            if (glowRenderer == null || glowRenderer.sharedMaterial == null) { glowRenderer = null; return; }
+            var m = glowRenderer.sharedMaterial;
+            glowBaseColor = m.HasProperty("_Color") ? m.GetColor("_Color") : Color.white;
+            glowBaseSize = m.HasProperty("_Size") ? m.GetFloat("_Size") : 1f;
+            glowBaseCore = m.HasProperty("_Core") ? m.GetFloat("_Core") : 1f;
+        }
+        glowFlare = k;
+        if (k <= 0f) { glowRenderer.SetPropertyBlock(null); return; }
+        if (glowBlock == null) glowBlock = new MaterialPropertyBlock();
+        glowBlock.Clear();
+        Color hot = new Color(glowBaseColor.r * 1.2f, glowBaseColor.g * 0.75f, glowBaseColor.b * 0.6f, glowBaseColor.a);
+        glowBlock.SetColor("_Color", Color.Lerp(glowBaseColor, hot, k) * (1f + 2.5f * k));
+        glowBlock.SetFloat("_Size", glowBaseSize * (1f + 1.3f * k));
+        glowBlock.SetFloat("_Core", Mathf.Min(3f, glowBaseCore * (1f + 1.2f * k)));
+        glowRenderer.SetPropertyBlock(glowBlock);
+    }
+
     public void SetWeakpointScale(float scale)
     {
         var hb = FindWeakpoint();
@@ -682,6 +722,20 @@ public class QuestionerTuning
     public float hordeClawGapMin = 5f, hordeClawGapMax = 8f;
     [Tooltip("After a horde grab ends no one in the horde claws for at least this long (s).")]
     public float hordeClawAfterGrab = 3f;
+
+    [Header("Horde attacks: pressure (user 2026-11-20 - replaces the random grabs / claws above)")]
+    [Tooltip("One meter for the whole horde. It fills while Questioners are within hordeNearRange (m) of Khalid: in this many "
+           + "seconds while he stands or creeps (under hordeMovingSpeed m/s), in hordePressureMoving seconds while he keeps "
+           + "moving; it empties in hordePressureDrain seconds with none near. Full = exactly one of them attacks.")]
+    public float hordePressureStill = 4f;
+    public float hordePressureMoving = 10f, hordePressureDrain = 3f, hordeNearRange = 4.5f, hordeMovingSpeed = 1.2f;
+    [Tooltip("After an attack is over the meter stays empty this long (s): attacks never chain.")]
+    public float hordeBreather = 2f;
+    [Tooltip("The chosen one's warning before it moves (s): it stops, faces him, hisses, and its mouth glow flares.")]
+    public float hordeTellTime = 0.8f;
+    [Tooltip("Only ones on screen are chosen. Meter full this long (s) with none on screen (he's camping, his back to them): "
+           + "one from behind may come - always the claws, with the longer warning hordeBehindTellTime (s).")]
+    public float hordeBehindAfter = 3f, hordeBehindTellTime = 1.2f;
     [Tooltip("Seconds between two horde screams starting (across the whole horde).")]
     public float hordeScreamSpacing = 0.6f;
     [Tooltip("Each horde Questioner's own scream cooldown (s).")]

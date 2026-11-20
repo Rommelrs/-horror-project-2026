@@ -35,6 +35,9 @@ public class ItemPickupEnemySpawner : MonoBehaviour
     [SerializeField] private int lineUpColumns = 4;
     [SerializeField] private float lineUpWidth = 5.5f;
     [SerializeField] private float lineUpDepth = 4.5f;
+    [Tooltip("An empty aisle this wide (m) down the middle of the line-up (inside Line Up Width): half the columns stand each "
+           + "side of it, so it reads as a gauntlet to run through, not a wall. 0 = none.")]
+    [SerializeField] private float lineUpAisle = 0f;
 
     [Header("Audio")]
     [SerializeField] private AudioSource musicAudioSource;
@@ -42,6 +45,8 @@ public class ItemPickupEnemySpawner : MonoBehaviour
     [SerializeField] private AudioClip pickupSFX;
     
     [Header("Events")]
+    [Tooltip("The moment the item is in the inventory (before the delay) - e.g. a cutscene that leads up to the spawning.")]
+    [SerializeField] private UnityEvent onItemDetected;
     [SerializeField] private UnityEvent onItemPickedUp;
     [SerializeField] private UnityEvent onSpawningStarted;
     [SerializeField] private UnityEvent onSpawningCompleted;
@@ -102,6 +107,7 @@ public class ItemPickupEnemySpawner : MonoBehaviour
             SaveableInteractable saveable = GetComponent<SaveableInteractable>();
             if (saveable != null) saveable.MarkAsUsed();
 
+            onItemDetected?.Invoke();
             StartCoroutine(Co_SpawnEnemies());
         }
 
@@ -191,7 +197,9 @@ public class ItemPickupEnemySpawner : MonoBehaviour
         {
             int row = i / lineUpColumns, column = i % lineUpColumns;
             // rows staggered, so the back ones show between the front ones
-            float x = ((column + (row % 2 == 0 ? 0.25f : 0.75f)) / lineUpColumns - 0.5f) * lineUpWidth;
+            float aisle = Mathf.Clamp(lineUpAisle, 0f, lineUpWidth * 0.8f);
+            float x = ((column + (row % 2 == 0 ? 0.25f : 0.75f)) / lineUpColumns - 0.5f) * (lineUpWidth - aisle);
+            if (aisle > 0f) x += (column < lineUpColumns / 2f ? -0.5f : 0.5f) * aisle;
             float z = (rows > 1 ? 0.5f - row / (rows - 1f) : 0f) * lineUpDepth;
             Vector3 at = lineUpCentre.TransformPoint(new Vector3(x + Random.Range(-0.15f, 0.15f), 0f, z + Random.Range(-0.15f, 0.15f)));
             if (UnityEngine.AI.NavMesh.SamplePosition(at, out var hit, 2f, UnityEngine.AI.NavMesh.AllAreas)) at = hit.position;

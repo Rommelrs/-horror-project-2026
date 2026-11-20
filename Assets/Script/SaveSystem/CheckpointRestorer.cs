@@ -36,12 +36,9 @@ public class CheckpointRestorer : MonoBehaviour
         yield return new WaitForEndOfFrame();
         p.controller.enabled = true;
 
-        // ─ Health
-        if (p.health != null)
-        {
-            p.health.ResetHealth();
-            p.health.SetHealthSilently(data.health);   // not Damage(): that played a hit (sound, blood, hurt HUD, stability loss)
-        }
+        // ─ Health (at least the Continue minimum, and a few seconds of immunity)
+        CheckpointManager.ApplyContinueHealth(p.health, data.health);
+        if (p.health != null) p.StartCoroutine(CheckpointManager.Co_InvulnerableAfterLoading(p.health));
 
         // ─ Stability
         if (p.playerStability != null)

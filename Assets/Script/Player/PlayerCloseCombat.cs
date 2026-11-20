@@ -4,8 +4,8 @@ using UnityEngine;
 /// <summary>
 /// Khalid's side of the Questioner fight:
 ///  - Grabbed: the Questioner holds him, screams into his face, slowly bites his neck, and Khalid shoves him off - all on a
-///    close over-the-shoulder camera that shakes with the scream and the bite. The only way out is a pipe strike timed into
-///    the grab lunge (QuestionerCombatState).
+///    close over-the-shoulder camera that shakes with the scream and the bite. Ways out: a pipe strike timed into the grab
+///    lunge (QuestionerCombatState), or once caught the two escape sliders (GrabEscapeQTE): both passed = no bite.
 ///  - The Question (scream): slows him 30% for a moment; for ~6 s his aim sways (bullet spread + the rendered camera, so
 ///    the ADS view too), the screen blurs and smears like an echo and a high ringing fills his ears.
 ///  - Knockback: the Questioner's hits shove him back a step.
@@ -56,9 +56,16 @@ public class PlayerCloseCombat : MonoBehaviour
     public static Vector3 KnockVelocity => instance != null ? instance.knockVelocity : Vector3.zero;
 
     public bool IsGrabbed => grabber != null;
+    /// <summary>The grab escape sliders (GrabEscapeQTE): Running while he tries, Escaped = both passed (no bite), Failed.</summary>
+    public GrabEscapeQTE.Result EscapeState => escapeQte != null ? escapeQte.State : GrabEscapeQTE.Result.None;
+    GrabEscapeQTE escapeQte;
+    float grabEndedAt = float.NegativeInfinity;
+    /// <summary>Interact does nothing else while he's held, being shoved off, or just after (the escape key pressed late).</summary>
+    public bool BlocksInteract => IsGrabbed || IsPushingOff || Time.time < grabEndedAt + 0.6f;
     public bool IsKnockedBack => Time.time < knockEnd;
     public bool IsPushingOff => Time.time < pushOffEnd;
-    public bool CanBeGrabbed => player != null && !player.IsDead() && grabber == null && !player.isScared && !player.isKnockedDown;
+    public bool CanBeGrabbed => player != null && !player.IsDead() && grabber == null && !player.isScared && !player.isKnockedDown
+                                && (player.health == null || !player.health.IsInvulnerable);   // just continued from a checkpoint
 
     Player player;
     Animator animator;
@@ -187,6 +194,9 @@ public class PlayerCloseCombat : MonoBehaviour
         PlayReaction("Grabbed", 99f);
         PlayerMeleeWeapon.SetHiddenForGrab(true);
         StartGrabCam(q);
+        // the way out: two quick sliders (faster the lower his stability)
+        if (escapeQte == null) escapeQte = GrabEscapeQTE.Create(transform);
+        escapeQte.Begin(q != null ? q.GrabsLanded : 1);     // the same one catching him again: faster each time
     }
 
     /// <summary>Keeps him where the Questioner holds him (in front of the split mouth), facing it.</summary>
@@ -210,6 +220,8 @@ public class PlayerCloseCombat : MonoBehaviour
         if (grabber == null) return;
         grabber = null;
         player.isGrabbed = false;
+        if (escapeQte != null) escapeQte.Cancel();
+        grabEndedAt = Time.time;
         if (pushedOff && !player.IsDead())
         {
             pushOffEnd = Time.time + pushOffTime;
@@ -268,6 +280,9 @@ public class PlayerCloseCombat : MonoBehaviour
         var lens = grabCam.m_Lens;
         lens.FieldOfView = grabCamFov;
         lens.NearClipPlane = 0.05f;
+        // the gameplay camera's far clip (25 m in Game, 14 m in the Store): the 5000 default drew the whole map during a grab
+        float gameFar = brain.OutputCamera != null && (object)brain.ActiveVirtualCamera != grabCam ? brain.OutputCamera.farClipPlane : 25f;
+        lens.FarClipPlane = Mathf.Clamp(gameFar, 10f, 60f);
         grabCam.m_Lens = lens;
         if (khalidHead == null) khalidHead = FindBone(transform, "head.x", "Head");
         grabberHead = FindBone(q.transform, "Head");

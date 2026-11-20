@@ -41,6 +41,32 @@ public class CheckpointManager : MonoBehaviour
     /// <summary>The checkpoint's inventory is in. Called by whichever restorer gets there.</summary>
     public static void MarkInventoryRestored() { inventoryPending = false; }
 
+    // ─ Continue rules (user, 2026-11-20): a checkpoint keeps the health it was saved with, and some respawn inside an enemy's
+    //   reach (a Bag Bearer throwing at the Block 2 entrance / the wall hole) - Continue could kill him again within seconds.
+    /// <summary>Health on Continue is at least this share of max.</summary>
+    public const float ContinueMinHealthFraction = 0.5f;
+    /// <summary>No damage (and no grabs) for this long once the loading screen is gone.</summary>
+    public const float ContinueInvulnerableSeconds = 3f;
+
+    /// <summary>Restorers: the checkpoint's health, raised to the minimum, and immunity while the scene settles.</summary>
+    public static void ApplyContinueHealth(Health health, int savedHealth)
+    {
+        if (health == null) return;
+        health.ResetHealth();
+        int min = Mathf.CeilToInt(health.GetMaxHealthValue() * ContinueMinHealthFraction);
+        health.SetHealthSilently(Mathf.Max(savedHealth, min));   // not Damage(): that played a hit (sound, blood, hurt HUD, stability loss)
+        health.GrantInvulnerability(ContinueInvulnerableSeconds);
+    }
+
+    /// <summary>Restorers, after the restore: the immunity again, counted from when the loading screen has gone (the player
+    /// can't see or move before that).</summary>
+    public static IEnumerator Co_InvulnerableAfterLoading(Health health)
+    {
+        float give = Time.unscaledTime + 30f;
+        while (LoadingHandler.IsLoading() && Time.unscaledTime < give) yield return null;
+        if (health != null) health.GrantInvulnerability(ContinueInvulnerableSeconds);
+    }
+
     private void Awake()
     {
         if (instance != null)
@@ -324,12 +350,9 @@ public class CheckpointManager : MonoBehaviour
         yield return new WaitForEndOfFrame();
         p.controller.enabled = true;
 
-        // ─ Health
-        if (p.health != null)
-        {
-            p.health.ResetHealth();
-            p.health.SetHealthSilently(data.health);   // not Damage(): that played a hit (sound, blood, hurt HUD, stability loss)
-        }
+        // ─ Health (at least the Continue minimum, and a few seconds of immunity)
+        ApplyContinueHealth(p.health, data.health);
+        if (p.health != null) p.StartCoroutine(Co_InvulnerableAfterLoading(p.health));
 
         // ─ Stability
         if (p.playerStability != null)

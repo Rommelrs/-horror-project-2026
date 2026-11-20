@@ -521,6 +521,13 @@ public class AdelPoleSequence : MonoBehaviour
             HideGun(player);           // the pickup's inventory update puts the gun back in his hand
             yield return Wait(1.1f);
         }
+        else if (knifeBlade != null && player.inventory != null && !OwnsBlade(player))
+        {
+            // Continue from the checkpoint its death made ("Knife blade pickup"): the Runner is restored dead, so it never
+            // drops the blade again and the outro had nothing to pick up - no knife, no way through the Block 3 cloth.
+            player.inventory.PickUp(knifeBlade, 1);
+            HideGun(player);
+        }
 
         // he runs to the pole (a cut hides the long part)
         Vector3 free = Ground(khalidFreeSpot);
@@ -689,6 +696,14 @@ public class AdelPoleSequence : MonoBehaviour
         phase = Phase.Done; IsPlaying = false;
         yield return null; yield return null; yield return null;
         if (CheckpointManager.instance != null) CheckpointManager.instance.TriggerCheckpoint(checkpointName);
+    }
+
+    /// <summary>The blade, or the knife it was already combined into (both parts make ItemType.Knife).</summary>
+    bool OwnsBlade(Player player)
+    {
+        foreach (var s in player.inventory.GetItems())
+            if (s.item == knifeBlade || (s.item != null && s.item.itemType == ItemType.Knife)) return true;
+        return false;
     }
 
     void TakeBlade(InspectableItemPickup blade)

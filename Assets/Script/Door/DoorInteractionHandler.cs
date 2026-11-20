@@ -63,6 +63,7 @@ public class DoorInteractionHandler : MonoBehaviour
 
     public void OnDoorInteractionButtonPressed(InputAction.CallbackContext callbackContext)
     {
+        if (PlayerCloseCombat.instance != null && PlayerCloseCombat.instance.BlocksInteract) return;   // held by a Questioner: E is the escape sliders' key
         float sinceRemark = Time.unscaledTime - doorRemarkShownAt;
         bool doorRemarkUp = sinceRemark >= doorRemarkIgnoreSeconds && sinceRemark < doorRemarkWindow;
         if (sinceRemark < doorRemarkIgnoreSeconds) return;           // the press that just showed the remark (and its bounce)

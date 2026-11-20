@@ -9,6 +9,8 @@ public class InteractionHandler : MonoBehaviour
     public static InteractionHandler instance;
 
     [SerializeField] InputActionReference interactionInput;
+    /// <summary>The Interact action (the grab escape sliders use it too).</summary>
+    public static InputAction InteractAction => instance != null && instance.interactionInput != null ? instance.interactionInput.action : null;
     [SerializeField] GameObject interactionPanel;
 
     [SerializeField] CanvasGroup interactCanvasGroup;
@@ -55,6 +57,11 @@ public class InteractionHandler : MonoBehaviour
             return;
 
         if (ItemInspectionHandler.instance && ItemInspectionHandler.instance.InspectionMenuIsActive())
+            return;
+
+        // held by a Questioner: Interact is the grab escape sliders' key, not "pick that up" (it opened a pickup's inspect
+        // screen mid-grab and paused the game)
+        if (PlayerCloseCombat.instance != null && PlayerCloseCombat.instance.BlocksInteract)
             return;
 
         //On Interact Button pressed

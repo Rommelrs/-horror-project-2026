@@ -231,7 +231,7 @@ public class BridgeRunnerSequence : MonoBehaviour
         var go = new GameObject(n);
         go.transform.SetParent(transform, false);
         var c = go.AddComponent<CinemachineVirtualCamera>();
-        c.m_Lens.FieldOfView = fov; c.m_Lens.NearClipPlane = 0.08f;
+        c.m_Lens.FieldOfView = fov; c.m_Lens.NearClipPlane = 0.08f; c.m_Lens.FarClipPlane = 25f;   // (ApplyGameClip copies the game's)
         c.Priority = 0;
         c.m_StandbyUpdate = CinemachineVirtualCameraBase.StandbyUpdateMode.Always;
         return c;

@@ -119,7 +119,8 @@ public class CinematicKnockdownSequence : MonoBehaviour
     // Done-state lives in the save's progress (it rolls back with checkpoints): loading a checkpoint taken after the knockdown
     // must not replay it - the Runner is gone by then and Khalid walked forever waiting for his push.
     string DoneKey => "knockdown-done:" + gameObject.scene.name + "/" + gameObject.name;
-    bool AlreadyDone => SaveManager.instance != null && SaveManager.instance.IsInteractableUsed(DoneKey);
+    public const string CheckpointName = "After the table knockdown";
+    public bool AlreadyDone => SaveManager.instance != null && SaveManager.instance.IsInteractableUsed(DoneKey);
 
     /// <summary>No Runner to push him (dead, gone or never set): the scene can't play, so it doesn't start.</summary>
     bool RunnerReady => runnerEnemy != null && runnerEnemy.gameObject.activeInHierarchy &&
@@ -685,6 +686,9 @@ public class CinematicKnockdownSequence : MonoBehaviour
         Player.instance.isKnockedDown = false;
         if (HasGun) PlayerMeleeWeapon.SelectGun();      // he fought from the floor with it: it stays out
         PlayerMeleeWeapon.SetCutscene(PlayerMeleeWeapon.CutsceneHold.None);
+
+        // back on his feet: dying after this no longer means the whole knockdown again (the done key went in at StandUp)
+        if (CheckpointManager.instance != null) CheckpointManager.instance.TriggerCheckpoint(CheckpointName);
     }
 
     IEnumerator Co_WatchSubtitleDismiss()

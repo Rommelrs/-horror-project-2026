@@ -1214,7 +1214,8 @@ public static partial class CowardMeetingBuilder   // (EscapeCowardTalkBuilder.c
         // keep tracking while not live, so a shot's first frame is already aimed (round-robin left the exit shot
         // pointing at an empty alley for a frame)
         vc.m_StandbyUpdate = CinemachineVirtualCameraBase.StandbyUpdateMode.Always;
-        vc.m_Lens.FieldOfView = fov; vc.m_Lens.NearClipPlane = 0.05f; vc.m_Lens.FarClipPlane = 600f;
+        // far clip = the gameplay camera's 25 m: the cutscene fog (1.9) hides everything past it; 600 drew the whole city (~6M tris)
+        vc.m_Lens.FieldOfView = fov; vc.m_Lens.NearClipPlane = 0.05f; vc.m_Lens.FarClipPlane = 25f;
         if (lookAt != null)
         {
             vc.LookAt = lookAt;

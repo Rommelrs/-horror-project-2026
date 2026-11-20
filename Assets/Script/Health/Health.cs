@@ -91,6 +91,16 @@ public class Health : MonoBehaviour, IDamagable
         set => isInvincible = value;
     }
 
+    // Timed immunity, separate from the Invincible flag so it can't fight with cutscenes that set/clear that flag themselves.
+    float invulnerableUntil = -1f;
+    public bool IsInvulnerable => Time.time < invulnerableUntil;
+
+    /// <summary>No damage for this many seconds of game time from now (Continue from a checkpoint). Never shortens a longer one.</summary>
+    public void GrantInvulnerability(float seconds)
+    {
+        invulnerableUntil = Mathf.Max(invulnerableUntil, Time.time + seconds);
+    }
+
     //Damage Behaviour
     public void Damage(int damage)
     {
@@ -101,6 +111,8 @@ public class Health : MonoBehaviour, IDamagable
     public void Damage(int damage, bool ignoreIFrames)
     {
         if (isInvincible)
+            return;
+        if (Time.time < invulnerableUntil)
             return;
         if (damageBlocker != null && damageBlocker())
             return;

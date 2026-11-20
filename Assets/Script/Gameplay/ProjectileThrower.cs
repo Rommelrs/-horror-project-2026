@@ -39,6 +39,18 @@ public class ProjectileThrower : MonoBehaviour
             }
         }
         
+        // A checkpoint is still being restored: the trigger that switched this on is re-applied in the first frame, while its
+        // dead enemy is only destroyed at the end of that frame - every thrower in Alley 1 threw once on load.
+        if (CheckpointManager.IsLoadingCheckpoint)
+            return;
+
+        // Its enemy isn't here: never started, or restored dead by a checkpoint (it never "was active", so the rule above can't
+        // fire). Without this a reload threw a bag at once, straight onto Khalid at the Coward meeting checkpoint.
+        // (object) cast: a dead enemy restored by a checkpoint is DESTROYED, and a destroyed reference reads "== null" like an
+        // empty field - that skipped every rule here and the thrower threw.
+        if ((object)requiredObject != null && (requiredObject == null || !requiredObject.activeInHierarchy || RequiredIsDead()))
+            return;
+
         if (autoThrow && Time.time >= nextThrowTime)
         {
             ThrowAtNextTarget();
@@ -46,9 +58,17 @@ public class ProjectileThrower : MonoBehaviour
         }
     }
 
+    Health requiredHealth;
+    bool RequiredIsDead()
+    {
+        if (requiredHealth == null) requiredHealth = requiredObject.GetComponent<Health>();
+        return requiredHealth != null && requiredHealth.IsDead;
+    }
+
     public void SetRequiredObject(GameObject obj)
     {
         requiredObject = obj;
+        requiredHealth = null;
         requiredObjectWasActive = false;
     }
 

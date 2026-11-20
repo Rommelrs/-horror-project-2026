@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class DangerZone : MonoBehaviour
 {
@@ -36,6 +37,8 @@ public class DangerZone : MonoBehaviour
     [Header("Stop Spawners On Trigger")]
     [SerializeField] private ItemPickupEnemySpawner[] spawnersToStop;
     [SerializeField] private bool despawnEnemiesFromSpawners = true;
+    [Tooltip("Also stop the spawners' music (off: the chase music plays on after the spawning stops).")]
+    [SerializeField] private bool stopSpawnerMusic = true;
 
     [Header("Disable Spawn Points")]
     [SerializeField] private GameObject[] spawnPointsToDisable;
@@ -47,6 +50,13 @@ public class DangerZone : MonoBehaviour
     [SerializeField] private bool allowRetrigger = true;
     [Tooltip("Time to wait after triggering before the zone can trigger again")]
     [SerializeField] private float retriggerCooldown = 1f;
+    [Tooltip("Off: it goes off when the timer runs out whether or not any enemy is inside (a story beat that must happen). "
+           + "On: with no enemy inside nothing happens (and with Destroy After Trigger the zone is simply gone).")]
+    [SerializeField] private bool requireEnemiesInZone = true;
+
+    [Header("Events")]
+    [Tooltip("Called when it goes off (after the hit, activations and spawner stop).")]
+    public UnityEvent onTriggered;
 
     private float playerTimeInZone = 0f;
     private bool playerInZone = false;
@@ -116,7 +126,7 @@ public class DangerZone : MonoBehaviour
         // Clean up null/dead enemies
         enemiesInZone.RemoveAll(e => e == null || e.health.IsDead);
 
-        if (enemiesInZone.Count == 0)
+        if (enemiesInZone.Count == 0 && requireEnemiesInZone)
         {
             if (destroyAfterTrigger)
                 Destroy(gameObject);
@@ -182,6 +192,8 @@ public class DangerZone : MonoBehaviour
         // Disable specific spawn points
         DisableSpawnPoints();
 
+        onTriggered?.Invoke();
+
         if (destroyAfterTrigger)
             Destroy(gameObject, postHitSoundDelay + 1f);
     }
@@ -241,7 +253,7 @@ public class DangerZone : MonoBehaviour
                     spawner.StopSpawning();
                 }
                 
-                spawner.StopMusic();
+                if (stopSpawnerMusic) spawner.StopMusic();
             }
         }
     }

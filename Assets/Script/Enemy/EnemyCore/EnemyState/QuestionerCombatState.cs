@@ -3,9 +3,10 @@ using UnityEngine.AI;
 
 /// <summary>
 /// The Questioner's fight (spec moveset). One state with its own phases, driven by timers (spec numbers in QuestionerTuning):
-///  Horde    - hordeMode (the Alley 3 action sequence): no turns - walks in and screams on his own cooldown; when close,
-///             a few at a time grab (only the ones in front of Khalid) or run in and claw (the ones beside / behind him),
-///             each with a horde-wide break after it. A missed grab goes straight back to screaming (UpdateHorde).
+///  Horde    - hordeMode (the Alley 3 action sequence): no turns - walks in and screams on his own cooldown. Attacks come
+///             from QuestionerHordeDirector: one at a time, when its pressure meter (Khalid lingering near them) is full; the
+///             chosen one warns (HordeTell: stops, hisses, mouth glow flares) then grabs or claws. A missed grab goes straight
+///             back to screaming (UpdateHorde).
 ///  Free     - token holder: walks at Khalid while strafing left / right (direction every 0.8-1.6 s); others circle at 6 -> 4 m.
 ///             Turns: after each attack the token passes to the one that has waited longest; hitting one out of turn makes
 ///             him take it at once (QuestionerEnemy.Provoke).
@@ -27,7 +28,7 @@ using UnityEngine.AI;
 /// </summary>
 public class QuestionerCombatState : EnemyState
 {
-    enum Phase { Free, Hurt, ScreamWindup, ScreamActive, ScreamRecover, GrabWindup, GrabRush, GrabHold, GrabScream, Bite, Release, Stumble, Swipe, StaggerDown, StaggerLoop, StaggerUp }
+    enum Phase { Free, HordeTell, Hurt, ScreamWindup, ScreamActive, ScreamRecover, GrabWindup, GrabRush, GrabHold, GrabScream, Bite, Release, Stumble, Swipe, StaggerDown, StaggerLoop, StaggerUp }
 
     readonly QuestionerEnemy q;
     QuestionerTuning T => q.tuning;
@@ -57,6 +58,9 @@ public class QuestionerCombatState : EnemyState
     bool hadToken, wasInGrab, wasInClaw;
     bool clawRun;
     float clawRunT;
+    // horde: chosen by QuestionerHordeDirector - the warning, then this attack (grab if tellGrab, else the claws)
+    bool hordeAttacking, tellGrab;
+    float tellTime, sentFlare;
     bool chorus, chorusLoud, chorusBig, chorusHitPending, chorusInhaled;
     readonly NavMeshPath routePath = new NavMeshPath();
     readonly Vector3[] routeCorners = new Vector3[16];
@@ -88,6 +92,10 @@ public class QuestionerCombatState : EnemyState
     public bool InGrabMove => phase == Phase.GrabWindup || phase == Phase.GrabRush || IsGrabbing;
     /// <summary>Horde: running in for the claws, or clawing.</summary>
     public bool InClawMove => clawRun || phase == Phase.Swipe;
+    /// <summary>Horde: chosen by the director and still in that attack (the warning, the grab or the claws and their end).</summary>
+    public bool InHordeAttack => hordeAttacking && (phase == Phase.HordeTell || InGrabMove || InClawMove || phase == Phase.Release || phase == Phase.Stumble);
+    /// <summary>Horde: free to be chosen for an attack (walking about, not mid-move, not the chorus).</summary>
+    public bool CanStartHordeAttack => phase == Phase.Free && !clawRun && !chorus && !hordeAttacking;
     /// <summary>Free to drop what he's doing for the chorus (not in a grab, a claw swing, a recoil or a stagger).</summary>
     public bool CanJoinChorus => phase == Phase.Free || phase == Phase.Release || phase == Phase.ScreamWindup || phase == Phase.ScreamActive || phase == Phase.ScreamRecover;
     /// <summary>The grab lunge: a pipe strike landing now knocks him back (the end of the wind-up and the rush).</summary>
@@ -162,7 +170,8 @@ public class QuestionerCombatState : EnemyState
         EndSwipeHold();
         if (wasInGrab && q.hordeMode) q.HordeGrabEnded();
         if (wasInClaw && q.hordeMode) q.HordeClawEnded();
-        wasInGrab = wasInClaw = clawRun = false;
+        wasInGrab = wasInClaw = clawRun = hordeAttacking = false;
+        if (sentFlare != 0f) { sentFlare = 0f; q.SetGlowFlare(0f); }
         ForceReleasePlayer();
         q.SetWeakpointScale(1f);
         q.ResetMouth();
@@ -201,10 +210,27 @@ public class QuestionerCombatState : EnemyState
         float d = toP.magnitude;
         Vector3 dir = d > 0.01f ? toP / d : q.transform.forward;
         if (!q.hordeMode) TrackHabits(dt, dir);
+        else QuestionerHordeDirector.Tick(q);
 
         switch (phase)
         {
             case Phase.Free: UpdateFree(dt, d, dir); break;
+
+            case Phase.HordeTell:
+                // the warning: he stops dead, faces Khalid, hisses, the mouth opens and its glow flares - then he goes
+                Brake(dt); Face(dir, 360f);
+                if (!hordeAttacking) { EndMove(); break; }      // the director let him go (safety timeout)
+                if (phaseT >= tellTime)
+                {
+                    if (tellGrab && CanGrabKhalid && StraightLineClear && d >= T.hordeGrabMin && d <= T.hordeGrabMax) StartGrab();
+                    else
+                    {
+                        SetPhase(Phase.Free, "Q_Locomotion", 0.15f);
+                        clawRun = true;
+                        clawRunT = 0f;
+                    }
+                }
+                break;
 
             case Phase.Hurt:
                 // recoils where he stands, still turning to Khalid - then backs off for the grab (claws straight back in
@@ -300,6 +326,7 @@ public class QuestionerCombatState : EnemyState
             case Phase.GrabHold:
                 // caught: a breath, face to face
                 HoldPlayer();
+                if (EscapedGrab()) break;
                 if (phaseT >= T.grabHoldPause)
                 {
                     SetPhase(Phase.GrabScream, "Q_GrabScream", 0.12f);
@@ -313,6 +340,7 @@ public class QuestionerCombatState : EnemyState
             {
                 // The Question, right into his face
                 HoldPlayer();
+                if (EscapedGrab()) break;
                 var pc = PlayerCloseCombat.instance;
                 if (!screamed && phaseT >= T.grabScreamAt)
                 {
@@ -338,6 +366,9 @@ public class QuestionerCombatState : EnemyState
             case Phase.Bite:
                 // leans in slowly, the bite lands, he gnaws - then Khalid shoves him off
                 HoldPlayer();
+                if (EscapedGrab()) break;
+                // the escape sliders still going: he holds the lean, the bite waits for them
+                if (!bitten && EscapeRunning && phaseT > T.biteLandTime - 0.05f) phaseT = T.biteLandTime - 0.05f;
                 if (!bitten) q.SetMouth(Mathf.Lerp(0.55f, 1.1f, phaseT / T.biteLandTime));
                 if (!bitten && phaseT >= T.biteLandTime)
                 {
@@ -410,6 +441,13 @@ public class QuestionerCombatState : EnemyState
         bool inClaw = InClawMove;
         if (wasInClaw && !inClaw && q.hordeMode) q.HordeClawEnded();
         wasInClaw = inClaw;
+        if (q.hordeMode)
+        {
+            // the chosen one's mouth glow: flickering hot through the warning and the wind-up / run-in
+            float flare = hordeAttacking && (phase == Phase.HordeTell || phase == Phase.GrabWindup || clawRun)
+                ? 0.8f + 0.2f * Mathf.Sin(Time.time * 22f) : 0f;
+            if (flare != sentFlare) { sentFlare = flare; q.SetGlowFlare(flare); }
+        }
         KeepOffPlayer();
     }
 
@@ -605,7 +643,7 @@ public class QuestionerCombatState : EnemyState
             Face(runDir, 360f);
             SendLocomotion(vel);
             if (d <= T.swipeRange) { clawRun = false; StartSwipe(); }
-            else if (clawRunT > 2.5f) { clawRun = false; nextDecision = Time.time + T.decisionInterval; }
+            else if (clawRunT > 2.5f) { clawRun = false; hordeAttacking = false; nextDecision = Time.time + T.decisionInterval; }
             return;
         }
 
@@ -629,17 +667,9 @@ public class QuestionerCombatState : EnemyState
         nextDecision = Time.time + T.decisionInterval;
         // facing a crowd of them for the first time: they all scream at once
         if (q.TryHordeChorus() || !q.HordeMayAttack) return;
-        if (!q.HasLineOfSightToPlayer()) return;
-        bool inFront = InFrontOfPlayer();
-        if (inFront && StraightLineClear && Time.time >= nextGrab && d >= T.hordeGrabMin && d <= T.hordeGrabMax && Random.value < T.grabChance && q.TryHordeGrab())
-            StartGrab();
-        else if (!inFront && d <= T.hordeClawRange && Random.value < T.grabChance && q.TryHordeClaw())
-        {
-            clawRun = true;
-            clawRunT = 0f;
-            q.PlayCue(q.hissSFX);
-        }
-        else if (Time.time >= nextScream && d <= T.screamMax && q.TryHordeScream())
+        if (hordeAttacking || !q.HasLineOfSightToPlayer()) return;
+        // grabs and claws come only from QuestionerHordeDirector (one at a time, with a warning); on his own he just screams
+        if (Time.time >= nextScream && d <= T.screamMax && q.TryHordeScream())
             StartScream();
     }
 
@@ -653,6 +683,24 @@ public class QuestionerCombatState : EnemyState
         Vector3 toMe = q.transform.position - p.transform.position;
         toMe.y = 0f;
         return Vector3.Angle(ahead, toMe) <= T.hordeFrontAngle;
+    }
+
+    /// <summary>The director is done with him (his attack ran over its time): a warning still going stops; a move carries on.</summary>
+    public void CancelHordeAttack() => hordeAttacking = false;
+
+    /// <summary>QuestionerHordeDirector chose him: the warning (tell seconds), then the grab if `mayGrab` and he can (in front,
+    /// in range, a clear line), else the claws. False if he can't start a move right now.</summary>
+    public bool BeginHordeAttack(float tell, bool mayGrab)
+    {
+        if (!CanStartHordeAttack || PlayerT == null) return false;
+        hordeAttacking = true;
+        tellGrab = mayGrab;
+        tellTime = tell;
+        vel = Vector3.zero;
+        SetPhase(Phase.HordeTell, "Q_Locomotion", 0.1f);
+        q.PlayCue(q.hissSFX);
+        q.SetMouth(0.6f, 0.15f);
+        return true;
     }
 
     void StartGrab()
@@ -711,6 +759,7 @@ public class QuestionerCombatState : EnemyState
 
     void EndMove()
     {
+        hordeAttacking = false;
         q.SetWeakpointScale(1f);
         q.ResetMouth();
         vel = Vector3.zero;
@@ -767,7 +816,7 @@ public class QuestionerCombatState : EnemyState
         // swung too early: he isn't stopped, and this grab can't be countered any more (a blind swing mustn't win by luck)
         if (phase == Phase.GrabWindup && !q.hordeMode) counterSpent = true;
         // between moves a pipe strike that isn't a counter sends him back for the grab
-        if (phase != Phase.Free && phase != Phase.Release) return;
+        if (phase != Phase.Free && phase != Phase.Release && phase != Phase.HordeTell) return;
         clawRun = false;
         chorus = false;
         if (!q.hordeMode && OutOfRecoils())
@@ -956,6 +1005,7 @@ public class QuestionerCombatState : EnemyState
         {
             holdingPlayer = true;
             bitten = screamed = false;
+            q.GrabsLanded++;
             pc.BeginGrab(q);
             SetPhase(Phase.GrabHold, "Q_GrabHold", 0.08f);
             q.SetMouth(0.6f);
@@ -973,6 +1023,27 @@ public class QuestionerCombatState : EnemyState
             phaseT = 0.8f - T.grabMissRecovery;
             if (q.hordeMode) nextScream = Mathf.Min(nextScream, Time.time + T.grabMissRecovery);
         }
+    }
+
+    static bool EscapeRunning => PlayerCloseCombat.instance != null && PlayerCloseCombat.instance.EscapeState == GrabEscapeQTE.Result.Running;
+
+    /// <summary>Khalid passed both escape sliders: he shoves him off before the bite (no damage).</summary>
+    bool EscapedGrab()
+    {
+        if (bitten || !holdingPlayer || PlayerCloseCombat.instance == null || PlayerCloseCombat.instance.EscapeState != GrabEscapeQTE.Result.Escaped) return false;
+        q.StopVoice();
+        ReleasePlayer(true);
+        BeginStumble(T.pushOffDistance);
+        return true;
+    }
+
+    /// <summary>Test only (TaskJump): grab now, whatever he was doing between moves.</summary>
+    public void DebugGrabNow()
+    {
+        if (stateMachine.CurrentState != this || InGrabMove || IsStaggered) return;
+        clawRun = false;
+        chorus = false;
+        StartGrab();
     }
 
     void HoldPlayer()

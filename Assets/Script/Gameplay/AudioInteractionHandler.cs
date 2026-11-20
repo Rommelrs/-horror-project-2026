@@ -40,12 +40,26 @@ public class AudioInteractionHandler : MonoBehaviour
 
     public void OnInteractButtonPressed(InputAction.CallbackContext callbackContext)
     {
+        if (PlayerCloseCombat.instance != null && PlayerCloseCombat.instance.BlocksInteract) return;   // held by a Questioner: E is the escape sliders' key
         if (callbackContext.performed)
         {
             if (currentAudioInteraction != null)
             {
+                bool hasLine = currentAudioInteraction.line != null && !currentAudioInteraction.line.IsEmpty;
+                // the press that closes the remark is the same E: don't knock again / reopen it
+                if (hasLine && SubtitleManager.instance != null
+                    && (SubtitleManager.instance.IsSubtitleBusy() || SubtitleManager.instance.IsWithinCooldownPeriod()))
+                    return;
+
                 //Interacted
                 audioSource.PlayOneShot(currentAudioInteraction.audioClip);
+
+                if (hasLine)
+                {
+                    // without this stamp the same press would close the subtitle in the frame it opens
+                    if (Player.instance != null) Player.instance.SetLastInteractionTime(Time.unscaledTime);
+                    SubtitleManager.ShowSubtitle(currentAudioInteraction.line);
+                }
 
                 //Destroy current audio interaction if enabled
                 if (currentAudioInteraction.destroyAfterInteraction)

@@ -30,6 +30,10 @@ public class GlassBreakable : MonoBehaviour
     [SerializeField] KeyCode debugBreakKey = KeyCode.E;
     [SerializeField] bool enableDebugKey = true;
 
+    [Header("Saves")]
+    [Tooltip("Already shattered when this knockdown is done in the save/checkpoint (it has no saved state of its own: it came back whole after a Continue).")]
+    [SerializeField] CinematicKnockdownSequence brokenOnceDone;
+
     bool isBroken = false;
     Rigidbody[] pieces;
 
@@ -45,10 +49,32 @@ public class GlassBreakable : MonoBehaviour
         }
     }
 
+    private void Start()
+    {
+        if (brokenOnceDone != null && brokenOnceDone.AlreadyDone) BreakSilently();
+    }
+
+    /// <summary>Loaded past the break: the pieces fall where they would, without the sound, particles or OnBroken.</summary>
+    void BreakSilently()
+    {
+        if (isBroken) return;
+        isBroken = true;
+        Vector3 origin = explosionOrigin != null ? explosionOrigin.position : transform.position;
+        foreach (var rb in pieces)
+        {
+            if (rb == null) continue;
+            rb.isKinematic = false;
+            rb.AddExplosionForce(explosionForce, origin, explosionRadius, upwardModifier, ForceMode.Impulse);
+        }
+    }
+
     private void Update()
     {
+#if UNITY_EDITOR
+        // test key only: it was E, the interact key, so any interaction anywhere shattered the table before the knockdown
         if (enableDebugKey && !isBroken && Input.GetKeyDown(debugBreakKey))
             Break();
+#endif
     }
 
     /// <summary>Call this to shatter the glass/table with physics.</summary>

@@ -189,6 +189,7 @@ public class KidnapSequence : MonoBehaviour
         go.transform.SetParent(transform, false);
         shot = go.AddComponent<CinemachineVirtualCamera>();
         shot.m_Lens.FieldOfView = shotFov; shot.m_Lens.NearClipPlane = 0.08f;
+        shot.m_Lens.FarClipPlane = 40f;   // the storm fog hides figures by 25-33 m; the 5000 default drew the whole city
         shot.Priority = 0;
         shot.m_StandbyUpdate = CinemachineVirtualCameraBase.StandbyUpdateMode.Always;
 

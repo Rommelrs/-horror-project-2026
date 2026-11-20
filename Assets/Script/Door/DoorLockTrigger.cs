@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Events;
 
 public class DoorLockTrigger : MonoBehaviour
 {
@@ -16,6 +17,10 @@ public class DoorLockTrigger : MonoBehaviour
     [SerializeField] private bool unlockOnExit = false;
     [SerializeField] private bool destroyAfterTrigger = false;
     
+    [Header("Events")]
+    [Tooltip("Called when the player walking in locks the door (not on ForceLock): a sound, a line...")]
+    public UnityEvent onLocked;
+
     private bool hasTriggered = false;
 
     private void OnTriggerEnter(Collider other)
@@ -45,6 +50,7 @@ public class DoorLockTrigger : MonoBehaviour
             
             LockDoor();
             ActivateObjects();
+            onLocked?.Invoke();
 
             if (destroyAfterTrigger)
                 Destroy(gameObject);
