@@ -48,8 +48,16 @@ public class InteractionHandler : MonoBehaviour
         interactionInput.action.performed += OnInteractButtonPressed;
     }
 
+    // the shared Interact action outlives the scene: stop listening when this handler goes
+    private void OnDestroy()
+    {
+        if (interactionInput != null && interactionInput.action != null)
+            interactionInput.action.performed -= OnInteractButtonPressed;
+    }
+
     public void OnInteractButtonPressed(InputAction.CallbackContext callbackContext)
     {
+        if (DoorInteractionHandler.WorldInteractionBlocked) return;   // in a cutscene
         if (SubtitleManager.instance && (SubtitleManager.instance.IsSubtitleBusy() || SubtitleManager.instance.IsWithinCooldownPeriod()))
             return;
 

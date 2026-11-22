@@ -11,7 +11,13 @@ public class PlayerPrefsDebugTool : MonoBehaviour
     [SerializeField] private KeyCode simulateLoadGameKey = KeyCode.F3;
     [SerializeField] private KeyCode showMarkerStatusKey = KeyCode.F4;
     [SerializeField] private KeyCode clearAllPlayerPrefsKey = KeyCode.F10;
-    
+
+    // Editor only: in a build F10 would wipe every PlayerPrefs (options, map markers) for the player.
+    private void Awake()
+    {
+        if (!Application.isEditor) enabled = false;
+    }
+
     private void Update()
     {
         // Simulate New Game

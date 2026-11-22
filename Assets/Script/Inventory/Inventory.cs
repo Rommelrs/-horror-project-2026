@@ -21,7 +21,10 @@ public class Inventory : MonoBehaviour
     [SerializeField] private int maxInventorySize = 20;
     [SerializeField] private List<ItemStack> defaultItems = new List<ItemStack>();
     [SerializeField] AudioClip pickupSound;
-    
+    [Tooltip("Notes the player always carries, from the very start of a new game (the Truth Note). Put back after every reset, " +
+             "checkpoint restore and save load, so an old save without them still has them.")]
+    [SerializeField] List<Item> alwaysCarried = new List<Item>();
+
     [Header("Item Combining")]
     [SerializeField] Item knifeHandleItem;
     [SerializeField] Item knifeBladeItem;
@@ -51,7 +54,26 @@ public class Inventory : MonoBehaviour
         {
             items = new List<ItemStack>(_persistentItems);
             notes = new List<ItemStack>(_persistentNotes);
+            EnsureAlwaysCarried();
         }
+    }
+
+    /// <summary>Puts the always-carried notes back at the top of the notes if they're missing. No events: also runs in Awake.</summary>
+    void EnsureAlwaysCarried()
+    {
+        bool changed = false;
+        for (int k = alwaysCarried.Count - 1; k >= 0; k--)
+        {
+            Item it = alwaysCarried[k];
+            if (it == null) continue;
+            var list = it.itemType == ItemType.Note ? notes : items;
+            bool has = false;
+            foreach (var s in list) if (s.item == it) { has = true; break; }
+            if (has) continue;
+            list.Insert(0, new ItemStack(it, Mathf.Max(1, it.maxStackSize)));
+            changed = true;
+        }
+        if (changed) SaveToPersistent();
     }
 
     private IEnumerator Start()
@@ -77,10 +99,12 @@ public class Inventory : MonoBehaviour
     // Initialize the inventory with default items
     private void InitializeDefaultItems()
     {
+        EnsureAlwaysCarried();
         foreach (var defaultItem in defaultItems)
         {
             AddItem(defaultItem.item, defaultItem.quantity);
         }
+        OnInventoryItemUpdated?.Invoke();
     }
 
     // Add an item to the inventory
@@ -191,9 +215,9 @@ public class Inventory : MonoBehaviour
                 OnInventoryItemUpdated?.Invoke();
             }
             
-            // Trigger subtitle when parts combine (with delay to avoid overlap)
-            if (knifeCombinedSubtitleTrigger != null)
-                StartCoroutine(TriggerSubtitleAfterDelay(knifeCombinedSubtitleTrigger, 0.5f));
+            // "I managed to combine the parts into a single knife" - on the inspect screen with the knife, once whatever
+            // cutscene picked the part up is over (it used to pop up mid-cutscene and freeze it)
+            StartCoroutine(Co_ShowCombinedKnife());
         }
         // If has full knife, split it into parts
         else if (hasFullKnife && !hasHandle && !hasBlade)
@@ -301,10 +325,35 @@ public class Inventory : MonoBehaviour
         return false;
     }
     
-    private IEnumerator TriggerSubtitleAfterDelay(SubtitleTrigger trigger, float delay)
+    /// <summary>The combined knife is shown on the inspect screen with its line, after a short quiet spell with no
+    /// cutscene, subtitle, inspect screen, pause or loading in the way. E closes the line and the inspect screen together.</summary>
+    private IEnumerator Co_ShowCombinedKnife()
     {
-        yield return new WaitForSeconds(delay);
-        trigger.TriggerSubtitle();
+        yield return new WaitForSecondsRealtime(0.5f);
+        float calm = 0f;
+        while (calm < 0.6f)
+        {
+            calm = KnifeRevealBlocked() ? 0f : calm + Time.unscaledDeltaTime;
+            yield return null;
+        }
+        if (!HasItem(combinedKnifeItem)) yield break;
+        if (ItemInspectionHandler.instance != null) ItemInspectionHandler.instance.InspectItem(combinedKnifeItem);
+        if (Player.instance != null) Player.instance.SetLastInteractionTime(Time.unscaledTime);
+        if (knifeCombinedSubtitleTrigger != null) knifeCombinedSubtitleTrigger.TriggerSubtitle();
+    }
+
+    static bool KnifeRevealBlocked()
+    {
+        if (AdelPoleSequence.IsPlaying || AdelDoorSequence.IsPlaying || BridgeRunnerSequence.IsPlaying
+            || CowardMeetingCutscene.IsPlaying || KidnapSequence.IsPlaying || StorageMeetingCutscene.IsPlaying) return true;
+        if (DoorInteractionHandler.WorldInteractionBlocked) return true;   // any other cutscene / scripted hold
+        if (CheckpointManager.IsRestoring || GameManager.IsPaused) return true;
+        if (LoadingHandler.instance && LoadingHandler.IsLoading()) return true;
+        if (SubtitleManager.instance != null && SubtitleManager.instance.IsSubtitleBusy()) return true;
+        if (ItemInspectionHandler.instance != null && ItemInspectionHandler.instance.InspectionMenuIsActive()) return true;
+        var p = Player.instance;
+        if (p != null && (p.pauseMovement || p.IsDead())) return true;
+        return false;
     }
     
     /// <summary>Call after manually restoring inventory to prevent re-initialization on next scene load.</summary>
@@ -439,6 +488,7 @@ public class Inventory : MonoBehaviour
     {
         items.Clear();
         notes.Clear();
+        EnsureAlwaysCarried();   // new game, checkpoint restore and save load all start from here: the Truth Note stays
         SaveToPersistent();
         OnInventoryItemUpdated?.Invoke();
         

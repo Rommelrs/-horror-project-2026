@@ -157,6 +157,7 @@ public class ItemInspectionHandler : MonoBehaviour
 
         if (GameManager.IsPaused)
             return;
+        if (DoorInteractionHandler.WorldInteractionBlocked) return;   // in a cutscene: no pickups (closing the inspect screen above still works)
 
         //On Interact Button pressed
         if (callbackContext.performed)

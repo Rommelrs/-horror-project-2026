@@ -22897,6 +22897,8 @@ MonoBehaviour:
   - item: {fileID: 11400000, guid: 71fd6720928b32f4eb1556f2d1872164, type: 2}
     quantity: 1
   pickupSound: {fileID: 8300000, guid: fe59c6158b53e9546ab6e46dbee90e65, type: 3}
+  alwaysCarried:
+  - {fileID: 11400000, guid: 95f7e9019f0e6f84782784c580da2e60, type: 2}
   knifeHandleItem: {fileID: 0}
   knifeBladeItem: {fileID: 0}
   combinedKnifeItem: {fileID: 0}
@@ -23086,6 +23088,7 @@ MonoBehaviour:
   rotationSmoothness: 20
   damageImpactTextPrefab: {fileID: 607598138314912966, guid: 5214b92c37791334fa185289ab5221d0,
     type: 3}
+  fireBufferTime: 0.3
   eyePeakAimingRotationEnabled: 0
   restrictYawAngleMin: 0
   restrictYawAngleMax: 0
@@ -23238,7 +23241,6 @@ MonoBehaviour:
   attackBlendIn: 0.08
   strikeFrom: 0.1
   contactAt: 0.175
-  bufferFrom: 0.55
   attackEnd: 0.93
   returnBlend: 0.4
   forwardSpeed: 1.25

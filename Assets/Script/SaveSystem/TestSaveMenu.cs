@@ -7,7 +7,13 @@ using UnityEngine;
 public class TestSaveMenu : MonoBehaviour
 {
     [SerializeField] private SaveMenuUI saveMenuUI;
-    
+
+    // Editor only: no F1 test key in builds.
+    private void Awake()
+    {
+        if (!Application.isEditor) enabled = false;
+    }
+
     void Update()
     {
         // Press F1 to open Save Menu

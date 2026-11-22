@@ -44,15 +44,29 @@ public class DoorInteractionHandler : MonoBehaviour
         doorInteractionInput.action.Enable();
     }
 
+    // The action is NOT disabled here: it is the same shared Interact action the subtitles (continue), item inspection
+    // and pickups listen to. Cutscenes turn this component off to keep doors shut, and switching the action off with it
+    // left a subtitle that waits for E impossible to close - and it froze time, so the cutscene never ended (soft lock
+    // at the knife blade). A disabled handler just ignores the press instead (see OnDoorInteractionButtonPressed).
     private void OnDisable()
     {
-        doorInteractionInput.action.Disable();
     }
+
+    /// <summary>A cutscene has this handler turned off: E must not touch the world (pickups, interactables, doors) - only
+    /// close a subtitle or an inspect screen. Same rule the old disabled action gave, minus the soft lock.</summary>
+    public static bool WorldInteractionBlocked => instance != null && !instance.isActiveAndEnabled;
 
     private void Start()
     {
         //Subscribe to door interaction input
         doorInteractionInput.action.performed += OnDoorInteractionButtonPressed;
+    }
+
+    // the action outlives the scene: a Player left behind by a scene change must stop listening, or E calls into a destroyed handler
+    private void OnDestroy()
+    {
+        if (doorInteractionInput != null && doorInteractionInput.action != null)
+            doorInteractionInput.action.performed -= OnDoorInteractionButtonPressed;
     }
 
     /// <summary>A door just showed a short remark: the next E may dismiss it and carry on instead of being swallowed by it.</summary>
@@ -63,6 +77,7 @@ public class DoorInteractionHandler : MonoBehaviour
 
     public void OnDoorInteractionButtonPressed(InputAction.CallbackContext callbackContext)
     {
+        if (this == null || !isActiveAndEnabled) return;   // destroyed, or turned off by a cutscene: doors stay shut (the shared action itself stays on)
         if (PlayerCloseCombat.instance != null && PlayerCloseCombat.instance.BlocksInteract) return;   // held by a Questioner: E is the escape sliders' key
         float sinceRemark = Time.unscaledTime - doorRemarkShownAt;
         bool doorRemarkUp = sinceRemark >= doorRemarkIgnoreSeconds && sinceRemark < doorRemarkWindow;

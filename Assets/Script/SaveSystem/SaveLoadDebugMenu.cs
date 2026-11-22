@@ -12,6 +12,12 @@ public class SaveLoadDebugMenu : MonoBehaviour
     [Header("Settings")]
     [SerializeField] private int quickSaveSlot = 0;
 
+    // Editor only: no quick save / quick load keys in builds.
+    private void Awake()
+    {
+        if (!Application.isEditor) enabled = false;
+    }
+
     private void Update()
     {
         // Check if SaveManager exists

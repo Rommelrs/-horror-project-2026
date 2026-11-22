@@ -38,9 +38,17 @@ public class AudioInteractionHandler : MonoBehaviour
         interactionInput.action.performed += OnInteractButtonPressed;
     }
 
+    // the shared Interact action outlives the scene: stop listening when this handler goes
+    private void OnDestroy()
+    {
+        if (interactionInput != null && interactionInput.action != null)
+            interactionInput.action.performed -= OnInteractButtonPressed;
+    }
+
     public void OnInteractButtonPressed(InputAction.CallbackContext callbackContext)
     {
         if (PlayerCloseCombat.instance != null && PlayerCloseCombat.instance.BlocksInteract) return;   // held by a Questioner: E is the escape sliders' key
+        if (DoorInteractionHandler.WorldInteractionBlocked) return;   // in a cutscene
         if (callbackContext.performed)
         {
             if (currentAudioInteraction != null)
