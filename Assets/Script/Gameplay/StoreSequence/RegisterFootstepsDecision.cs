@@ -142,6 +142,11 @@ public class RegisterFootstepsDecision : MonoBehaviour
             if (register != null && register.CashRegisterMenuIsActive() && !codeDone) SpawnCameo();
         }
 
+        // he stands there hidden behind the register screen: the moment that screen goes, his split second starts - in every state.
+        // (Only "Approaching" did that: leaving after the last step, or while the event was ending, left him standing for the 20+ s
+        // it took the event to finish - user 2026-11-25.)
+        if (cameoActive && !cameoShownToPlayer && register != null && !register.CashRegisterMenuIsActive()) ShowCameoToPlayer();
+
         // the cameo ends on its own clock, whatever else is going on
         if (cameoActive && cameoShownToPlayer && Time.unscaledTime >= cameoHideAt && Time.frameCount >= cameoShownFrame + 2) HideCameo();
 

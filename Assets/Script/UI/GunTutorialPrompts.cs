@@ -36,7 +36,39 @@ public class GunTutorialPrompts : MonoBehaviour
     [Tooltip("How long the second prompt stays after the first shot / swing before fading out.")]
     [SerializeField] float hideDelayAfterShot = 0.5f;
 
+    [Header("Forced first shot (gun)")]
+    [Tooltip("He can't walk on, use doors or put the gun away until he has fired once (playtesters skipped it). He gets rounds if he has none.")]
+    [SerializeField] bool forceFirstShot = true;
+    [SerializeField] int roundsIfNone = 3;
+
     enum State { None, Switch, Reload, Aim, Shoot }
+
+    /// <summary>The gun is out for its first shot: no switching away from it.</summary>
+    public static bool LocksWeapon { get; private set; }
+    /// <summary>One of its prompts is (or may be) on screen: no other prompt on the same line.</summary>
+    public static bool Showing { get; private set; }
+    bool holding;
+
+    void Hold(bool on)
+    {
+        if (holding == on) return;
+        holding = on;
+        LocksWeapon = on && !(PlayerMeleeWeapon.Equipped || PlayerMeleeWeapon.Switching);
+        if (on) EnemyFreeze.Hold(this); else EnemyFreeze.Release(this);
+        if (Player.instance != null) Player.instance.pauseMovement = on;
+        if (on && Player.instance != null)
+        {
+            var pm = Player.instance.GetComponent<PlayerMovement>();
+            if (pm != null) pm.SetExternalMoveInput(Vector2.zero);
+        }
+    }
+
+    void OnDisable()
+    {
+        if (holding) Hold(false);
+        LocksWeapon = false;
+        Showing = false;
+    }
 
     Coroutine routine;
     bool shotFired;
@@ -87,9 +119,27 @@ public class GunTutorialPrompts : MonoBehaviour
             yield return Co_WaitForCutscene();
 
         State shown = State.None;
+        Showing = true;
+        bool force = kind == WeaponKind.Gun && forceFirstShot;
 
         while (!shotFired)
         {
+            // forced: he stands here until the first shot (dead = the checkpoint decides what comes next)
+            if (force)
+            {
+                if (Player.instance == null || Player.instance.IsDead()) break;
+                // never without a round to fire
+                if (weapon.currentAmmo <= 0 && weapon.GetReserveAmmo() <= 0 && !weapon.isReloading) weapon.EnsureLoaded(roundsIfNone);
+                bool busyElsewhere = CutsceneGate.Playing || PlayerMeleeWeapon.InCutscene || GameManager.IsPaused
+                                     || (SubtitleManager.instance != null && SubtitleManager.instance.IsSubtitleBusy());
+                if (!holding && !busyElsewhere) Hold(true);
+                if (holding)
+                {
+                    Player.instance.pauseMovement = true;
+                    LocksWeapon = !(PlayerMeleeWeapon.Equipped || PlayerMeleeWeapon.Switching);
+                }
+            }
+
             // the first swing counts as the "shot"
             if (kind == WeaponKind.Melee && PlayerMeleeWeapon.Attacking)
             {
@@ -108,7 +158,7 @@ public class GunTutorialPrompts : MonoBehaviour
             }
 
             // gun: aiming and lowering it again without shooting means the player chose not to - the hint is done
-            if (kind == WeaponKind.Gun && shown == State.Shoot && wanted == State.Aim)
+            if (kind == WeaponKind.Gun && !force && shown == State.Shoot && wanted == State.Aim)
                 break;
 
             if (wanted != shown)
@@ -124,6 +174,9 @@ public class GunTutorialPrompts : MonoBehaviour
             yield return null;
         }
 
+        if (holding) Hold(false);
+        LocksWeapon = false;
+        Showing = false;
         if (switchPrompt != null) switchPrompt.HidePrompt();
         if (reloadPrompt != null) reloadPrompt.HidePrompt();
         aimPrompt.HidePrompt();

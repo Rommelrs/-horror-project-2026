@@ -226,6 +226,8 @@ public class KidnapSequence : MonoBehaviour
     void OnTriggerEnter(Collider other)
     {
         if (phase != Phase.Waiting || !other.CompareTag("Player")) return;
+        // not before the store: without the Hammer the Block 1 gate can't be broken open after the chase = soft lock
+        if (!PlayerMeleeWeapon.OwnsPipe) return;
         // a checkpoint / save restore may have arrived after Start: ask again
         if (AlreadyDone) { phase = Phase.Done; HideActors(); return; }
         Begin();
@@ -390,7 +392,7 @@ public class KidnapSequence : MonoBehaviour
                 runner.Appear(Ground(runnerStart), GrabSpot);
                 runner.Run();
                 var ra0 = runner.GetComponentInChildren<Animator>();
-                if (ra0 != null) steps.Track(ra0, 0.95f);
+                if (ra0 != null) steps.Track(ra0, 1.7f);
             }
             float u = Mathf.InverseLerp(TRunIn, TGrab, t);
             Vector3 from = Ground(runnerStart), to = RunnerGrabPos;
@@ -511,6 +513,7 @@ public class KidnapSequence : MonoBehaviour
         var player = Player.instance;
         phase = Phase.Chase; ChaseActive = true;
         if (player == null) return;
+        StabilityTutorial.ShowOnce(0.4f);       // he got past the Questioner without killing him
         var pm = player.GetComponent<PlayerMovement>();
         if (pm != null)
         {

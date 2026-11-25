@@ -103,6 +103,7 @@ public class DoorInteractionHandler : MonoBehaviour
     /// <summary>True when a door with 'Auto Interact On Enter' may be used right now (nothing else is going on).</summary>
     public bool CanAutoInteract()
     {
+        if (CutsceneGate.Playing) return false;
         if (busy || GameManager.IsPaused) return false;
         if (ItemInspectionHandler.instance && ItemInspectionHandler.instance.InspectionMenuIsActive()) return false;
         return true;
@@ -116,6 +117,10 @@ public class DoorInteractionHandler : MonoBehaviour
             // Unity does not reliably call OnTriggerExit when a GameObject is disabled
             if (currentInteractable != null && !currentInteractable.gameObject.activeInHierarchy)
                 currentInteractable = null;
+
+            // a scripted walk / knockdown has him (it may start while the last door's fade is still finishing: spamming E there took
+            // him back through the door while the scene kept walking him forward forever - user 2026-11-25)
+            if (CutsceneGate.Playing || (Player.instance != null && Player.instance.isKnockedDown)) return;
 
             if (currentInteractable != null && busy == false)
             {

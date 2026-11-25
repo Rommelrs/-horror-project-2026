@@ -43,11 +43,20 @@ public class AutoPickupCutscene : MonoBehaviour
         StartCoroutine(Co_AutoPickupSequence());
     }
 
+    /// <summary>One of these is walking him up to its item right now.</summary>
+    public static bool Running { get; private set; }
+    bool walking;
+
+    void BeginWalk() { walking = Running = true; EnemyFreeze.Hold(this); }
+    void EndWalk() { walking = Running = false; EnemyFreeze.Release(this); }
+    void OnDisable() { if (walking) EndWalk(); }
+
     IEnumerator Co_AutoPickupSequence()
     {
         Player player = Player.instance;
         PlayerMovement playerMovement = player.GetComponent<PlayerMovement>();
 
+        BeginWalk();
         player.pauseMovement = true;
         // Stop reflecting whatever direction was last held so the animator eases back to idle
         // instead of freezing mid-stride (PlayerMovement itself resets this on pause too, but
@@ -70,6 +79,7 @@ public class AutoPickupCutscene : MonoBehaviour
         if (targetPickup == null)
         {
             player.pauseMovement = false;
+            EndWalk();
             yield break;
         }
 
@@ -100,6 +110,7 @@ public class AutoPickupCutscene : MonoBehaviour
         if (targetPickup == null)
         {
             player.pauseMovement = false;
+            EndWalk();
             yield break;
         }
 
@@ -117,6 +128,7 @@ public class AutoPickupCutscene : MonoBehaviour
         {
             yield return new WaitForSeconds(pauseAfterPickup);
             player.pauseMovement = false;
+            EndWalk();
         }
     }
 
@@ -208,6 +220,7 @@ public class AutoPickupCutscene : MonoBehaviour
     {
         yield return new WaitForSecondsRealtime(pauseAfterPickup);
         Player.instance.pauseMovement = false;
+        EndWalk();
     }
 
     void PickUpItem()
@@ -222,6 +235,7 @@ public class AutoPickupCutscene : MonoBehaviour
         if (ItemInspectionHandler.instance != null)
             ItemInspectionHandler.instance.InspectItem(targetPickup.itemToPickup);
 
+        if (ItemInspectionHandler.instance != null) ItemInspectionHandler.instance.NotePickedUp();
         Player.instance.inventory.PickUp(targetPickup.itemToPickup, targetPickup.itemQuantity);
 
         if (targetPickup.pckupClip != null)

@@ -14,12 +14,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemName: Gate Key
   itemIcon: {fileID: 0}
-  description: 
+  description: Opens the door near Abu Nasser's house
   isStackable: 0
   maxStackSize: 1
   itemType: 6
+  showReadPrompt: 1
+  readOnOpen: 0
+  needsLightToRead: 0
+  tooDarkLine:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
   healingAmount: 0
   stabilityIncreaseAmount: 0
   energyDrinkDuration: 0
   calmingInhalerDuration: 0
   keyCode: 1234
+  references:
+    version: 2
+    RefIds: []

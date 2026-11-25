@@ -75,6 +75,11 @@ public class InteractionHandler : MonoBehaviour
         //On Interact Button pressed
         if (callbackContext.performed)
         {
+            // an item in reach comes first (E by a shelf with ammo on it said "Not now." instead of taking the ammo)
+            if (currentInteractable != null && currentInteractable.interactionType != InteractionType.Pickup && !(currentInteractable is LootContainer)
+                && ItemInspectionHandler.instance != null && ItemInspectionHandler.instance.HasItemInReach)
+                return;
+
             if (currentInteractable != null)
             {
                 if(currentInteractable is DrillHoleInteractable)
@@ -114,6 +119,7 @@ public class InteractionHandler : MonoBehaviour
                 }
 
                 //Interacted
+                if (HasItemTarget && ItemInspectionHandler.instance != null) ItemInspectionHandler.instance.NotePickedUp();
                 currentInteractable.Interacted();
 
                 //Set last Interaction Time
@@ -149,6 +155,10 @@ public class InteractionHandler : MonoBehaviour
         }
     }
 
+    /// <summary>A pickup or a container to open is the current target (remarks beside it keep quiet).</summary>
+    public bool HasItemTarget => currentInteractable != null && currentInteractable.gameObject.activeInHierarchy
+                                 && (currentInteractable.interactionType == InteractionType.Pickup || currentInteractable is LootContainer);
+
     public void PlayItemPickupSound()
     {
         //Play Item Pickup Sound: the main menu hover, like the other pickups. The list is only for scenes without a UISoundManager.
@@ -183,8 +193,11 @@ public class InteractionHandler : MonoBehaviour
 
         if (currentInteractableList != null && currentInteractableList.Count > 0)
         {
-            //Target First Interactable from the list
-            TargetCurrentInteractable(currentInteractableList[0]);
+            //Target First Interactable from the list, pickups before everything else
+            Interactable best = currentInteractableList[0];
+            foreach (var i in currentInteractableList)
+                if (i.interactionType == InteractionType.Pickup) { best = i; break; }
+            TargetCurrentInteractable(best);
         }
         else
         {

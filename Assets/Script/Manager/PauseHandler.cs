@@ -51,6 +51,9 @@ public class PauseHandler : MonoBehaviour
         if (LoadingHandler.IsLoading())
             return;
 
+        if (StabilityTutorial.Open || DeathHelp.Open)
+            return;
+
         // Block all input during map reveal sequence
         if (MapLocationReveal.IsSequenceActive)
             return;

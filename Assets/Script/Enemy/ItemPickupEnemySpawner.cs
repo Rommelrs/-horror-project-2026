@@ -43,6 +43,7 @@ public class ItemPickupEnemySpawner : MonoBehaviour
     [SerializeField] private AudioSource musicAudioSource;
     [SerializeField] private AudioClip pickupMusic;
     [SerializeField] private AudioClip pickupSFX;
+    private AudioSource glassSource;
     
     [Header("Events")]
     [Tooltip("The moment the item is in the inventory (before the delay) - e.g. a cutscene that leads up to the spawning.")]
@@ -290,7 +291,22 @@ public class ItemPickupEnemySpawner : MonoBehaviour
         if (pickupSFX == null) return;
 
         if (musicAudioSource != null)
-            musicAudioSource.PlayOneShot(pickupSFX);
+        {
+            // the glass breaking is a sound effect, not part of the music: it was on the music's mixer group and gone with Music at 0
+            var sfxMain = SoundEffectManager.instance != null ? SoundEffectManager.instance.GetComponent<AudioSource>() : null;
+            if (glassSource == null)
+            {
+                glassSource = musicAudioSource.gameObject.AddComponent<AudioSource>();
+                glassSource.playOnAwake = false;
+                glassSource.volume = musicAudioSource.volume;
+                glassSource.spatialBlend = musicAudioSource.spatialBlend;
+                glassSource.rolloffMode = musicAudioSource.rolloffMode;
+                glassSource.minDistance = musicAudioSource.minDistance;
+                glassSource.maxDistance = musicAudioSource.maxDistance;
+            }
+            if (sfxMain != null) glassSource.outputAudioMixerGroup = sfxMain.outputAudioMixerGroup;
+            glassSource.PlayOneShot(pickupSFX);
+        }
         else if (SoundEffectManager.instance != null)
             SoundEffectManager.instance.PlaySFXAtPosition(pickupSFX, Player.instance.transform.position);
         else

@@ -93,7 +93,7 @@ public class PlayerCloseCombat : MonoBehaviour
     {
         get
         {
-            if (IsGrabbed || IsKnockedBack || IsPushingOff) return 0f;
+            if (IsGrabbed || IsKnockedBack || IsPushingOff || GrabCounterTutorial.Holding || BearTrap.HoldsPlayer) return 0f;
             return Time.time < slowUntil ? 1f - slowAmount : 1f;
         }
     }
@@ -196,7 +196,7 @@ public class PlayerCloseCombat : MonoBehaviour
         StartGrabCam(q);
         // the way out: two quick sliders (faster the lower his stability)
         if (escapeQte == null) escapeQte = GrabEscapeQTE.Create(transform);
-        escapeQte.Begin(q != null ? q.GrabsLanded : 1);     // the same one catching him again: faster each time
+        escapeQte.Begin(q != null ? q.GrabEscapes : 0);     // faster only for every earlier ESCAPE from this one
     }
 
     /// <summary>Keeps him where the Questioner holds him (in front of the split mouth), facing it.</summary>

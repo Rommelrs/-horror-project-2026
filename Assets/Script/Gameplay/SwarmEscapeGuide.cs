@@ -133,10 +133,11 @@ public class SwarmEscapeGuide : MonoBehaviour
     [Tooltip("The subtitle goes with the first this many calls (the voice keeps calling after).")]
     [SerializeField] int callLineTimes = 2;
     [Tooltip("Khalid this close to the exit: Adel stops calling.")]
-    [SerializeField] float arrivedDistance = 5f;
+    [SerializeField] float arrivedDistance = 9f;
 
     bool collapsed, introRunning, swarmStarted;
     AudioSource callSource;
+    float callLineUntil = -1f;
     CinemachineVirtualCamera shot;
     CinemachineBrain brain;
     CinemachineBlendDefinition savedBlend;
@@ -554,8 +555,17 @@ public class SwarmEscapeGuide : MonoBehaviour
 
     // ------------------------------------------------------------------ west door
 
+    [Tooltip("The swarm can't be pushed aside while he is within this distance (m) of the locked door.")]
+    [SerializeField] float solidSwarmDistance = 10f;
+    static SwarmEscapeGuide atLockedDoor;
+
+    /// <summary>He has found the west door locked and is still at it: the swarm can't be pushed aside (only there - user 2026-11-25).</summary>
+    public static bool SwarmHoldsGround => atLockedDoor != null && !atLockedDoor.collapsed && atLockedDoor.lockedDoor != null && Player.instance != null
+        && Vector3.Distance(Player.instance.transform.position, atLockedDoor.lockedDoor.position) < atLockedDoor.solidSwarmDistance;
+
     public void OnDoorLocked()
     {
+        atLockedDoor = this;
         Vector3 at = lockedDoor != null ? lockedDoor.position : transform.position;
         if (lockSound != null) PlayAt(lockSound, at, lockVolume, 40f);
         StartCoroutine(Co_Later(lockedLineDelay, () => Say(lockedLine, lockedLineSeconds)));
@@ -698,14 +708,19 @@ public class SwarmEscapeGuide : MonoBehaviour
             if (!PlayerMeleeWeapon.InCutscene)
             {
                 callSource.PlayOneShot(callClip);
-                if (calls < callLineTimes) Say(callLine, callLineSeconds);
+                if (calls < callLineTimes) { Say(callLine, callLineSeconds); callLineUntil = Time.time + callLineSeconds + 1f; }
                 calls++;
             }
             float next = Time.time + callEvery;
             while (Time.time < next)
             {
                 player = Player.instance;
-                if (player != null && Vector3.Distance(player.transform.position, exitPoint.position) <= arrivedDistance) yield break;
+                if (player != null && Vector3.Distance(player.transform.position, exitPoint.position) <= arrivedDistance)
+                {
+                    // he's there: the line goes (it stayed up over the exit's own lines)
+                    if (Time.time < callLineUntil && SubtitleManager.instance != null && SubtitleManager.instance.IsSubtitleBusy()) SubtitleManager.instance.ForceClose();
+                    yield break;
+                }
                 yield return null;
             }
         }

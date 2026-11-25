@@ -120,6 +120,8 @@ public class InventoryUI : MonoBehaviour
         if (LevelManager.instance.isGameOver || LevelManager.instance.isGameWon)
             return;
 
+        if (StabilityTutorial.Open || GrabCounterTutorial.Holding || DeathHelp.Open) return;
+
         if (callbackContext.performed)
         {
             if (inventoryMenu.gameObject.activeSelf)

@@ -306,6 +306,14 @@ public class CameraSystem : MonoBehaviour
         debugLastEvent = "SNAP BEHIND";
     }
 
+    /// <summary>Free camera only: the heading and tilt to raise a gun at (where the camera looks, not where Khalid faces).
+    /// The classic and the fixed cameras keep his own facing. The camera's normal downward tilt counts as level.</summary>
+    public bool TryGetFreeAim(out float yaw, out float pitch)
+    {
+        yaw = freeYaw; pitch = freePitch - defaultPitch;
+        return FreeCameraEnabled && activeZone == null && freeSynced;
+    }
+
     /// <summary>Puts the rig straight behind the player (a script that turned him and wants the view to stay that way,
     /// e.g. after a camera glance). Does nothing in a fixed camera zone.</summary>
     public void SnapBehind()

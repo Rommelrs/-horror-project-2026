@@ -142,6 +142,9 @@ public class MapHandler : MonoBehaviour
             // Block all map input during reveal sequence
             if (MapLocationReveal.IsSequenceActive) return;
 
+            // nor in a cutscene or a chase
+            if (CutsceneGate.BlocksMap && !mapMenu.gameObject.activeSelf) return;
+
             if (mapMenu.gameObject.activeSelf)
             {
                 if (!isClosingMap)
@@ -314,6 +317,7 @@ public class MapHandler : MonoBehaviour
 
         //Enable Inventory Menu
         menuPanelSwitcher.SwitchPanel(mapMenu);
+        MapItemCheck.RefreshAll();
 
         //Resume the Game
         GameManager.IsPaused = true;

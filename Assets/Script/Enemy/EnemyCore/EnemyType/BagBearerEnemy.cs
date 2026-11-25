@@ -112,6 +112,16 @@ public class BagBearerEnemy : Enemy
 
     void LateUpdate()
     {
+        if (standStill)
+        {
+            if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh && stateMachine.CurrentState != enemyKnockbackState)
+            {
+                agent.isStopped = true;
+                agent.velocity = Vector3.zero;
+            }
+            return;
+        }
+
         // Wall avoidance runs in LateUpdate so it overrides EnemyChaseState's destination
         if (stateMachine.CurrentState == chaseState)
             ApplyWallAvoidance();
@@ -250,6 +260,17 @@ public class BagBearerEnemy : Enemy
     /// <summary>Until this time (Time.time) he moves but never starts a throw or a reload: a scripted sequence gives the player a
     /// moment first (e.g. the table knockdown). Setting an earlier time shortens a hold.</summary>
     public void SetAttackHold(float untilTime) => attackHoldUntil = untilTime;
+
+    bool standStill;
+
+    /// <summary>He throws from where he stands and doesn't walk (the table knockdown: he used to come to the roof's edge, straight
+    /// above the player on the floor, where his bags could hardly be aimed at).</summary>
+    public void SetStandStill(bool on)
+    {
+        if (standStill == on) return;
+        standStill = on;
+        if (!on && agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh) agent.isStopped = false;
+    }
 
     float throwGap;
 

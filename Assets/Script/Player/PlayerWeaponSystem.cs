@@ -357,7 +357,7 @@ public class PlayerWeaponSystem : MonoBehaviour
             return;
         }
         
-        if (aimInput.action.ReadValue<float>() > 0.1f || aimingOverrideForTesting)
+        if ((aimInput.action.ReadValue<float>() > 0.1f && !CutsceneGate.BlocksAim) || aimingOverrideForTesting)
         {
             if (isAiming == false)
             {
@@ -405,6 +405,13 @@ public class PlayerWeaponSystem : MonoBehaviour
 
                 _cinemachineTargetPitch = 0.0f;
                 _cinemachineTargetYaw = transform.eulerAngles.y;
+                // free camera: the gun comes up where the camera is looking (a scripted aim keeps the facing it set up)
+                if (!aimingOverrideForTesting && !eyePeakAimingRotationEnabled && !isAutoRotating && CameraSystem.Instance != null
+                    && CameraSystem.Instance.TryGetFreeAim(out float camYaw, out float camPitch))
+                {
+                    _cinemachineTargetYaw = camYaw;
+                    _cinemachineTargetPitch = ClampAngle(camPitch, BottomClamp, TopClamp);
+                }
             }
 
             animator.SetBool("Aiming", true);

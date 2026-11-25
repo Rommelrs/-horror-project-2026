@@ -58,6 +58,11 @@ public class CinematicPreSequenceController : MonoBehaviour
     bool hasTriggered = false;
     bool autoWalking = false;
 
+    /// <summary>The walk up to the knockdown is playing: no doors, no weapons, no map.</summary>
+    public static bool Running { get; private set; }
+    bool running;
+    void OnDisable() { if (running) { running = Running = false; } }
+
     private void OnTriggerEnter(Collider other)
     {
         if (!other.CompareTag("Player")) return;
@@ -71,6 +76,7 @@ public class CinematicPreSequenceController : MonoBehaviour
 
     IEnumerator Co_RunPreSequence()
     {
+        running = Running = true;
         OnPreSequenceStarted?.Invoke();
 
         // ── Lock all player control ────────────────────────────────────────────
@@ -123,6 +129,22 @@ public class CinematicPreSequenceController : MonoBehaviour
         if (knockdownSequence != null)
         {
             knockdownSequence.StartSequence();
+        }
+        running = Running = false;
+
+        // the knockdown refused to start (its Runner went in the meantime...): he must not stay locked
+        if (knockdownSequence == null || !knockdownSequence.Started)
+        {
+            Debug.LogWarning("[PreSequence] the knockdown did not start - giving control back");
+            var p = Player.instance;
+            if (p != null)
+            {
+                if (p.playerWeaponSystem != null) p.playerWeaponSystem.weaponIsEnabled = p.inventory != null && p.inventory.HasWeapon();
+                p.playerMovement.enabled = true;
+                p.pauseMovement = false;
+            }
+            MapLocationReveal.IsSequenceActive = false;
+            if (cameraRotationOverride != null) cameraRotationOverride.isActive = false;
         }
     }
 

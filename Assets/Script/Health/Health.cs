@@ -116,6 +116,9 @@ public class Health : MonoBehaviour, IDamagable
             return;
         if (damageBlocker != null && damageBlocker())
             return;
+        // enemies stand still (the screen is fading to black...): nothing already in the air hurts him
+        if (EnemyFreeze.Active && Player.instance != null && Player.instance.health == this)
+            return;
 
         // an owner can reshape a hit before it lands (the Questioner: a mouth shot staggers him instead of killing him)
         if (damageFilter != null) damage = damageFilter(damage);

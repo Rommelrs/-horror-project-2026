@@ -13,6 +13,12 @@ public class FadeScreenUI : MonoBehaviour
 
     Coroutine fadeCoroutine;
     Coroutine imageFadeCoroutine;
+    float fadeTarget;
+
+    /// <summary>The screen is black, or on its way to it (enemies stand still meanwhile, EnemyFreeze). False again once it has faded
+    /// back in past half way.</summary>
+    public static bool ScreenCovered => instance != null && instance.isActiveAndEnabled && instance.canvasGroup != null
+                                        && (instance.fadeTarget > 0.5f || instance.canvasGroup.alpha > 0.5f);
 
     private void Awake()
     {
@@ -59,6 +65,7 @@ public class FadeScreenUI : MonoBehaviour
     //Coroutine to handle the fade effect that smoothly transitions the alpha value of the CanvasGroup
     private IEnumerator Fade(float targetAlpha)
     {
+        fadeTarget = targetAlpha;
         float startAlpha = canvasGroup.alpha;
         float elapsedTime = 0f;
 
@@ -132,6 +139,7 @@ public class FadeScreenUI : MonoBehaviour
 
     private IEnumerator FadeWithDuration(float targetAlpha, float duration)
     {
+        fadeTarget = targetAlpha;
         float startAlpha = canvasGroup.alpha;
         float elapsedTime = 0f;
 

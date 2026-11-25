@@ -1,5 +1,7 @@
 using System.Collections;
+using Cinemachine;
 using UnityEngine;
+using UnityEngine.Localization;
 using UnityEngine.Events;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -43,6 +45,18 @@ public class CombinationLockInteractable : Interactable
 
     [Header("Lock Prop")]
     [SerializeField] private Rigidbody lockPropRigidbody;
+
+    [Header("Leaving it unsolved the first time: the camera shows the drawing it belongs to")]
+    [SerializeField] private Transform drawing;
+    [Tooltip("How far in front of the drawing the camera stands (m).")]
+    [SerializeField] private float drawingShotDistance = 3.4f;
+    [SerializeField] private float drawingBlend = 1.1f, drawingHold = 3.2f;
+    [SerializeField] private LocalizedString drawingLine;
+
+    public const string HintId = "alley3:combination-lock";
+    public const string HintLine = "Maybe it's related to these removed numbers";
+    const string DrawingShownFlag = "LockDrawingShown";
+    private bool turnedADial;
 
     [Header("Events")]
     [SerializeField] private UnityEvent onLockOpened;
@@ -104,6 +118,8 @@ public class CombinationLockInteractable : Interactable
     private void Update()
     {
         if (!isOpen) return;
+        // E closes a line first, not the lock under it
+        if (SubtitleManager.instance != null && (SubtitleManager.instance.IsSubtitleBusy() || SubtitleManager.instance.IsWithinCooldownPeriod())) return;
 
         // Check for E key press to close
         if (Keyboard.current != null && Keyboard.current.eKey.wasPressedThisFrame)
@@ -149,6 +165,7 @@ public class CombinationLockInteractable : Interactable
         yield return new WaitForSecondsRealtime(1f);
 
         isOpen = true;
+        PuzzleHint.Opened(HintId, HintLine, lockPanel);
 
         // Trigger subtitle
         if (subtitleTrigger != null)
@@ -160,6 +177,7 @@ public class CombinationLockInteractable : Interactable
     private void ChangeDial(int dialIndex, int direction)
     {
         if (isUnlocked) return;
+        turnedADial = true;
 
         // Play click sound
         if (audioSource != null && dialClickClips != null && dialClickClips.Length > 0)
@@ -210,6 +228,7 @@ public class CombinationLockInteractable : Interactable
     private IEnumerator Co_Unlocked()
     {
         isUnlocked = true;
+        PuzzleHint.Solved(HintId);
         
         // Mark as used in save system
         if (saveableInteractable != null)
@@ -258,5 +277,52 @@ public class CombinationLockInteractable : Interactable
             coll.enabled = true;
 
         onLockOpened?.Invoke();
+
+        if (!isUnlocked)
+        {
+            // left without the code: that's a try - the hint button's countdown starts
+            if (turnedADial) PuzzleHint.Failed(HintId);
+            if (drawing != null && !StoryFlags.Has(DrawingShownFlag)) StartCoroutine(Co_ShowDrawing());
+        }
     }
+
+    /// <summary>The first time he gives up on it the camera turns to the hopscotch on the wall: "Maybe this drawing on the wall could
+    /// help". He and the enemies stand still meanwhile.</summary>
+    private IEnumerator Co_ShowDrawing()
+    {
+        StoryFlags.Set(DrawingShownFlag);
+        var player = Player.instance;
+        var brain = Camera.main != null ? Camera.main.GetComponent<CinemachineBrain>() : null;
+        if (player == null || brain == null) yield break;
+
+        EnemyFreeze.Hold(this);
+        player.pauseMovement = true;
+        var door = player.GetComponent<DoorInteractionHandler>();
+        bool doorWasOn = door != null && door.enabled;
+        if (doorWasOn) door.enabled = false;          // a cutscene: no E, map, aim or weapon switch (CutsceneGate)
+
+        var go = new GameObject("Lock drawing shot");
+        var cam = go.AddComponent<CinemachineVirtualCamera>();
+        cam.m_Lens.FieldOfView = 48f; cam.m_Lens.NearClipPlane = 0.08f;
+        cam.m_Lens.FarClipPlane = brain.OutputCamera != null ? Mathf.Clamp(brain.OutputCamera.farClipPlane, 15f, 60f) : 25f;
+        cam.transform.position = drawing.position - drawing.forward * drawingShotDistance;
+        cam.transform.rotation = Quaternion.LookRotation(drawing.forward, Vector3.up);
+        var savedBlend = brain.m_DefaultBlend;
+        brain.m_DefaultBlend = new CinemachineBlendDefinition(CinemachineBlendDefinition.Style.EaseInOut, drawingBlend);
+        cam.Priority = 500;
+
+        yield return new WaitForSeconds(drawingBlend * 0.7f);
+        if (drawingLine != null && !drawingLine.IsEmpty) SubtitleManager.ShowSubtitle(drawingLine, false, null, drawingHold);
+        yield return new WaitForSeconds(drawingBlend * 0.3f + drawingHold);
+
+        cam.Priority = -10;
+        yield return new WaitForSeconds(drawingBlend);
+        brain.m_DefaultBlend = savedBlend;
+        Destroy(go);
+        if (door != null && doorWasOn) door.enabled = true;
+        player.pauseMovement = false;
+        EnemyFreeze.Release(this);
+    }
+
+    private void OnDisable() => EnemyFreeze.Release(this);
 }

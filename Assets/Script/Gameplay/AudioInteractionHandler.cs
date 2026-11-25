@@ -49,6 +49,9 @@ public class AudioInteractionHandler : MonoBehaviour
     {
         if (PlayerCloseCombat.instance != null && PlayerCloseCombat.instance.BlocksInteract) return;   // held by a Questioner: E is the escape sliders' key
         if (DoorInteractionHandler.WorldInteractionBlocked) return;   // in a cutscene
+        // something to take is in reach: that first, no remark over it
+        if (InteractionHandler.instance != null && InteractionHandler.instance.HasItemTarget) return;
+        if (ItemInspectionHandler.instance != null && ItemInspectionHandler.instance.HasItemInReach) return;
         if (callbackContext.performed)
         {
             if (currentAudioInteraction != null)

@@ -11,6 +11,8 @@ public class CashRegisterInteractable : Interactable
 
     /// <summary>Saved when the right code goes in. A reloaded scene otherwise lets the player type it again for a second key.</summary>
     public const string SolvedKey = "store:register-solved";
+    public const string HintId = "store:register";
+    public const string HintLine = "I should check the map";
 
     [Header("UI")]
     [SerializeField] GameObject cashRegisterMenu;
@@ -137,6 +139,7 @@ public class CashRegisterInteractable : Interactable
         yield return new WaitForSecondsRealtime(1f);
 
         cashRegisterMenuActivated = true;
+        PuzzleHint.Opened(HintId, HintLine, cashRegisterMenu);
 
         if (attemptToPlayNoPowerSubtitleCR != null) StopCoroutine(attemptToPlayNoPowerSubtitleCR);
         attemptToPlayNoPowerSubtitleCR = StartCoroutine(Co_AttemptToPlayNoPowerSubtitle());
@@ -321,6 +324,7 @@ public class CashRegisterInteractable : Interactable
         else
         {
             //Wrong Code
+            PuzzleHint.Failed(HintId);       // the hint button's countdown
             currentCode = "";
             UpdateCodeText();
 
@@ -333,6 +337,7 @@ public class CashRegisterInteractable : Interactable
     {
         //Correct Code Submitted
         correctCodeSubmitted = true;
+        PuzzleHint.Solved(HintId);
 
         //Disable Further Interaction
         coll.enabled = false;

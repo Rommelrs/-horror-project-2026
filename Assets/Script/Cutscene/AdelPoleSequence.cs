@@ -429,7 +429,7 @@ public class AdelPoleSequence : MonoBehaviour
         if (runner.agent != null && runner.agent.isOnNavMesh) runner.agent.isStopped = false;
         runner.PauseEnemyState(false);
         runnerHeld = false;
-        if (hasGun) { forceAim = true; SetForcedAim(player, true); }
+        if (hasGun) { forceAim = true; forceAimAt = -1f; moveHeld = 0f; moveWasUp = false; SetForcedAim(player, true); }
 
         // control back, still aiming (until he presses aim himself)
         k = player.transform.position;
@@ -442,16 +442,26 @@ public class AdelPoleSequence : MonoBehaviour
         IsPlaying = false;
     }
 
+    float forceAimAt = -1f, moveHeld;
+    bool moveWasUp;
+
     // forced ADS: the gun stays up until he presses the aim button himself, then it's his again
     void UpdateForcedAim(Player p)
     {
         if (!forceAim || p == null) return;
         var ws = p.playerWeaponSystem;
-        if (ws == null || p.IsDead()) { forceAim = false; return; }
-        if (ws.AimButtonHeld || PlayerMeleeWeapon.Equipped || (p.inventory != null && !p.inventory.HasWeapon()))
+        if (ws == null || p.IsDead()) { forceAim = false; ForcedAimPrompt.Hide(); return; }
+        // "he's stuck aiming": the keys are on screen, and walking (a fresh press, or holding it) lowers the gun too
+        if (forceAimAt < 0f) { forceAimAt = Time.time; ForcedAimPrompt.Show(); }
+        var pm = p.GetComponent<PlayerMovement>();
+        bool moving = pm != null && pm.GetMoveInput.sqrMagnitude > 0.16f;
+        if (!moving) { moveHeld = 0f; moveWasUp = true; } else moveHeld += Time.deltaTime;
+        bool walksOff = Time.time - forceAimAt > 0.6f && moving && (moveWasUp || moveHeld > 0.9f);
+        if (walksOff || ws.AimButtonHeld || PlayerMeleeWeapon.Equipped || (p.inventory != null && !p.inventory.HasWeapon()))
         {
             forceAim = false;
             SetForcedAim(p, false);
+            ForcedAimPrompt.Hide();
             return;
         }
         ws.aimingOverrideForTesting = true;
@@ -469,7 +479,7 @@ public class AdelPoleSequence : MonoBehaviour
     {
         var player = Player.instance;
         phase = Phase.Outro; IsPlaying = true;
-        forceAim = false; SetForcedAim(player, false);
+        forceAim = false; SetForcedAim(player, false); ForcedAimPrompt.Hide();
         if (player.playerWeaponSystem != null) player.playerWeaponSystem.ExitOutOfAiming();
         HoldKhalid(player, true);
         HideGun(player);

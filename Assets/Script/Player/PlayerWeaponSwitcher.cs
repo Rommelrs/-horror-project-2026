@@ -86,7 +86,7 @@ public class PlayerWeaponSwitcher : MonoBehaviour
 
     void Update()
     {
-        if (GameManager.IsPaused || weapons.isReloading) return;
+        if (GameManager.IsPaused || weapons.isReloading || CutsceneGate.BlocksWeaponSwitch) return;
         for (int i = 0; i < guns.Length; i++)
             if (i != current && guns[i].selectInput != null && guns[i].selectInput.action.WasPressedThisFrame() && Owns(i))
                 Select(i, true);

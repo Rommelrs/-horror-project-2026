@@ -116,6 +116,17 @@ public class CinematicKnockdownSequence : MonoBehaviour
 
     bool hasTriggered = false;
 
+    /// <summary>It has begun (this session).</summary>
+    public bool Started => hasTriggered;
+    /// <summary>Khalid is being walked into the push: nothing he presses may do anything (a door took him away mid-walk and he walked
+    /// on forever - user 2026-11-25). False once he is on the floor with the gun.</summary>
+    public static bool Scripted { get; private set; }
+    bool scripted;
+    [Tooltip("Safety: if the Runner hasn't reached him this many seconds after the sequence started, the push happens anyway.")]
+    [SerializeField] float pushTimeout = 9f;
+    float startedAt = -1f;
+    void OnDisable() { if (scripted) scripted = Scripted = false; }
+
     // Done-state lives in the save's progress (it rolls back with checkpoints): loading a checkpoint taken after the knockdown
     // must not replay it - the Runner is gone by then and Khalid walked forever waiting for his push.
     string DoneKey => "knockdown-done:" + gameObject.scene.name + "/" + gameObject.name;
@@ -173,7 +184,16 @@ public class CinematicKnockdownSequence : MonoBehaviour
 
     private void Update()
     {
+        // the push never came (the Runner is stuck or lost him): he must not walk forever
+        if (scripted && !isPlayerDowned && startedAt >= 0f && Time.time - startedAt > pushTimeout)
+        {
+            startedAt = -1f;
+            Debug.LogWarning("[Knockdown] the Runner did not reach him in time - pushing him anyway");
+            if (runnerEnemy != null && runnerEnemy.enemyDashAttackState != null) runnerEnemy.enemyDashAttackState.DashStarted -= OnDashStarted;
+            StartCoroutine(Co_KnockdownEffect());
+        }
         if (!isPlayerDowned) return;
+        if (tableShard != null && fallStarted && !tableShard.gameObject.activeSelf) tableShard.gameObject.SetActive(true);
 
         // Always lock the player body rotation while downed — ADS only moves the camera, not the character
         Player.instance.transform.rotation = downedPlayerRotation;
@@ -331,6 +351,34 @@ public class CinematicKnockdownSequence : MonoBehaviour
             if (e is BagBearerEnemy bb && bb != null) bb.SetAttackHold(untilTime);
     }
 
+    [Header("What is left of the table top, standing over him")]
+    [Tooltip("Shown while he lies there: the Runner's upper body is behind it, only his legs (his raw knees) are in the open. Tips over when he gets up.")]
+    [SerializeField] Transform tableShard;
+
+    IEnumerator Co_ShardFalls()
+    {
+        Quaternion from = tableShard.rotation, to = Quaternion.AngleAxis(-86f, tableShard.right) * from;
+        for (float t = 0f; t < 1f; t += Time.deltaTime / 0.55f)
+        {
+            tableShard.rotation = Quaternion.Slerp(from, to, t * t);
+            yield return null;
+        }
+        tableShard.rotation = to;
+        yield return new WaitForSeconds(20f);
+        if (tableShard != null) tableShard.gameObject.SetActive(false);
+    }
+
+    void SetBagBearersStill(bool on)
+    {
+        if (enemiesToKill == null) return;
+        foreach (var e in enemiesToKill)
+            if (e is BagBearerEnemy bb && bb != null) bb.SetStandStill(on);
+    }
+
+    [Tooltip("How far up he can aim from the floor (degrees).")]
+    [SerializeField] float downedAimUp = 78f;
+    float savedBottomClamp = float.NaN;
+
     void SetBagBearerThrowGap(float seconds)
     {
         if (enemiesToKill == null) return;
@@ -340,9 +388,12 @@ public class CinematicKnockdownSequence : MonoBehaviour
 
     IEnumerator Co_RunSequence()
     {
+        scripted = Scripted = true;
+        startedAt = Time.time;
         OnSequenceStarted?.Invoke();
         // the encounter wakes up with the sequence: no bag in the air before he's even been pushed
         HoldBagBearers(float.MaxValue);
+        SetBagBearersStill(true);
 
         // Remove ALL player control
         Player.instance.isKnockedDown = true;
@@ -418,13 +469,18 @@ public class CinematicKnockdownSequence : MonoBehaviour
         }
 
         // Runner has reached the player — trigger the sequence
-        StartCoroutine(Co_KnockdownEffect());
+        if (!isPlayerDowned) StartCoroutine(Co_KnockdownEffect());
     }
 
     IEnumerator Co_KnockdownEffect()
     {
         isPlayerDowned = true;
         autoWalking = false; // Stop auto-walk
+        if (float.IsNaN(savedBottomClamp))
+        {
+            savedBottomClamp = Player.instance.playerWeaponSystem.BottomClamp;
+            Player.instance.playerWeaponSystem.BottomClamp = Mathf.Min(savedBottomClamp, -downedAimUp);
+        }
         HoldBagBearers(Time.time + bagBearerGraceAfterKnockdown);
         SetBagBearerThrowGap(bagBearerThrowGapWhileDowned);
         // the camera as it is before any of the knockdown's changes: what standing up returns it to
@@ -496,6 +552,7 @@ public class CinematicKnockdownSequence : MonoBehaviour
         Player.instance.animator.Play(knockdownStateName, KnockdownLayer, 0f);
 
         OnPlayerKnockedDown?.Invoke();
+        scripted = Scripted = false;
 
         // Enable full weapon system (it handles FP hands/ADS normally)
         // downedAimCam override is handled in Update() via isAiming
@@ -552,6 +609,9 @@ public class CinematicKnockdownSequence : MonoBehaviour
         fallStarted = false;
         clearedAt = -1f;
         SetBagBearerThrowGap(0f);
+        SetBagBearersStill(false);
+        if (tableShard != null && tableShard.gameObject.activeInHierarchy) StartCoroutine(Co_ShardFalls());
+        if (!float.IsNaN(savedBottomClamp)) { Player.instance.playerWeaponSystem.BottomClamp = savedBottomClamp; savedBottomClamp = float.NaN; }
 
         // Reset ADS toggle state and force exit aiming
         adsToggled = false;

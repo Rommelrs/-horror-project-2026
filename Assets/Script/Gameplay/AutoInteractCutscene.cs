@@ -32,14 +32,30 @@ public class AutoInteractCutscene : MonoBehaviour
 
     bool hasTriggered = false;
 
+    /// <summary>One of these is walking him up to its picture right now.</summary>
+    public static bool Running { get; private set; }
+    bool walking;
+
+    void BeginWalk() { walking = Running = true; EnemyFreeze.Hold(this); }
+    void EndWalk() { walking = Running = false; EnemyFreeze.Release(this); }
+    void OnDisable() { if (walking) EndWalk(); }
+
     private void Awake()
     {
         targetInteractable = GetComponent<ImageFadeInteractable>();
     }
 
+    /// <summary>The walk-over starts now, from wherever he is (AdelWrapperDrop, when the gate has shut).</summary>
+    public void StartNow()
+    {
+        if (hasTriggered || !enabled || targetInteractable == null || Player.instance == null) return;
+        hasTriggered = true;
+        StartCoroutine(Co_AutoInteractSequence());
+    }
+
     private void OnTriggerEnter(Collider other)
     {
-        if (hasTriggered) return;
+        if (hasTriggered || !enabled) return;        // Unity calls this on a switched-off component too
         if (!other.CompareTag("Player")) return;
         if (targetInteractable == null) return;
 
@@ -52,6 +68,7 @@ public class AutoInteractCutscene : MonoBehaviour
         Player player = Player.instance;
         PlayerMovement playerMovement = player.GetComponent<PlayerMovement>();
 
+        BeginWalk();
         player.pauseMovement = true;
         playerMovement.SetExternalMoveInput(Vector2.zero);
         SetIdleAnimatorPose(player);
@@ -113,6 +130,7 @@ public class AutoInteractCutscene : MonoBehaviour
     {
         yield return new WaitForSecondsRealtime(pauseAfterClose);
         Player.instance.pauseMovement = false;
+        EndWalk();
     }
 
     // Walks the player toward walkToPosition using the character's own facing (no strafing,

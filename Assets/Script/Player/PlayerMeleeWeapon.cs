@@ -581,7 +581,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
         if (!equipped) { ApplyWeights(0f, false); return; }
 
         bool canRaise = CanRaise();
-        bool aimHeld = aimInput != null && aimInput.action.ReadValue<float>() > 0.1f;
+        bool aimHeld = aimInput != null && aimInput.action.ReadValue<float>() > 0.1f && !CutsceneGate.BlocksAim;
 
         if (!ready && aimHeld && canRaise) Raise();
         else if (ready && !canRaise) Lower();
@@ -627,7 +627,7 @@ public class PlayerMeleeWeapon : MonoBehaviour
         bool hasGun = inventory != null && inventory.HasWeapon();
         if (!owns) selected = false;
         else if (!hasGun) selected = true;
-        else if (!switching && !ready && !PlayerQuickHeal.Using && (weapons == null || (!weapons.isReloading && !weapons.isAiming)))
+        else if (!switching && !ready && !PlayerQuickHeal.Using && !CutsceneGate.BlocksWeaponSwitch && (weapons == null || (!weapons.isReloading && !weapons.isAiming)))
         {
             if (selectInput != null && selectInput.action.WasPressedThisFrame()) selected = true;
             if (GunKeyPressed()) selected = false;

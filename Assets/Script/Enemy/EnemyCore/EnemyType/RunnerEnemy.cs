@@ -21,6 +21,31 @@ public class RunnerEnemy : Enemy
     public float injuredMovementSpeed = 1f;
     public bool playLookAroundAtWaypoints = true;
 
+    [Header("Knees (the weak point): a wet, raw sound with his steps")]
+    [SerializeField] AudioClip[] kneeClips;
+    [Range(0f, 1f)] [SerializeField] float kneeVolume = 0.7f;
+    [Tooltip("How far it can be heard (m).")]
+    [SerializeField] float kneeHearing = 11f;
+    AudioSource kneeSource;
+    int kneeStep;
+
+    public override void PlayFootstep()
+    {
+        base.PlayFootstep();
+        if (kneeClips == null || kneeClips.Length == 0 || health == null || health.IsDead) return;
+        if (kneeSource == null)
+        {
+            kneeSource = (leftKneeTransform != null ? leftKneeTransform : transform).gameObject.AddComponent<AudioSource>();
+            kneeSource.playOnAwake = false; kneeSource.spatialBlend = 1f; kneeSource.dopplerLevel = 0f;
+            kneeSource.rolloffMode = AudioRolloffMode.Linear; kneeSource.minDistance = 1.2f; kneeSource.maxDistance = kneeHearing;
+            var main = GetComponent<AudioSource>(); if (main != null) kneeSource.outputAudioMixerGroup = main.outputAudioMixerGroup;
+        }
+        // every other step, so it doesn't turn into a rattle at a run
+        if (kneeStep++ % 2 != 0) return;
+        kneeSource.pitch = Random.Range(0.92f, 1.08f);
+        kneeSource.PlayOneShot(kneeClips[Random.Range(0, kneeClips.Length)], kneeVolume);
+    }
+
     [HideInInspector] public bool sideStepToRight = true;
     [HideInInspector] public bool leftKneeDamaged = false;
     [HideInInspector] public int weakpointHitCount = 0; // 0 = no hits, 1 = first hit, 2 = second hit

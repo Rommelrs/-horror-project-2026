@@ -108,6 +108,9 @@ public class CheckpointManager : MonoBehaviour
         if (Player.instance == null) yield break;
         if (IsRestoring) yield break;
 
+        // a map marker switched on this very frame is only recorded by its next poll: the gate's "open" mark was missing after Continue
+        foreach (var m in FindObjectsByType<SaveableUIImage>(FindObjectsInactive.Include, FindObjectsSortMode.None)) m.Poll();
+
         CheckpointData data = CollectData(checkpointName);
         WriteToFile(data);
 
@@ -185,6 +188,14 @@ public class CheckpointManager : MonoBehaviour
             LoadingHandler.instance.LoadScene(pendingLoadData.sceneName);
         else
             SceneManager.LoadScene(pendingLoadData.sceneName);
+    }
+
+    /// <summary>The checkpoint Continue would load (null = none).</summary>
+    public CheckpointData PeekCheckpoint()
+    {
+        if (!HasCheckpoint()) return null;
+        try { return JsonUtility.FromJson<CheckpointData>(File.ReadAllText(CheckpointFilePath)); }
+        catch { return null; }
     }
 
     /// <summary>Deletes the checkpoint file (call on New Game).</summary>

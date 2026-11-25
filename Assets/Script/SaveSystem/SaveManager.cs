@@ -21,7 +21,8 @@ public class SaveManager : MonoBehaviour
     // Playtime in seconds, counted in REAL time while a gameplay scene is open. (It used to be Time.time, which stops while the game
     // is paused - inventory, notes, pause menu, frozen subtitles - and also counted the time spent in the main menu.)
     private double playtimeSeconds;
-    private const float MaxPlaytimeStep = 1f;      // a frame longer than this (scene load, editor hiccup) only counts this much
+    private const double MaxPlaytimeStep = 60.0;   // one frame never counts more than this (the PC slept)
+    private double lastClock = -1.0;
     private const string MenuSceneName = "Menu";
     public float Playtime => (float)playtimeSeconds;
 
@@ -69,8 +70,13 @@ public class SaveManager : MonoBehaviour
     private void Update()
     {
         if (instance != this) return;
-        if (SceneManager.GetActiveScene().name == MenuSceneName) return;       // time in the main menu is not playtime
-        playtimeSeconds += Mathf.Min(Time.unscaledDeltaTime, MaxPlaytimeStep);
+        // the wall clock, so nothing stops it: cutscenes, subtitles, menus, inventory, loading screens, a lost window focus
+        // (unscaledDeltaTime lost every long frame). Only the main menu isn't playtime, and a PC put to sleep isn't either.
+        double now = Time.realtimeSinceStartupAsDouble;
+        double step = lastClock >= 0.0 ? now - lastClock : 0.0;
+        lastClock = now;
+        if (SceneManager.GetActiveScene().name == MenuSceneName) return;
+        playtimeSeconds += System.Math.Min(step, MaxPlaytimeStep);
     }
 
     private void OnApplicationQuit()

@@ -33,6 +33,10 @@ public class OptionsManager : MonoBehaviour
     [Tooltip("Shows or hides the small ammo counter that appears while aiming.")]
     [SerializeField] Toggle ammoCounterToggle;
 
+    [Header("Puzzle hints / tutorials")]
+    [SerializeField] Toggle hintsToggle;
+    [SerializeField] Button stabilityTutorialButton;
+
     [Header("Graphics")]
     [SerializeField] TMP_Dropdown resolutionDropdown;
 
@@ -115,6 +119,14 @@ public class OptionsManager : MonoBehaviour
             ammoCounterToggle.SetIsOnWithoutNotify(AmmoCounterUI.Enabled);
             ammoCounterToggle.onValueChanged.AddListener(OnAmmoCounterToggled);
         }
+
+        if (hintsToggle != null)
+        {
+            hintsToggle.SetIsOnWithoutNotify(HintSettings.Enabled);
+            hintsToggle.onValueChanged.AddListener(v => HintSettings.Enabled = v);
+        }
+        if (stabilityTutorialButton != null)
+            stabilityTutorialButton.onClick.AddListener(() => StabilityTutorial.Show());
 
         // Keep the toggle in step when the camera is switched with the hotkey instead
         if (CameraSystem.Instance != null)

@@ -7,6 +7,10 @@ public class RunnerEnemyAttackState : EnemyState
     float readyToLeaveTime;
     Quaternion targetRotation;
 
+    // the close swing plays slower than the clip (playtesters couldn't read it - user 2026-11-25); Stats.attackDelay is the beat before it
+    const float SwingSpeed = 0.75f;
+    float savedAnimSpeed = 1f;
+
     public RunnerEnemyAttackState(Enemy enemy, EnemyStateMachine sm) : base(enemy, sm) { }
 
     public override void Enter()
@@ -15,6 +19,12 @@ public class RunnerEnemyAttackState : EnemyState
         // before canLeave is recomputed in Update, so without this reset every other attack was left again on its first frame:
         // he flickered Attack -> Sidestep and the swing played while he was already strafing.
         canLeave = false;
+
+        if (enemy.anim != null)
+        {
+            savedAnimSpeed = enemy.anim.speed > 0f ? enemy.anim.speed : 1f;
+            enemy.anim.speed = SwingSpeed;
+        }
 
         // Calculate leave time based on attack animation + small buffer
         float minimumTimeToLeave = enemy.stats.attackDelay + enemy.stats.attackCooldown - 0.1f;
@@ -36,6 +46,7 @@ public class RunnerEnemyAttackState : EnemyState
     {
          base.Exit();
 
+         enemy.anim.speed = savedAnimSpeed;
          enemy.anim.ResetTrigger("Attack");
     }
 

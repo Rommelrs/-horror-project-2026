@@ -457,9 +457,18 @@ public class QuestionerCombatState : EnemyState
         if (IsGrabbing || stateMachine.CurrentState != this) return;
         Vector3 toP = ToPlayerFlat();
         float d = toP.magnitude;
-        const float minGap = 0.75f;
+        bool solid = q.hordeMode && SwarmEscapeGuide.SwarmHoldsGround;
+        float minGap = solid ? 0.95f : 0.75f;
         if (d >= minGap) return;
         Vector3 away = d > 0.01f ? -toP / d : -q.transform.forward;
+        if (solid)
+        {
+            // at the locked door the swarm is a wall: he is the one who gives way (playtesters just walked through it)
+            var pl = Player.instance;
+            if (pl != null && pl.controller != null && pl.controller.enabled && !pl.pauseMovement && !pl.isGrabbed)
+                pl.controller.Move(-away * (minGap - d));
+            return;
+        }
         MoveAgent(away * (minGap - d));
     }
 
@@ -557,6 +566,16 @@ public class QuestionerCombatState : EnemyState
         if (!token || Time.time < nextDecision) return;
         nextDecision = Time.time + T.decisionInterval;
         bool sight = q.HasLineOfSightToPlayer();
+
+        // the first Questioner of the game: nothing but the grab dash, until the player has learned to strike into it
+        if (GrabCounterTutorial.Pending(q))
+        {
+            feintUntil = repositionUntil = 0f;
+            if (!sight || !CanGrabKhalid || !StraightLineClear || d > T.grabMax + 0.5f) return;
+            if (d < LessonMinDistance && lessonBackOffs < 3) { lessonBackOffs++; BeginReposition(1.2f, T.grabMin + 0.6f); return; }
+            StartGrab();
+            return;
+        }
 
         // the feint after a pipe strike always ends in the grab (no scream, whatever Khalid does meanwhile)
         if (Feinting)
@@ -805,6 +824,7 @@ public class QuestionerCombatState : EnemyState
     public void OnMeleeHit()
     {
         if (IsStaggered || IsGrabbing) return;
+        GrabCounterTutorial.OnStrike(q);
         if (IsCounterable)
         {
             q.StopVoice();
@@ -1001,6 +1021,12 @@ public class QuestionerCombatState : EnemyState
         Vector3 toP = PlayerT.position - q.transform.position;
         toP.y = 0f;
         var pc = PlayerCloseCombat.instance;
+        if (!counterSpent && toP.magnitude <= GrabCounterTutorial.StopDistance && Vector3.Angle(q.transform.forward, toP) < 75f
+            && pc != null && pc.CanBeGrabbed && GrabCounterTutorial.Pending(q))
+        {
+            GrabCounterTutorial.Begin(q);       // he is frozen from the next frame on, until the strike
+            return;
+        }
         if (toP.magnitude <= T.grabContact && Vector3.Angle(q.transform.forward, toP) < 75f && pc != null && pc.CanBeGrabbed)
         {
             holdingPlayer = true;
@@ -1025,12 +1051,16 @@ public class QuestionerCombatState : EnemyState
         }
     }
 
+    const float LessonMinDistance = 2.9f;
+    int lessonBackOffs;
+
     static bool EscapeRunning => PlayerCloseCombat.instance != null && PlayerCloseCombat.instance.EscapeState == GrabEscapeQTE.Result.Running;
 
     /// <summary>Khalid passed both escape sliders: he shoves him off before the bite (no damage).</summary>
     bool EscapedGrab()
     {
         if (bitten || !holdingPlayer || PlayerCloseCombat.instance == null || PlayerCloseCombat.instance.EscapeState != GrabEscapeQTE.Result.Escaped) return false;
+        q.GrabEscapes++;
         q.StopVoice();
         ReleasePlayer(true);
         BeginStumble(T.pushOffDistance);

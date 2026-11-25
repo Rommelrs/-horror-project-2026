@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// The Questioner grab escape (user 2026-11-20): two quick sliders while he holds Khalid. A marker runs once across a bar;
 /// press Interact while it is inside the lit zone. Pass the first and the second comes at once; pass both = Khalid shoves him
 /// off before the bite. Pressing outside the zone, or letting the marker run out, fails it - the grab goes on to the bite.
-/// The lower Khalid's stability, the faster the marker runs; and every time the same Questioner catches him again, faster still. Built at runtime by PlayerCloseCombat (BeginGrab / EndGrab).
+/// The lower Khalid's stability, the faster the marker runs; and every time he gets out of the same Questioner's grab, faster still (failing doesn't change it). Built at runtime by PlayerCloseCombat (BeginGrab / EndGrab).
 /// </summary>
 public class GrabEscapeQTE : MonoBehaviour
 {
@@ -28,7 +28,7 @@ public class GrabEscapeQTE : MonoBehaviour
     public float sweepNoStability = 0.42f;
     [Tooltip("The second slider runs this much faster than the first (x).")]
     public float secondSpeedUp = 1.1f;
-    [Tooltip("Each earlier catch by the SAME Questioner makes both sliders this much faster (+x per catch)...")]
+    [Tooltip("Each earlier ESCAPE from the SAME Questioner makes both sliders this much faster (+x per escape). A failed try doesn't.")]
     public float repeatSpeedUp = 0.2f;
     [Tooltip("...up to this many times as fast.")]
     public float maxRepeatSpeedUp = 1.8f;
@@ -139,12 +139,20 @@ public class GrabEscapeQTE : MonoBehaviour
 
     static InputAction Action => InteractionHandler.InteractAction;
 
+    public const string LessonFlag = "GrabEscapeTutorialDone";
+    /// <summary>The very first time: the marker stops in the zone and waits for the key, which flashes.</summary>
+    public bool Lesson { get; private set; }
+    bool waitingForKey;
+    Image keyBox;
+
     /// <summary>He has just been caught: the bar shows and the first marker starts after startDelay.</summary>
-    public void Begin(int catchNumber = 1)
+    public void Begin(int earlierEscapes = 0)
     {
-        repeatMul = Mathf.Min(maxRepeatSpeedUp, 1f + repeatSpeedUp * Mathf.Max(0, catchNumber - 1));
+        repeatMul = Mathf.Min(maxRepeatSpeedUp, 1f + repeatSpeedUp * Mathf.Max(0, earlierEscapes));
         State = Result.Running;
         running = true;
+        Lesson = !StoryFlags.Has(LessonFlag);
+        waitingForKey = false;
         slider = 0;
         foreach (var p in pips) p.color = PipOff;
         var a = Action;
@@ -159,6 +167,7 @@ public class GrabEscapeQTE : MonoBehaviour
     {
         if (State == Result.Running) State = Result.None;
         running = false;
+        FlashKey(false);
         if (hideAt < 0f) hideAt = Time.unscaledTime;
     }
 
@@ -201,20 +210,42 @@ public class GrabEscapeQTE : MonoBehaviour
         if (dt <= 0f) return;
         if (wait > 0f) { wait -= dt; return; }
 
+        // first time ever: the marker stops in the middle of the zone and the key flashes until he presses it
+        if (Lesson && pos + dt / Mathf.Max(0.1f, sweep) >= zoneStart + zoneWidth * 0.5f)
+        {
+            pos = zoneStart + zoneWidth * 0.5f;
+            waitingForKey = true;
+            dt = 0f;
+        }
+        FlashKey(waitingForKey);
         pos += dt / Mathf.Max(0.1f, sweep);
         var a = Action;
         bool pressed = a != null && a.WasPressedThisFrame();
         if (pressed)
         {
             if (pos >= zoneStart && pos <= zoneStart + zoneWidth) Pass();
-            else Fail();
+            else if (!Lesson) Fail();
         }
         else if (pos >= 1f) { pos = 1f; Fail(); }
         PlaceMarker();
     }
 
+    void FlashKey(bool on)
+    {
+        if (keyBox == null && keyText != null) keyBox = keyText.transform.parent.GetComponent<Image>();
+        bool lit = on && Mathf.Repeat(Time.unscaledTime, 0.5f) < 0.28f;
+        if (keyBox != null) keyBox.color = lit ? ZoneColor : BarColor;
+        if (keyText != null)
+        {
+            keyText.color = lit ? Color.black : PassColor;
+            keyText.transform.parent.localScale = Vector3.one * (lit ? 1.18f : 1f);
+        }
+    }
+
     void Pass()
     {
+        waitingForKey = false;
+        FlashKey(false);
         pips[slider].color = PassColor;
         zoneImg.color = PassColor;
         if (slider == 0)
@@ -223,6 +254,8 @@ public class GrabEscapeQTE : MonoBehaviour
             StartSlider(betweenSliders);
             return;
         }
+        if (Lesson) StoryFlags.Set(LessonFlag);
+        Lesson = false;
         State = Result.Escaped;
         running = false;
         hideAt = Time.unscaledTime + 0.35f;

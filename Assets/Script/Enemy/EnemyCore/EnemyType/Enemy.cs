@@ -120,8 +120,40 @@ public class Enemy : MonoBehaviour, IPoolable
         }
     }
 
+    bool frozen, frozenAgentStopped;
+    float frozenAnimSpeed = 1f;
+
+    /// <summary>Screen fading to black / a scripted walk (EnemyFreeze): no thinking, moving or animating until it's over.</summary>
+    bool ApplyFreeze()
+    {
+        bool want = EnemyFreeze.Active && (health == null || !health.IsDead);
+        if (want != frozen)
+        {
+            frozen = want;
+            if (frozen)
+            {
+                if (anim != null) frozenAnimSpeed = anim.speed > 0f ? anim.speed : 1f;
+                if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh) frozenAgentStopped = agent.isStopped;
+            }
+            else
+            {
+                if (anim != null) anim.speed = frozenAnimSpeed;
+                if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh) agent.isStopped = frozenAgentStopped;
+            }
+        }
+        if (frozen)
+        {
+            if (anim != null) anim.speed = 0f;
+            if (agent != null && agent.isActiveAndEnabled && agent.isOnNavMesh) { agent.isStopped = true; agent.velocity = Vector3.zero; }
+            if (rb != null && !rb.isKinematic) rb.linearVelocity = new Vector3(0f, Mathf.Min(0f, rb.linearVelocity.y), 0f);
+        }
+        return frozen;
+    }
+
     void Update()
     {
+        if (ApplyFreeze()) { currentState = "FROZEN"; return; }
+
         if (!pauseEnemyState)
         {
             //Handle State Tick
@@ -464,7 +496,7 @@ public class Enemy : MonoBehaviour, IPoolable
     }
 
     // Called from Animation Event
-    public void PlayFootstep()
+    public virtual void PlayFootstep()
     {
         AudioClip[] clips = GetFootstepSoundsForCurrentSurface();
         

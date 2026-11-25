@@ -53,6 +53,10 @@ public class AdelDoorSequence : MonoBehaviour
     bool pausedMovement, madeInvincible;
 
     public static bool IsPlaying { get; private set; }
+    /// <summary>Adel's model while he runs for the gate (null when he isn't).</summary>
+    public Transform RunningAdel => IsPlaying && adel != null && adel.gameObject.activeSelf ? adel.transform : null;
+    /// <summary>The gate has shut on Khalid.</summary>
+    public bool GateShut { get; private set; }
     public string DebugState => phase + (Armed ? " armed" : "") + (StoryFlags.Has(SeenFlag) ? " seen" : "");
 
     bool Armed => debugArmed || (!StoryFlags.Has(SeenFlag) && (string.IsNullOrEmpty(requiredFlag) || StoryFlags.Has(requiredFlag)));
@@ -166,7 +170,7 @@ public class AdelDoorSequence : MonoBehaviour
     {
         phase = Phase.Done;
         if (gateCloseClip != null) { sfx.transform.position = gapPoint; sfx.PlayOneShot(gateCloseClip, 1f); }
-        if (gate == null) yield break;
+        if (gate == null) { GateShut = true; yield break; }
         Vector3 from = gate.position;
         for (float e = 0f; e < 0.35f; e += Time.deltaTime)
         {
@@ -175,6 +179,7 @@ public class AdelDoorSequence : MonoBehaviour
             yield return null;
         }
         gate.position = gateClosed;
+        GateShut = true;
     }
 
     /// <summary>The whispering door's OnInteractionFailed (it's locked): after the gate shut on him, Khalid says what he saw.</summary>
@@ -286,6 +291,7 @@ public class AdelDoorSequence : MonoBehaviour
         StopAllCoroutines();
         debugArmed = true;
         phase = Phase.Waiting;
+        GateShut = false;
         if (gate != null) gate.position = gateClosed;
         if (adel != null) adel.gameObject.SetActive(false);
         Vector3 at = Ground(new Vector3(lineCenter.x - 4.5f, 2f, lineCenter.z));

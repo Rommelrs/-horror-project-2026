@@ -16,6 +16,15 @@ public class LoadButton : MonoBehaviour
         if (isLoading)
             return;
 
+        // main menu: puzzle hints on or off first
+        if (!NewGameOptions.Confirmed && SceneManager.GetActiveScene().name == "Menu")
+        {
+            NewGameOptions.Show(this);
+            return;
+        }
+        NewGameOptions.Confirmed = false;
+        DeathHelp.Clear();
+
         isLoading = true;
         
         // Clear all save manager runtime tracking for fresh start
@@ -54,6 +63,13 @@ public class LoadButton : MonoBehaviour
     {
         if (isLoading)
             return;
+
+        // the store is closed for good once he owns the Hammer (going back in soft-locked playtesters)
+        if (gameSceneName == "Store" && StoreDoorLock.Closed && SceneManager.GetActiveScene().name == "Game")
+        {
+            Debug.LogWarning("[LoadButton] the store is closed: he owns the Hammer");
+            return;
+        }
 
         isLoading = true;
 

@@ -46,6 +46,33 @@ public class ItemInspectionHandler : MonoBehaviour
     Item currentItem;
     AudioSource audioSource;
 
+    /// <summary>An item lies in reach: E picks that up before any remark or other interaction beside it.</summary>
+    public bool HasItemInReach => Time.frameCount == pickedUpFrame || (currentInspectableItem != null && currentInspectableItem.gameObject.activeInHierarchy);
+    int pickedUpFrame = -1;      // the press that just took one (whichever handler hears it first)
+
+    // ---- "Press E to interact" the first time an item lies in reach (until the first one is taken; kept in saves)
+    const string FirstPickupFlag = "FirstPickupHintDone";
+    bool firstPromptUp;
+
+    void UpdateFirstPickupPrompt()
+    {
+        if (InteractPromptUI.instance == null) return;
+        bool inReach = (currentInspectableItem != null && currentInspectableItem.gameObject.activeInHierarchy)
+                       || (InteractionHandler.instance != null && InteractionHandler.instance.HasItemTarget);
+        bool want = inReach && !StoryFlags.Has(FirstPickupFlag) && !GameManager.IsPaused && !CutsceneGate.Playing && !GunTutorialPrompts.Showing
+                    && (SubtitleManager.instance == null || !SubtitleManager.instance.IsSubtitleBusy());
+        if (want == firstPromptUp) return;
+        firstPromptUp = want;
+        if (want) InteractPromptUI.instance.ShowPrompt(); else InteractPromptUI.instance.HidePrompt();
+    }
+
+    /// <summary>He has taken something: he knows the key now.</summary>
+    public void NotePickedUp()
+    {
+        pickedUpFrame = Time.frameCount;
+        if (!StoryFlags.Has(FirstPickupFlag)) StoryFlags.Set(FirstPickupFlag);
+    }
+
     private void Awake()
     {
         instance = this;
@@ -105,6 +132,7 @@ public class ItemInspectionHandler : MonoBehaviour
             hintsRaised = true;
         hintLift = hintsRaised ? subtitleHintLift : 0f;
         PositionExitHint();
+        UpdateFirstPickupPrompt();
     }
 
     [Tooltip("How far the Read / Close hints rise while a subtitle is on screen (canvas pixels).")]
@@ -164,6 +192,7 @@ public class ItemInspectionHandler : MonoBehaviour
         {
             if (currentInspectableItem != null)
             {
+                NotePickedUp();
                 if (currentInspectableItem.itemToPickup != null)
                 {
                     if (!currentInspectableItem.instantPickup)

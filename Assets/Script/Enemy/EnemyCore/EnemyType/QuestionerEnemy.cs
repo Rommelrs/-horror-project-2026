@@ -517,6 +517,7 @@ public class QuestionerEnemy : HeadshotEnemy
     {
         // the mouth's glowing weak point (and its hitbox) goes with him: a dead body has nothing left to aim at
         RemoveMouthWeakpoints();
+        if (!hordeMode) StabilityTutorial.ShowOnce(2.5f);       // the first one he kills teaches what stability is
         ReleaseToken();
         combatState.ForceReleasePlayer();
         jawTarget = killedWhileStaggered ? 0.5f : 0.8f;
@@ -532,11 +533,15 @@ public class QuestionerEnemy : HeadshotEnemy
 
     /// <summary>How many times this one has caught Khalid: each catch after the first makes the escape sliders faster.</summary>
     public int GrabsLanded { get; set; }
+    /// <summary>How many times Khalid got out of THIS Questioner's grab with both sliders: only that makes the next ones faster
+    /// (a failed one doesn't - user 2026-11-25).</summary>
+    public int GrabEscapes { get; set; }
 
     public override void OnPool()
     {
         base.OnPool();
         GrabsLanded = 0;
+        GrabEscapes = 0;
         killedWhileStaggered = false;
         RestoreWeakpoint();
         SetWeakpointScale(1f);
